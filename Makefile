@@ -93,4 +93,4 @@ freq78:
 
 phantom:
 	@ clear
-	@ ./bin/mem.run -i ./tests/phantom/phantom.sql -o ./tests/FREQ78/phantom_out.sql -m ./tests/phantom/mod_in_0.fits -b ./tests/phantom/beam_0.fits -d ./tests/phantom/input.dat
+	@ ./bin/mem.run -i ./tests/phantom/phantom.sql -o ./tests/phantom/phantom_out.sql -m ./tests/phantom/mod_in_0.fits -b ./tests/phantom/beam_0.fits -d ./tests/phantom/input.dat
