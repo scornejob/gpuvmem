@@ -82,6 +82,7 @@ typedef struct variables {
   char *beam;
   char *modin;
   int multigpu;
+  int select;
 } Vars;
 
 __host__ void goToError();

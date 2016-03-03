@@ -14,7 +14,7 @@ main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ mkdir -p out
-	@ nvcc $(LDFLAGS) build/*.o -o bin/mem.run $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc $(LDFLAGS) build/*.o -o bin/mem $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
@@ -73,15 +73,15 @@ conf:
 
 co65:
 	@ clear
-	@ ./bin/mem.run -i ./tests/co65/co65.sqlite -o ./tests/co65/co65_out.sqlite -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -d ./tests/co65/input.dat
+	@ ./bin/mem -i ./tests/co65/co65.sqlite -o ./tests/co65/co65_out.sqlite -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -d ./tests/co65/input.dat
 
 selfcalband9:
 	@ clear
-	@ ./bin/mem.run -i ./tests/selfcalband9/selfcalband9.sqlite -o ./tests/selfcalband9/selfcalband9_out.sqlite -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -d ./tests/selfcalband9/input.dat
+	@ ./bin/mem -i ./tests/selfcalband9/selfcalband9.sqlite -o ./tests/selfcalband9/selfcalband9_out.sqlite -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -d ./tests/selfcalband9/input.dat
 
 hco20:
 	@ clear
-	@ ./bin/mem.run -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -d ./tests/HCO-chan20/input.dat
+	@ ./bin/mem -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -d ./tests/HCO-chan20/input.dat
 
 hco23:
 	@ clear

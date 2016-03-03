@@ -69,6 +69,7 @@ Vis *device_visibilities;
 
 int num_gpus;
 int multigpu;
+int selected;
 
 fitsfile *mod_in;
 int status_mod_in;
@@ -131,6 +132,12 @@ __host__ int main(int argc, char **argv) {
 	char *modinput = variables.modin;
 	char *beaminput = variables.beam;
 	multigpu = variables.multigpu;
+  selected = variables.select;
+
+  if(selected > num_gpus || selected < 0){
+    printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
+    exit(-1);
+  }
 
   readInputDat(inputdat);
 	data = getFreqs(msinput);
@@ -228,6 +235,7 @@ __host__ int main(int argc, char **argv) {
 
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
 			gpuErrchk(cudaMalloc(&device_visibilities[i].u, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i]));
@@ -251,6 +259,7 @@ __host__ int main(int argc, char **argv) {
 	}
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		for(int i=0; i < data.total_frequencies; i++){
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].atten, sizeof(cufftComplex)*M*N));
 			gpuErrchk(cudaMemset(device_vars[i].atten, 0, sizeof(cufftComplex)*M*N));
@@ -366,6 +375,7 @@ __host__ int main(int argc, char **argv) {
 
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		gpuErrchk(cudaMalloc((void**)&device_V, sizeof(cufftComplex)*M*N));
 	  gpuErrchk(cudaMalloc((void**)&device_image, sizeof(cufftComplex)*M*N));
 	}else{
@@ -376,7 +386,11 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	cudaSetDevice(0);
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+	   cudaSetDevice(0);
+  }
 	gpuErrchk(cudaMalloc((void**)&device_I, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_I, 0, sizeof(cufftComplex)*M*N));
 
@@ -407,6 +421,7 @@ __host__ int main(int argc, char **argv) {
 
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		gpuErrchk(cudaMemset(device_V, 0, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMemset(device_image, 0, sizeof(cufftComplex)*M*N));
 	}else{
@@ -422,6 +437,7 @@ __host__ int main(int argc, char **argv) {
 
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		if ((cufftPlan2d(&plan1GPU, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
 			printf("cufft plan error\n");
 			return -1;
@@ -440,6 +456,7 @@ __host__ int main(int argc, char **argv) {
 	cudaEvent_t start, stop;
 	float time;
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
 			cudaEventCreate(&start);
 			cudaEventCreate(&stop);
@@ -476,6 +493,7 @@ __host__ int main(int argc, char **argv) {
 	}
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
 			cudaEventCreate(&start);
 			cudaEventCreate(&stop);
@@ -516,6 +534,7 @@ __host__ int main(int argc, char **argv) {
 
 
 	if(num_gpus == 1){
+    cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
 			cudaEventCreate(&start);
 			cudaEventCreate(&stop);
@@ -556,7 +575,11 @@ __host__ int main(int argc, char **argv) {
 	}
 
   toFitsDouble(device_total_atten_image, 0, M, N, 3);
-	cudaSetDevice(0);
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+	   cudaSetDevice(0);
+   }
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
@@ -652,7 +675,11 @@ __host__ int main(int argc, char **argv) {
 			cudaFree(device_vars[i].device_image);
 		}
 	}
-	cudaSetDevice(0);
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(0);
+  }
 	cudaFree(device_total_atten_image);
 	cudaFree(device_noise_image);
 	cudaFree(device_fg_image);
@@ -665,6 +692,7 @@ __host__ int main(int argc, char **argv) {
 	cudaFree(device_H);
 
   //Disabling UVA
+
   for(int i=1; i<num_gpus; i++){
         cudaSetDevice(0);
         cudaDeviceDisablePeerAccess(i);

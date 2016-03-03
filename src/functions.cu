@@ -65,6 +65,7 @@ extern Vis *visibilities;
 extern Vis *device_visibilities;
 
 extern int num_gpus;
+extern int selected;
 
 extern fitsfile *mod_in;
 extern int status_mod_in;
@@ -475,14 +476,15 @@ __host__ void writeMS(char *file, Vis *visibilities) {
 
 
 __host__ void print_help() {
-	printf("Example: executable_name options [ arguments ...]\n");
+	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
 	printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of visibilities(SQLite)\n");
   printf("    -d  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file location\n");
   printf("    -b  --beam       beam_0 FITS file location\n");
-  printf("    -g  --multigpu   Option for multigpu ON (Default OFF)\n");
+  printf("    -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
+  printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)");
 }
 
 __host__ Vars getOptions(int argc, char **argv) {
@@ -493,11 +495,13 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.beam = (char*) malloc(2000*sizeof(char));
   variables.modin = (char*) malloc(2000*sizeof(char));
   variables.multigpu = 0;
+  variables.select = 0;
 
 	long next_op;
-	const char* const short_op = "hi:o:d:m:b:g:";
+	const char* const short_op = "hi:o:d:m:b:g:s:";
 
-	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' }, {"multigpu", 1, NULL, 'g'}, { NULL, 0, NULL, 0 } };
+	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
+                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, { NULL, 0, NULL, 0 } };
 
 	if (argc == 1) {
 		printf(
@@ -533,6 +537,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     	break;
     case 'g':
       variables.multigpu = atoi(optarg);
+      break;
+    case 's':
+      variables.select = atoi(optarg);
       break;
 		case '?':
 			print_help();
@@ -1222,6 +1229,11 @@ __global__ void copyImage(cufftComplex *p, float *device_xt, long N)
 
 __host__ float chiCuadrado(cufftComplex *I)
 {
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(0);
+  }
   printf("**************Calculating phi - Iteration %d **************\n", iter);
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
@@ -1266,6 +1278,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   }
 
   if(num_gpus == 1){
+    cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
 
       cudaEventCreate(&start);
@@ -1435,7 +1448,11 @@ __host__ float chiCuadrado(cufftComplex *I)
 
     }
   }
-    cudaSetDevice(0);
+    if(num_gpus == 1){
+      cudaSetDevice(selected);
+    }else{
+      cudaSetDevice(0);
+    }
     resultH  = deviceReduce(device_H, M*N);
     resultPhi = (0.5 * resultchi2) + (lambda * resultH);
     printf("chi2 value = %.5f\n", resultchi2);
@@ -1455,6 +1472,11 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 	cudaEvent_t start, stop;
   float time;
 
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(0);
+  }
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   cudaEventRecord(start, 0);
@@ -1490,6 +1512,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   }
 
   if(num_gpus == 1){
+    cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
         cudaEventCreate(&start);
       	cudaEventCreate(&stop);
@@ -1544,7 +1567,11 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     }
   }
 
-  cudaSetDevice(0);
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(0);
+  }
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   cudaEventRecord(start, 0);
