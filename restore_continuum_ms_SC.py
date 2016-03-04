@@ -1,10 +1,9 @@
-residual_ms = "HLTau_B7_spw1_residuals"
-model_fits = "mod_out.fits"
-restored = "restored_HLTau_B7_spw1"
-#pix_size="0.2arcsec"
-#pix_num=256
-weight="natural"
-polarization="I"
+#casapy --log2term --nogui -c restore_continum_ms_SC.py
+residual_ms = "HLTau_B6_spw1_residuals" #input
+model_fits = "mod_out.fits"  # input 
+restored = "restored"  #output
+weight="briggs" # "briggs"
+polarization="I" 
 
 ######################################################################
 residual_image=residual_ms+".img"
@@ -19,8 +18,8 @@ cdelt = imhead(imagename="mod_out", mode="get", hdkey="cdelt2")
 cdelta = qa.convert(v=cdelt,outunit="arcsec")
 cdeltd = qa.convert(v=cdelt,outunit="deg")
 pix_size = str(cdelta['value'])+"arcsec"
-print "pix_size",pix_size
-print "pix_num",pix_num
+#print "pix_size",pix_size
+#print "pix_num",pix_num
 
 
 
@@ -31,24 +30,25 @@ exportfits(imagename=residual_image+".image", fitsimage=residual_image+".image.f
 ia.open(infile=residual_image+".image")
 rbeam=ia.restoringbeam()
 ia.done()
-bmaj = imhead(imagename=residual_image+".image", mode="get", hdkey="beammajor")
 
+bmaj = imhead(imagename=residual_image+".image", mode="get", hdkey="beammajor")
 bmin = imhead(imagename=residual_image+".image", mode="get", hdkey="beamminor")
 bpa  = imhead(imagename=residual_image+".image", mode="get", hdkey="beampa")
-print "bmaj ",bmaj
+#print "bmaj ",bmaj
 
-major = qa.convert(v=bmaj,outunit="deg")
-print "major ",major
-print "major value ",major['value']
+#major = qa.convert(v=bmaj,outunit="deg")
+#print "major ",major
+#print "major value ",major['value']
 
 minor = qa.convert(v=bmin,outunit="deg")
 pa    = qa.convert(v=bpa ,outunit="deg")
 
-print "cdeltd", cdeltd
-print "log",log(2)
-convert_factor = (pi/(4*log(2))) * major['value']* minor['value'] /  (cdeltd['value']**2)
+#print "cdeltd", cdeltd
+#print "log",log(2)
 
-print "convert_factor",convert_factor,"\n"
+#DO NOT DELETE convert_factor = (pi/(4*log(2))) * major['value']* minor['value'] /  (cdeltd['value']**2)
+
+#print "convert_factor",convert_factor,"\n"
 
 
 ia.open(infile="mod_out")
