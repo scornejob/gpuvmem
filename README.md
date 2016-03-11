@@ -40,7 +40,7 @@ Use GPUVMEM:
 Example: `./bin/gpuvmem options [ arguments ...]`
 - -h  --help       Shows this
 - -i  --input      The name of the input file of visibilities(SQLite)
-- -o  --output     The name of the output file of visibilities(SQLite)
+- -o  --output     The name of the output file of residual visibilities(SQLite)
 - -d  --inputdat   The name of the input file of parameters
 - -m  --modin      mod_in_0 FITS file
 - -b  --beam       beam_0 FITS file

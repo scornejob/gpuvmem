@@ -515,7 +515,7 @@ __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
 	printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
-  printf(	"    -o  --output     The name of the output file of visibilities(SQLite)\n");
+  printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
   printf("    -d  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
