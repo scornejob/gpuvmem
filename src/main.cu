@@ -624,14 +624,55 @@ __host__ int main(int argc, char **argv) {
 	//Pass residuals to host
 	printf("Passing final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);
+  printf("Back UV coordinates to normal\n");
+	if(num_gpus == 1){
+    cudaSetDevice(1);
+		for(int i=0; i<data.total_frequencies; i++){
+			cudaEventCreate(&start);
+			cudaEventCreate(&stop);
+			cudaEventRecord(start, 0);
+			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
+			gpuErrchk(cudaDeviceSynchronize());
+			cudaEventRecord(stop, 0);
+			cudaEventSynchronize(stop);
+			cudaEventElapsedTime(&time, start, stop);
+			global_time = global_time + time;
+		}
+	}else{
+		#pragma omp parallel for schedule(static,1)
+    for (int i = 0; i < data.total_frequencies; i++)
+		{
+			unsigned int j = omp_get_thread_num();
+			//unsigned int num_cpu_threads = omp_get_num_threads();
+			// set and check the CUDA device for this CPU thread
+			int gpu_id = -1;
+			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+			cudaGetDevice(&gpu_id);
+			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
+			cudaEventCreate(&start);
+			cudaEventCreate(&stop);
+			cudaEventRecord(start, 0);
+			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
+			gpuErrchk(cudaDeviceSynchronize());
+			cudaEventRecord(stop, 0);
+			cudaEventSynchronize(stop);
+			cudaEventElapsedTime(&time, start, stop);
+			global_time = global_time + time;
+		}
+	}
+
 	printf("Saving residuals to host memory\n");
 	if(num_gpus == 1){
 		for(int i=0; i<data.total_frequencies; i++){
+      gpuErrchk(cudaMemcpy(visibilities[i].u, device_visibilities[i].u, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+			gpuErrchk(cudaMemcpy(visibilities[i].v, device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
 			gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
 		}
 	}else{
 		for(int i=0; i<data.total_frequencies; i++){
 			cudaSetDevice(i%num_gpus);
+      gpuErrchk(cudaMemcpy(visibilities[i].u, device_visibilities[i].u, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+			gpuErrchk(cudaMemcpy(visibilities[i].v, device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
 			gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
 		}
 	}

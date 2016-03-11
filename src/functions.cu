@@ -470,6 +470,42 @@ __host__ void writeMS(char *file, Vis *visibilities) {
    }
  }
  sqlite3_finalize(stmt);
+
+
+ l=0;
+
+ sql = "UPDATE samples SET u = ?, v = ? WHERE id = ? AND flag_row = 0 AND internal_freq_id = ?";
+
+ rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
+ if (rc != SQLITE_OK ) {
+   printf("Cannot execute UPDATE: %s\n", sqlite3_errmsg(db));
+   sqlite3_close(db);
+   goToError();
+ }else{
+   printf("Passing u,v to file. Please wait...\n");
+ }
+
+ for(int i=0; i<data.n_internal_frequencies; i++){
+    for(int j=0; j<data.channels[i]; j++){
+      for(int k=0; k<data.numVisibilitiesPerFreq[l]; k++){
+        sqlite3_bind_double(stmt, 1, visibilities[l].u[k]);
+        sqlite3_bind_double(stmt, 2, visibilities[l].v[k]);
+        sqlite3_bind_int(stmt, 3, visibilities[l].id[k]);
+        sqlite3_bind_int(stmt, 4, i);
+        int s = sqlite3_step(stmt);
+        sqlite3_clear_bindings(stmt);
+        sqlite3_reset(stmt);
+        //printf("u: %f, v: %f, id: %d, freq: %d", visibilities[l].u[k], visibilities[l].v[k], visibilities[l].id[k], i);
+        printf("\rIF[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l]));
+        fflush(stdout);
+      }
+      printf("\n");
+      l++;
+    }
+  }
+
+
+ sqlite3_finalize(stmt);
  sqlite3_close(db);
 
 }
@@ -481,8 +517,8 @@ __host__ void print_help() {
 	printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of visibilities(SQLite)\n");
   printf("    -d  --inputdat   The name of the input file of parameters\n");
-  printf("    -m  --modin      mod_in_0 FITS file location\n");
-  printf("    -b  --beam       beam_0 FITS file location\n");
+  printf("    -m  --modin      mod_in_0 FITS file\n");
+  printf("    -b  --beam       beam_0 FITS file\n");
   printf("    -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)");
 }
@@ -854,6 +890,17 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
       Vx[i] = (Vx[i] * freq) / LIGHTSPEED;
   }
 }
+
+__global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities)
+{
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+
+  if (i < numVisibilities){
+      Ux[i] = (Ux[i] * LIGHTSPEED) / freq;
+      Vx[i] = (Vx[i] * LIGHTSPEED) / freq;
+  }
+}
+
 __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
