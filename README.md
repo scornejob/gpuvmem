@@ -1,5 +1,19 @@
 # GPUVMEM
 
+#Libraries
+
+To compile GPUVMEM you need:
+
+- sqlite3
+- CUDA
+- OpenMP
+
+#Compiling
+```
+cd gpuvmem
+./configure
+make
+```
 #Usage
 
 Convert your ms input file to sql with ms2sql:
@@ -32,6 +46,8 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 - -b  --beam       beam_0 FITS file
 - -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 - -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
+
+An out folder will be created. That's where outputs (FITS images) will be saved.
 
 #Contributors
 
