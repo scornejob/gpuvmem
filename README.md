@@ -18,11 +18,11 @@ make
 
 Convert your ms input file to sql with ms2sql:
 
-`ms2sql --ms-src input.ms --db-dest output.sql --verbose`
+`ms2sql --ms-src input.ms --db-dest input.sql --verbose`
 
-Remember to also make a copy of the output.sql to save residuals.
+Remember to also make a copy of the input.sql to save residuals.
 
-`cp output.sql residuals.sql`
+`cp input.sql residuals.sql`
 
 Create your beam_0.fits and mod_in_0.fits with difmap.
 Create your input.dat file with the following data and change the parameters if you want:
