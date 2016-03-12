@@ -8,6 +8,12 @@ To compile GPUVMEM you need:
 - CUDA
 - OpenMP
 
+#Check your SM in Makefile
+If `make` doesn't work check if you are compiling with the right SM.
+- The ARCHFLAGS for Tesla K80 is: -arch=sm_37
+- The ARCHFLAGS for Maxwell architecture is: -arch=sm_50
+
+
 #Compiling
 ```
 cd gpuvmem
@@ -29,7 +35,7 @@ Create your input.dat file with the following data and change the parameters if 
 
 ```
 lambda_entropy  0.01
-noise_cut	100.5         
+noise_cut	100.5
 minpix_factor   1000.0
 ftol		1.0e-12
 random_probability 0.0
