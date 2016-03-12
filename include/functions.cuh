@@ -117,8 +117,6 @@ __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *atten
 __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N, int nfreq);
 __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
-__global__ void fftshift(cufftComplex *IorV, long N);
-__global__ void getcoeff(float2 *nuv, float *u, float *v, int *X, float *coeff, long numVisibilities, long M, long N, float deltau, float deltav);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N);
