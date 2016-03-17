@@ -81,6 +81,7 @@ typedef struct variables {
   char *inputdat;
   char *beam;
   char *modin;
+  char *path;
   int multigpu;
   int select;
 } Vars;

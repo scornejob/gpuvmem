@@ -74,6 +74,8 @@ int selected;
 fitsfile *mod_in;
 int status_mod_in;
 
+char *mempath;
+
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
   #ifdef _WIN32
@@ -133,6 +135,7 @@ __host__ int main(int argc, char **argv) {
 	char *beaminput = variables.beam;
 	multigpu = variables.multigpu;
   selected = variables.select;
+  mempath = variables.path;
 
   if(selected > num_gpus || selected < 0){
     printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");

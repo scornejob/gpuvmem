@@ -67,6 +67,8 @@ extern Vis *device_visibilities;
 extern int num_gpus;
 extern int selected;
 
+extern char* mempath;
+
 extern fitsfile *mod_in;
 extern int status_mod_in;
 
@@ -519,6 +521,7 @@ __host__ void print_help() {
   printf("    -d  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
+  printf("    -p  --path       MEM folder path to save FITS images. With / included. (Example ./../mem/)\n");
   printf("    -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)");
 }
@@ -530,14 +533,15 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.inputdat = (char*) malloc(2000*sizeof(char));
   variables.beam = (char*) malloc(2000*sizeof(char));
   variables.modin = (char*) malloc(2000*sizeof(char));
+  variables.path = (char*) malloc(2000*sizeof(char));
   variables.multigpu = 0;
   variables.select = 0;
 
 	long next_op;
-	const char* const short_op = "hi:o:d:m:b:g:s:";
+	const char* const short_op = "hi:o:d:m:b:g:s:p:";
 
 	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
-                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, { NULL, 0, NULL, 0 } };
+                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, {"path", 1, NULL, 'p'}, { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -571,6 +575,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'b':
     	strcpy(variables.beam, optarg);
     	break;
+    case 'p':
+      strcpy(variables.path, optarg);
+      break;
     case 'g':
       variables.multigpu = atoi(optarg);
       break;
@@ -603,13 +610,13 @@ __host__ void toFitsDouble(cufftComplex *I, int iteration, long M, long N, int o
   char *unit = "JY/PIXEL";
   switch(option){
     case 2:
-      sprintf(name, "!out/atten_%d.fits", iteration);
+      sprintf(name, "!%satten_%d.fits", mempath, iteration);
       break;
     case 3:
-      sprintf(name, "!out/total_atten_0.fits", iteration);
+      sprintf(name, "!%stotal_atten_0.fits", mempath, iteration);
       break;
     case 4:
-      sprintf(name, "!out/noise_0.fits", iteration);
+      sprintf(name, "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -667,16 +674,16 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
   char *unit = "JY/PIXEL";
   switch(option){
     case 0:
-      sprintf(name, "!out/mod_out.fits", iteration);
+      sprintf(name, "!%smod_out.fits", mempath, iteration);
       break;
     case 1:
-      sprintf(name, "!out/MEM_%d.fits", iteration);
+      sprintf(name, "!%sMEM_%d.fits", mempath, iteration);
       break;
     case 2:
-      sprintf(name, "!out/MEM_V_%d.fits", iteration);
+      sprintf(name, "!%sMEM_V_%d.fits", mempath, iteration);
       break;
     case 3:
-      sprintf(name, "!out/MEM_VB_%d.fits", iteration);
+      sprintf(name, "!%sMEM_VB_%d.fits", mempath, iteration);
       break;
     case -1:
       break;
