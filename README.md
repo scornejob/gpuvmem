@@ -50,10 +50,13 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 - -d  --inputdat   The name of the input file of parameters
 - -m  --modin      mod_in_0 FITS file
 - -b  --beam       beam_0 FITS file
+  -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n")
 - -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 - -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 
-An out folder will be created. That's where outputs (FITS images) will be saved.
+#IMPORTANT
+
+Remember to create the mem folder to save the FITS images
 
 #Contributors
 
