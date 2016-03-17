@@ -329,7 +329,12 @@ __host__ int main(int argc, char **argv) {
 				dim3 blocks(M/threads.x, N/threads.y);
 				threadsPerBlockNN = threads;
 				numBlocksNN = blocks;
-	}
+	  }else{
+        dim3 threads(32,32);
+        dim3 blocks(M/threads.x, N/threads.y);
+        threadsPerBlockNN = threads;
+        numBlocksNN = blocks;
+    }
 
 	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){
@@ -629,7 +634,7 @@ __host__ int main(int argc, char **argv) {
 	toFitsFloat(device_I, iter, M, N, 0);
   printf("Back UV coordinates to normal\n");
 	if(num_gpus == 1){
-    cudaSetDevice(1);
+    cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
 			cudaEventCreate(&start);
 			cudaEventCreate(&stop);
