@@ -972,6 +972,11 @@ __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, 
     image[N*i+j].y = 0.f;
 }
 
+/*--------------------------------------------------------------------
+ * Phase rotate the visibility data in "image" to refer phase to point
+ * (x,y) instead of (0,0).
+ * Multiply pixel V(i,j) by exp(-2 pi i (x/ni + y/nj))
+ *--------------------------------------------------------------------*/
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs)
 {
 
@@ -1009,7 +1014,9 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 }
 
 
-
+/*
+ * Interpolate in the visibility array to find the visibility at (u,v);
+ */
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
 {
   int i = threadIdx.x + blockDim.x * blockIdx.x;
