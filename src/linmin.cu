@@ -14,7 +14,7 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
 {
   float xx, xmin, fx, fb, fa, bx ,ax;
 
-  gpuErrchk(cudaMalloc((void**)&device_pcom, sizeof(cufftDoubleComplex)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_pcom, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_pcom, 0, sizeof(cufftComplex)*M*N));
 
   gpuErrchk((cudaMalloc((void**)&device_xicom, sizeof(float)*M*N)));
