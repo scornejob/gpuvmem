@@ -1020,7 +1020,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
 {
   int i = threadIdx.x + blockDim.x * blockIdx.x;
-  int i1, i2, j1, j2;
+  long i1, i2, j1, j2;
   float du, dv;
   float v11, v12, v21, v22;
   float Zreal;
@@ -1028,6 +1028,11 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
   if (i < numVisibilities){
     float u = Ux[i]/deltau;
     float v = Vx[i]/deltav;
+
+    if (fabs(u) > (N/2)+0.5 || fabs(v) > (N/2)+0.5) {
+      printf("Error in residual: u,v = %f,%f\n", u, v);
+      asm("trap;");
+    }
 
     if(u < 0.0){
       u = N + u;
@@ -1043,7 +1048,10 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
     j1 = v;
     j2 = (j1+1)%N;
     dv = v - j1;
-
+    if (i1 < 0 || i1 > N || j1 < 0 || j2 > N) {
+      printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
+      asm("trap;");
+    }
       /* Bilinear interpolation: real part */
     v11 = V[N*i1 + j1].x; /* [i1, j1] */
     v12 = V[N*i1 + j2].x; /* [i1, j2] */
