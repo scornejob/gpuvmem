@@ -638,20 +638,21 @@ __host__ void toFitsDouble(cufftComplex *I, int iteration, long M, long N, int o
 	float* image2D;
 	image2D = (float*) malloc(M*N*sizeof(float));
 
-  int x = N-1;
-  int y = M-1;
-  for(int i=M-1; i >=0; i--){
-		for(int j=0; j < N; j++){
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i< N; i++){
+    for(int j=0; j< N; j++){
       if(option == 0){
-			  image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
+        image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
       }else{
         image2D[N*x+y] = host_IFITS[N*i+j].x;
       }
-      x--;
-		}
-    y--;
-    x=N-1;
-	}
+      y--;
+    }
+    y = N-1;
+    x--;
+  }
+
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
 	fits_close_file(fpointer, &status);
@@ -705,24 +706,21 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 	float* image2D;
 	image2D = (float*) malloc(M*N*sizeof(float));
 
-  int x = N-1;
-  //int y = M-1;
-  int y=0;
-  for(int i=M-1; i >=0; i--){
-		for(int j=0; j < N; j++){
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i< N; i++){
+    for(int j=0; j< N; j++){
       if(option == 0){
-			  image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
-      }else if (option == 2 || option == 3){
-        image2D[N*x+y] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
-        //image2D[N*x+y] = host_IFITS[N*i+j].y;
+        image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
       }else{
         image2D[N*x+y] = host_IFITS[N*i+j].x;
       }
-      x--;
-		}
-    y++;
-    x=N-1;
-	}
+      y--;
+    }
+    y = N-1;
+    x--;
+  }
+
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
 	fits_close_file(fpointer, &status);
@@ -911,12 +909,12 @@ __global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities)
 __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
-		int i = threadIdx.x + blockDim.x * blockIdx.x;
-		int j = threadIdx.y + blockDim.y * blockIdx.y;
+		int j = threadIdx.x + blockDim.x * blockIdx.x;
+		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
-    float x = (i - (int)xobs) * DELTAX * RPDEG;
-    float y = (j - (int)yobs) * DELTAY * RPDEG;
+    float x = (j - (int)xobs) * DELTAX * RPDEG;
+    float y = (i - (int)yobs) * DELTAY * RPDEG;
 
     float arc = sqrt(x*x+y*y);
     float c = 4.0*log(2.0);
@@ -930,8 +928,8 @@ __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float
 
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   total_atten[N*i+j].x += attenperFreq[N*i+j].x;
   total_atten[N*i+j].y = 0;
@@ -939,8 +937,8 @@ __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *atten
 
 __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N, int nfreq)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float weight = 0.0;
   float noiseval = 0.0;
@@ -954,14 +952,14 @@ __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image
 
 __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY)
 {
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
-    int j = threadIdx.y + blockDim.y * blockIdx.y;
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
     float dx = DELTAX * 60.0;
     float dy = DELTAY * 60.0;
-    float x = (i - xobs) * dx;
-    float y = (j - yobs) * dy;
+    float x = (j - xobs) * dx;
+    float y = (i - yobs) * dy;
     float arc = RPARCM*sqrt(x*x+y*y);
     float c = 4.0*log(2.0);
     float a = (FWHM*BEAM_FREQ/(frec*1e-9));
@@ -980,23 +978,23 @@ __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, 
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs)
 {
 
-		int i = threadIdx.x + blockDim.x * blockIdx.x;
-		int j = threadIdx.y + blockDim.y * blockIdx.y;
+		int j = threadIdx.x + blockDim.x * blockIdx.x;
+		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
     float u,v;
     float du = -2.0 * (xphs/M);
     float dv = -2.0 * (yphs/N);
 
-    if(i < M/2){
-      u = du * i;
+    if(j < M/2){
+      u = du * j;
     }else{
-      u = du * (i-M);
+      u = du * (j-M);
     }
 
-    if(j < N/2){
-      v = dv * j;
+    if(i < N/2){
+      v = dv * i;
     }else{
-      v = dv * (j-N);
+      v = dv * (i-N);
     }
 
     float phase = u+v;
@@ -1052,17 +1050,18 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
       printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
       asm("trap;");
     }
-      /* Bilinear interpolation: real part */
-    v11 = V[N*i1 + j1].x; /* [i1, j1] */
-    v12 = V[N*i1 + j2].x; /* [i1, j2] */
-    v21 = V[N*i2 + j1].x; /* [i2, j1] */
-    v22 = V[N*i2 + j2].x; /* [i2, j2] */
+    //printf("Positions (%ld,%ld); (%ld, %ld); (%ld, %ld); (%ld, %ld)\n", j1, i1, j2, i1, j1, i2, j2, i2);
+    /* Bilinear interpolation: real part */
+    v11 = V[N*j1 + i1].x; /* [i1, j1] */
+    v12 = V[N*j2 + i1].x; /* [i1, j2] */
+    v21 = V[N*j1 + i2].x; /* [i2, j1] */
+    v22 = V[N*j2 + i2].x; /* [i2, j2] */
     Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
     /* Bilinear interpolation: imaginary part */
-    v11 = V[N*i1 + j1].y; /* [i1, j1] */
-    v12 = V[N*i1 + j2].y; /* [i1, j2] */
-    v21 = V[N*i2 + j1].y; /* [i2, j1] */
-    v22 = V[N*i2 + j2].y; /* [i2, j2] */
+    v11 = V[N*j1 + i1].y; /* [i1, j1] */
+    v12 = V[N*j2 + i1].y; /* [i1, j2] */
+    v21 = V[N*j1 + i2].y; /* [i2, j1] */
+    v22 = V[N*j2 + i2].y; /* [i2, j2] */
     Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
 
     Vr[i].x =  Zreal - Vo[i].x;
@@ -1076,13 +1075,13 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
 
 __global__ void clip(cufftComplex *I, float MINPIX, long N)
 {
-	int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-	if(I[N*k+l].x <= MINPIX){
-		I[N*k+l].x = MINPIX;
+	if(I[N*i+j].x <= MINPIX){
+		I[N*i+j].x = MINPIX;
 	}
-  I[N*k+l].y = 0;
+  I[N*i+j].y = 0;
 
   //printf("%f\n", I[N*k+l].x);
 
@@ -1091,8 +1090,8 @@ __global__ void clip(cufftComplex *I, float MINPIX, long N)
 
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
-	int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
   if(noise[N*i+j].x > noise_cut){
@@ -1107,39 +1106,39 @@ __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftCom
 
 __global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N)
 {
-  int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  gg[N*k+l] = g[N*k+l] * g[N*k+l];
-  dgg[N*k+l] = (xi[N*k+l] + g[N*k+l]) * xi[N*k+l];
+  gg[N*i+j] = g[N*i+j] * g[N*i+j];
+  dgg[N*i+j] = (xi[N*i+j] + g[N*i+j]) * xi[N*i+j];
 }
 
 __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
 {
-	int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  xi[N*k+l] *= xmin;
-  if(p[N*k+l].x + xi[N*k+l] > MINPIX){
-    p[N*k+l].x += xi[N*k+l];
+  xi[N*i+j] *= xmin;
+  if(p[N*i+j].x + xi[N*i+j] > MINPIX){
+    p[N*i+j].x += xi[N*i+j];
   }else{
-    p[N*k+l].x = MINPIX;
-    xi[N*k+l] = 0.0;
+    p[N*i+j].x = MINPIX;
+    xi[N*i+j] = 0.0;
   }
-  p[N*k+l].y = 0.0;
+  p[N*i+j].y = 0.0;
 }
 
 __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
 {
-	int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(pcom[N*k+l].x + x * xicom[N*k+l] > MINPIX){
-      xt[N*k+l].x = pcom[N*k+l].x + x * xicom[N*k+l];
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > MINPIX){
+      xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
-      xt[N*k+l].x = MINPIX;
+      xt[N*i+j].x = MINPIX;
   }
-  xt[N*k+l].y = 0.0;
+  xt[N*i+j].y = 0.0;
 }
 
 
@@ -1154,38 +1153,38 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 __global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
-	int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float entropy = 0.0;
-  if(noise[N*k+l].x <= noise_cut){
-    entropy = I[N*k+l].x * log(I[N*k+l].x / MINPIX);
+  if(noise[N*i+j].x <= noise_cut){
+    entropy = I[N*i+j].x * log(I[N*i+j].x / MINPIX);
   }
 
-  H[N*k+l] = entropy;
+  H[N*i+j] = entropy;
 }
 __global__ void searchDirection(float *g, float *xi, float *h, long N)
 {
-  int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  g[N*k+l] = -xi[N*k+l];
-  xi[N*k+l] = h[N*k+l] = g[N*k+l];
+  g[N*i+j] = -xi[N*i+j];
+  xi[N*i+j] = h[N*i+j] = g[N*i+j];
 }
 
 __global__ void newXi(float *g, float *xi, float *h, float gam, long N)
 {
-  int k = threadIdx.x + blockDim.x * blockIdx.x;
-	int l = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  g[N*k+l] = -xi[N*k+l];
-  xi[N*k+l] = h[N*k+l] = g[N*k+l] + gam * h[N*k+l];
+  g[N*i+j] = -xi[N*i+j];
+  xi[N*i+j] = h[N*i+j] = g[N*i+j] + gam * h[N*i+j];
 }
 
 __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   dphi[N*i+j] = 0.0;
   dChi2[N*i+j] = 0.0;
@@ -1195,8 +1194,8 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j].x <= noise_cut){
     dH[N*i+j] = lambda * (log(I[N*i+j].x / MINPIX) + 1.0);
@@ -1206,11 +1205,11 @@ __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_
 __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
-	int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float x = (i - (int)xobs) * DELTAX * RPDEG;
-  float y = (j - (int)yobs) * DELTAY * RPDEG;
+  float x = (j - (int)xobs) * DELTAX * RPDEG;
+  float y = (i - (int)yobs) * DELTAY * RPDEG;
 
 	float Ukv;
 	float Vkv;
@@ -1240,32 +1239,32 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
 __global__ void DChi2_total(float *dchi2_total, float *dchi2, long N)
 {
 
-	int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   dchi2_total[N*i+j] += dchi2[N*i+j];
 }
 
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   dphi[N*i+j] = dchi2[N*i+j] + dH[N*i+j];
 }
 
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   x[N*i+j] = xc[N*i+j].x - lambda*gc[N*i+j];
 }
 
 __global__ void projection(float *px, float *x, float MINPIX, long N){
 
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
   if(INFINITY < x[N*i+j]){
@@ -1282,16 +1281,16 @@ __global__ void projection(float *px, float *x, float MINPIX, long N){
 }
 
 __global__ void normVectorCalculation(float *normVector, float *gc, long N){
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   normVector[N*i+j] = gc[N*i+j] * gc[N*i+j];
 }
 
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N)
 {
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-	int j = threadIdx.y + blockDim.y * blockIdx.y;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   p[N*i+j].x = device_xt[N*i+j];
 }
