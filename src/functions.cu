@@ -640,17 +640,20 @@ __host__ void toFitsDouble(cufftComplex *I, int iteration, long M, long N, int o
 
   int x = M-1;
   int y = N-1;
-  for(int i=0; i< N; i++){
-    for(int j=0; j< N; j++){
+  for(int i=0; i < M; i++){
+    for(int j=0; j < N; j++){
       if(option == 0){
-        image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
+        image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
+      }else if (option == 2 || option == 3){
+        image2D[N*y+x] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
+        //image2D[N*x+y] = host_IFITS[N*i+j].y;
       }else{
-        image2D[N*x+y] = host_IFITS[N*i+j].x;
+        image2D[N*y+x] = host_IFITS[N*i+j].x;
       }
-      y--;
+      x--;
     }
-    y = N-1;
-    x--;
+    x=M-1;
+    y--;
   }
 
 
@@ -708,19 +711,21 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 
   int x = M-1;
   int y = N-1;
-  for(int i=0; i< N; i++){
-    for(int j=0; j< N; j++){
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
       if(option == 0){
-        image2D[N*x+y] = host_IFITS[N*i+j].x * fg_scale;
+			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
+      }else if (option == 2 || option == 3){
+        image2D[N*y+x] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
+        //image2D[N*x+y] = host_IFITS[N*i+j].y;
       }else{
-        image2D[N*x+y] = host_IFITS[N*i+j].x;
+        image2D[N*y+x] = host_IFITS[N*i+j].x;
       }
-      y--;
-    }
-    y = N-1;
-    x--;
-  }
-
+      x--;
+		}
+    x=M-1;
+    y--;
+	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
 	fits_close_file(fpointer, &status);
@@ -982,8 +987,8 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
     float u,v;
-    float du = -2.0 * (xphs/M);
-    float dv = -2.0 * (yphs/N);
+    float du = xphs/M;
+    float dv = yphs/N;
 
     if(j < M/2){
       u = du * j;
@@ -997,7 +1002,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
       v = dv * (i-N);
     }
 
-    float phase = u+v;
+    float phase = -2.0*(u+v);
     float c, s;
     #if (__CUDA_ARCH__ >= 300 )
       sincospif(phase, &s, &c);
