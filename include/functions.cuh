@@ -97,7 +97,6 @@ __host__ Vars getOptions(int argc, char **argv);
 __host__ void Print2DFloatArray(int rows, int cols, float *array);
 __host__ void Print2DIntArray(int rows, int cols, int *array);
 __host__ void Print2DComplex(int rows, int cols, cufftComplex *data, bool cufft_symmetry);
-__host__ void toFitsDouble(cufftComplex *I, int iteration, long M, long N, int option);
 __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option);
 __host__ float chiCuadrado(cufftComplex *I);
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2);

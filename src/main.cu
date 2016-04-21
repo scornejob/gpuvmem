@@ -513,7 +513,7 @@ __host__ int main(int argc, char **argv) {
 			cudaEventElapsedTime(&time, start, stop);
 			//printf("CUDA atten noise execution time = %f ms\n",time);
 			global_time = global_time + time;
-      toFitsDouble(device_vars[i].atten, i, M, N, 2);
+      toFitsFloat(device_vars[i].atten, i, M, N, 4);
 		}
 	}else{
     #pragma omp parallel for schedule(static,1)
@@ -536,7 +536,7 @@ __host__ int main(int argc, char **argv) {
 			cudaEventElapsedTime(&time, start, stop);
 			//printf("CUDA atten noise execution time = %f ms\n",time);
 			global_time = global_time + time;
-      toFitsDouble(device_vars[i].atten, i, M, N, 2);
+      toFitsFloat(device_vars[i].atten, i, M, N, 4);
 		}
 	}
 
@@ -609,7 +609,7 @@ __host__ int main(int argc, char **argv) {
 		global_time = global_time + time;
 	}
 
-  toFitsDouble(device_total_atten_image, 0, M, N, 3);
+  toFitsFloat(device_total_atten_image, 0, M, N, 5);
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
@@ -625,7 +625,7 @@ __host__ int main(int argc, char **argv) {
 	cudaEventElapsedTime(&time, start, stop);
 	//printf("CUDA atten noise execution time = %f ms\n",time);
 	global_time = global_time + time;
-	toFitsDouble(device_noise_image, 0, M, N, 4);
+	toFitsFloat(device_noise_image, 0, M, N, 6);
 	//exit(0);
 	cufftComplex *host_noise_image = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(cufftComplex), device_noise_image, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));

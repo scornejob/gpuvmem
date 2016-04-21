@@ -597,75 +597,6 @@ __host__ Vars getOptions(int argc, char **argv) {
 	return variables;
 }
 
-
-__host__ void toFitsDouble(cufftComplex *I, int iteration, long M, long N, int option)
-{
-	fitsfile *fpointer;
-	int status = 0;
-	long fpixel = 1;
-	long elements = M*N;
-	char name[60]="";
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *unit = "JY/PIXEL";
-  switch(option){
-    case 2:
-      sprintf(name, "!%satten_%d.fits", mempath, iteration);
-      break;
-    case 3:
-      sprintf(name, "!%stotal_atten_0.fits", mempath, iteration);
-      break;
-    case 4:
-      sprintf(name, "!%snoise_0.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-
-	fits_create_file(&fpointer, name, &status);
-  fits_copy_header(mod_in, fpointer, &status);
-  if(option==0){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
-  cufftComplex *host_IFITS;
-  host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
-
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-    for(int j=0; j < N; j++){
-      if(option == 0){
-        image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-      }else if (option == 2 || option == 3){
-        image2D[N*y+x] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
-        //image2D[N*x+y] = host_IFITS[N*i+j].y;
-      }else{
-        image2D[N*y+x] = host_IFITS[N*i+j].x;
-      }
-      x--;
-    }
-    x=M-1;
-    y--;
-  }
-
-
-	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
-	fits_close_file(fpointer, &status);
-	fits_report_error(stderr, status);
-
-  free(host_IFITS);
-	free(image2D);
-}
-
-
 __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option)
 {
 	fitsfile *fpointer;
@@ -688,6 +619,15 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       break;
     case 3:
       sprintf(name, "!%sMEM_VB_%d.fits", mempath, iteration);
+      break;
+    case 4:
+      sprintf(name, "!%satten_%d.fits", mempath, iteration);
+      break;
+    case 5:
+      sprintf(name, "!%stotal_atten_0.fits", mempath, iteration);
+      break;
+    case 6:
+      sprintf(name, "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -718,6 +658,8 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       }else if (option == 2 || option == 3){
         image2D[N*y+x] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
         //image2D[N*x+y] = host_IFITS[N*i+j].y;
+      }else if(option == 4 || option == 5 || option == 6){
+        image2D[N*i+j] = host_IFITS[N*i+j].x;
       }else{
         image2D[N*y+x] = host_IFITS[N*i+j].x;
       }
