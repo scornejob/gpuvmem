@@ -618,7 +618,7 @@ __host__ int main(int argc, char **argv) {
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
-	noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_noise_image, difmap_noise, N, data.total_frequencies);
+	noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_noise_image, difmap_noise, N);
 	gpuErrchk(cudaDeviceSynchronize());
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
