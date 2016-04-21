@@ -952,7 +952,7 @@ __global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N
   total_atten[N*i+j].y = 0;
 }
 
-__global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N, int nfreq)
+__global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -960,7 +960,6 @@ __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image
   float weight = 0.0;
   float noiseval = 0.0;
   float atten = total_atten[N*i+j].x;
-  atten = atten/nfreq;
   weight = (atten / difmap_noise) * (atten / difmap_noise);
   noiseval = sqrt(1.0/weight);
   noise_image[N*i+j].x = noiseval;
