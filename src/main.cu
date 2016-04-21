@@ -582,6 +582,33 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
+
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start, 0);
+		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
+		gpuErrchk(cudaDeviceSynchronize());
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&time, start, stop);
+		//printf("CUDA atten noise execution time = %f ms\n",time);
+		global_time = global_time + time;
+	}else{
+    cudaSetDevice(0);
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start, 0);
+		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
+		gpuErrchk(cudaDeviceSynchronize());
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&time, start, stop);
+		//printf("CUDA atten noise execution time = %f ms\n",time);
+		global_time = global_time + time;
+	}
+
   toFitsDouble(device_total_atten_image, 0, M, N, 3);
   if(num_gpus == 1){
     cudaSetDevice(selected);

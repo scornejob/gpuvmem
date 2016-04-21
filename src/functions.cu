@@ -917,9 +917,10 @@ __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float
 		int j = threadIdx.x + blockDim.x * blockIdx.x;
 		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-
-    float x = (j - (int)xobs) * DELTAX * RPDEG;
-    float y = (i - (int)yobs) * DELTAY * RPDEG;
+    int x0 = xobs;
+    int y0 = yobs;
+    float x = (j - x0) * DELTAX * RPDEG;
+    float y = (i - y0) * DELTAY * RPDEG;
 
     float arc = sqrt(x*x+y*y);
     float c = 4.0*log(2.0);
@@ -931,12 +932,23 @@ __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float
     attenMatrix[N*i+j].y = 0;
 }
 
+
+
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   total_atten[N*i+j].x += attenperFreq[N*i+j].x;
+  total_atten[N*i+j].y = 0;
+}
+
+__global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  total_atten[N*i+j].x /= channels;
   total_atten[N*i+j].y = 0;
 }
 
