@@ -116,7 +116,7 @@ __global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities);
 __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N);
 __global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N);
-__global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N, int nfreq);
+__global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N);
 __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
