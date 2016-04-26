@@ -412,6 +412,30 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   sqlite3_close(db);
 }
 
+
+__host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data){
+  printf("Saving residuals to host memory\n");
+  if(num_gpus == 1){
+    for(int i=0; i<data.total_frequencies; i++){
+      gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+    }
+  }else{
+    for(int i=0; i<data.total_frequencies; i++){
+      cudaSetDevice(i%num_gpus);
+      gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+    }
+  }
+
+  for(int i=0; i<data.total_frequencies; i++){
+    for(int j=0; j<data.numVisibilitiesPerFreq[i];j++){
+      if(visibilities[i].u[j]<0){
+        visibilities[i].Vr[j].y *= -1;
+      }
+    }
+  }
+
+}
+
 __host__ void writeMS(char *file, Vis *visibilities) {
   sqlite3 *db;
   sqlite3_stmt *stmt;
@@ -1166,8 +1190,10 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float x = (j - (int)xobs) * DELTAX * RPDEG;
-  float y = (i - (int)yobs) * DELTAY * RPDEG;
+  int x0 = xobs;
+  int y0 = yobs;
+  float x = (j - x0) * DELTAX * RPDEG;
+  float y = (i - y0) * DELTAY * RPDEG;
 
 	float Ukv;
 	float Vkv;
