@@ -1028,11 +1028,15 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
     j1 = v;
     j2 = (j1+1)%N;
     dv = v - j1;
+
     if (i1 < 0 || i1 > N || j1 < 0 || j2 > N) {
       printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
       asm("trap;");
     }
-    //printf("Positions (%ld,%ld); (%ld, %ld); (%ld, %ld); (%ld, %ld)\n", j1, i1, j2, i1, j1, i2, j2, i2);
+
+    /*if(i1 == 511 || i2 == 0){
+      printf("Positions (%ld,%ld); (%ld, %ld); (%ld, %ld); (%ld, %ld)\n", i1, j1, i1, j2, i2, j1, i2, j2);
+    }*/
     /* Bilinear interpolation: real part */
     v11 = V[N*j1 + i1].x; /* [i1, j1] */
     v12 = V[N*j2 + i1].x; /* [i1, j2] */
