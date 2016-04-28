@@ -90,6 +90,7 @@ __host__ void goToError();
 __host__ freqData getFreqs(char * file);
 __host__ long NearestPowerOf2(long N);
 __host__ void readInputDat(char *file);
+__host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data);
 __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities);
 __host__ void writeMS(char *file, Vis *visibilities);
 __host__ void print_help();

@@ -696,23 +696,10 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	printf("Saving residuals to host memory\n");
-	if(num_gpus == 1){
-		for(int i=0; i<data.total_frequencies; i++){
-      gpuErrchk(cudaMemcpy(visibilities[i].u, device_visibilities[i].u, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-			gpuErrchk(cudaMemcpy(visibilities[i].v, device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-			gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-		}
-	}else{
-		for(int i=0; i<data.total_frequencies; i++){
-			cudaSetDevice(i%num_gpus);
-      gpuErrchk(cudaMemcpy(visibilities[i].u, device_visibilities[i].u, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-			gpuErrchk(cudaMemcpy(visibilities[i].v, device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-			gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-		}
-	}
-	//Pass residuals to disk
-	printf("Saving residuals...\n");
+
+	//Saving residuals to disk
+  residualsToHost(device_visibilities, visibilities, data);
+  printf("Saving residuals to SQL...\n");
 	writeMS(msoutput, visibilities);
 	printf("Residuals saved.\n");
 
