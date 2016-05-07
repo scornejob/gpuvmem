@@ -163,8 +163,8 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
- printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
- printf("number of FINAL CUDA devices:\t%d\n", num_gpus);
+ //printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
+ printf("Number of CUDA devices and threads: \t%d\n", num_gpus);
 
  //Check peer access if there is more than 1 GPU
   if(num_gpus > 1){
@@ -257,9 +257,6 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	for(int i=0; i<data.total_frequencies; i++){
-		printf("NumVisibilities per frequency[%d] = %d ------> Frequency value: %lf\n", i, data.numVisibilitiesPerFreq[i], visibilities[i].freq);
-	}
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
