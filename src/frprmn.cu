@@ -171,6 +171,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   gpuErrchk(cudaMemset(device_dgg_vector, 0, sizeof(float)*M*N));
 
   fp = (*func)(p);
+  printf("Function value = %f\n", fp);
   (*dfunc)(p,xi);
   //g=-xi
   //xi=h=g
@@ -183,7 +184,6 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   for(int i=1; i <= ITERATIONS; i++){
     iter = i;
     printf("\n\n**********Iteration %d **********\n\n", i);
-    printf("\n\nLinmin Entrance\n\n");
     linmin(p, xi, fret, func);
 
     if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPS)) {
@@ -193,6 +193,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 		}
 
     fp=(*func)(p);
+    printf("Function value = %f\n", fp);
     (*dfunc)(p,xi);
     dgg = gg = 0.0;
     ////gg = g*g

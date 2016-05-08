@@ -1290,7 +1290,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   }else{
     cudaSetDevice(0);
   }
-  printf("**************Calculating phi - Iteration %d **************\n", iter);
+  //printf("**************Calculating phi - Iteration %d **************\n", iter);
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
   float resultH  = 0.0;
@@ -1511,11 +1511,11 @@ __host__ float chiCuadrado(cufftComplex *I)
     }
     resultH  = deviceReduce(device_H, M*N);
     resultPhi = (0.5 * resultchi2) + (lambda * resultH);
-    printf("chi2 value = %.5f\n", resultchi2);
+    /*printf("chi2 value = %.5f\n", resultchi2);
     printf("H value = %.5f\n", resultH);
     printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
     printf("lambda * H value = %.5f\n", lambda*resultH);
-    printf("Phi value = %.5f\n\n", resultPhi);
+    printf("Phi value = %.5f\n\n", resultPhi);*/
 
   	return resultPhi;
 }
@@ -1524,7 +1524,7 @@ __host__ float chiCuadrado(cufftComplex *I)
 
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 {
-	printf("**************Calculating dphi - Iteration %d *************\n", iter);
+	//printf("**************Calculating dphi - Iteration %d *************\n", iter);
 	cudaEvent_t start, stop;
   float time;
 
