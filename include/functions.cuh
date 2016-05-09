@@ -84,6 +84,9 @@ typedef struct variables {
   char *path;
   int multigpu;
   int select;
+  int blockSizeX;
+  int blockSizeY;
+  int blockSizeV;
 } Vars;
 
 __host__ void goToError();

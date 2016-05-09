@@ -26,6 +26,7 @@ extern float MINPIX;
 __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
 {
   int i = 0;
+  double start, end;
   int iarm;
   float normPGC, normPL, fc, ft, fgoal;
   float *device_normVector, *device_pgc, *device_x, *xi, *device_xt, *device_pl;
@@ -69,6 +70,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
   normPGC = deviceReduce(device_normVector, M*N);
   i=1;
   while(normPGC > ARMIJOTOLERANCE && i <= ITERATIONS){
+    start = omp_get_wtime();
     iter = i;
     float lambda2 = 1.0;
 
@@ -134,6 +136,9 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
 
     normPGC = deviceReduce(device_normVector, M*N);
     i++;
+    end = omp_get_wtime();
+    double wall_time = end-start;
+    printf("Time: %lf seconds\n", i, wall_time);
   }
 
   cudaFree(device_normVector);
@@ -150,6 +155,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 {
   float gg, dgg, gam, fp;
   float *device_g, *device_h, *xi;
+  double start, end;
 
 
   //////////////////////MEMORY GPU//////////////////////////
@@ -171,6 +177,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   gpuErrchk(cudaMemset(device_dgg_vector, 0, sizeof(float)*M*N));
 
   fp = (*func)(p);
+  printf("Starting function value = %f\n", fp);
   (*dfunc)(p,xi);
   //g=-xi
   //xi=h=g
@@ -181,9 +188,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 
   ////////////////////////////////////////////////////////////////
   for(int i=1; i <= ITERATIONS; i++){
+    start = omp_get_wtime();
     iter = i;
     printf("\n\n**********Iteration %d **********\n\n", i);
-    printf("\n\nLinmin Entrance\n\n");
     linmin(p, xi, fret, func);
 
     if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPS)) {
@@ -193,6 +200,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 		}
 
     fp=(*func)(p);
+    printf("Function value = %f\n", fp);
     (*dfunc)(p,xi);
     dgg = gg = 0.0;
     ////gg = g*g
@@ -213,7 +221,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
     //xi=h=g+gam*h;
     newXi<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, gam, N);
   	gpuErrchk(cudaDeviceSynchronize());
-
+    end = omp_get_wtime();
+    double wall_time = end-start;
+    printf("Time: %lf seconds\n", i, wall_time);
   }
   printf("Too many iterations in frprmn\n");
   FREEALL

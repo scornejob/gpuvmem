@@ -71,24 +71,24 @@ conf:
 
 co65:
 	@ clear
-	@ ./bin/mem -i ./tests/co65/co65.sqlite -o ./tests/co65/co65_out.sqlite -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -d ./tests/co65/input.dat -p ./tests/co65/mem/
+	@ ./bin/mem -i ./tests/co65/co65.sqlite -o ./tests/co65/co65_out.sqlite -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -d ./tests/co65/input.dat -p ./tests/co65/mem/ -X 32 -Y 32 -V 1024
 
 selfcalband9:
 	@ clear
-	@ ./bin/mem -i ./tests/selfcalband9/selfcalband9.sqlite -o ./tests/selfcalband9/selfcalband9_out.sqlite -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -d ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/
+	@ ./bin/mem -i ./tests/selfcalband9/selfcalband9.sqlite -o ./tests/selfcalband9/selfcalband9_out.sqlite -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -d ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 32 -Y 32 -V 1024
 
 hco20:
 	@ clear
-	@ ./bin/mem -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -d ./tests/HCO-chan20/input.dat -p ./tests/HCO-chan20/mem/
+	@ ./bin/mem -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -d ./tests/HCO-chan20/input.dat -p ./tests/HCO-chan20/mem/ -X 32 -Y 32 -V 1024
 
 hco23:
 	@ clear
-	@ ./bin/mem -i ./tests/HCO-chan23/HCO-23.sqlite -o ./tests/HCO-chan23/HCO-23_out.sqlite -m ./tests/HCO-chan23/mod_in_0.fits -b ./tests/HCO-chan23/beam_0.fits -d ./tests/HCO-chan23/input.dat -p ./tests/HCO-chan23/mem/
+	@ ./bin/mem -i ./tests/HCO-chan23/HCO-23.sqlite -o ./tests/HCO-chan23/HCO-23_out.sqlite -m ./tests/HCO-chan23/mod_in_0.fits -b ./tests/HCO-chan23/beam_0.fits -d ./tests/HCO-chan23/input.dat -p ./tests/HCO-chan23/mem/ -X 32 -Y 32 -V 1024
 
 freq78:
 	@ clear
-	@ ./bin/mem -i ./tests/FREQ78/FREQ78.sqlite -o ./tests/FREQ78/FREQ78_out.sqlite -m ./tests/FREQ78/mod_in_0.fits -b ./tests/FREQ78/beam_0.fits -d ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/
+	@ ./bin/mem -i ./tests/FREQ78/FREQ78.sqlite -o ./tests/FREQ78/FREQ78_out.sqlite -m ./tests/FREQ78/mod_in_0.fits -b ./tests/FREQ78/beam_0.fits -d ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 32 -Y 32 -V 1024
 
 phantom:
 	@ clear
-	@ ./bin/mem -i ./tests/phantom/phantom.sql -o ./tests/phantom/phantom_out.sql -m ./tests/phantom/mod_in_0.fits -b ./tests/phantom/beam_0.fits -d ./tests/phantom/input.dat -p ./tests/phantom/mem/
+	@ ./bin/mem -i ./tests/phantom/phantom.sql -o ./tests/phantom/phantom_out.sql -m ./tests/phantom/mod_in_0.fits -b ./tests/phantom/beam_0.fits -d ./tests/phantom/input.dat -p ./tests/phantom/mem/ -X 32 -Y 32 -V 1024

@@ -15,10 +15,10 @@ __host__ float f1dim(float x)
     gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(cufftComplex)*M*N));
     gpuErrchk(cudaMemset(device_xt, 0, sizeof(cufftComplex)*M*N));
 
-    printf("Se evalua en f1dim %f\n", x);
+    //printf("Se evalua en f1dim %f\n", x);
     //xt = pcom+x*xicom;
     evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
-  	gpuErrchk(cudaDeviceSynchronize());
+    gpuErrchk(cudaDeviceSynchronize());
 
     f = (*nrfunc)(device_xt);
     cudaFree(device_xt);

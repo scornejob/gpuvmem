@@ -27,13 +27,13 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
 
   ax = 0.0;
 	xx = 1.0;
-  printf("\n\nmnbrak Entrance\n\n");
+
   mnbrak(&ax, &xx, &bx, &fa, &fx, &fb, f1dim);
 
-  printf("\n\nbrent Entrance\n\n");
+
   *fret = brent(ax, xx, bx, TOL, &xmin, f1dim);
 
-  printf("\n\nBrent xmin = %f\n\n", xmin);
+  printf("alpha = %f\n\n", xmin);
 
   //GPU MUL AND ADD
   //xi     = xi*xmin;

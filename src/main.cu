@@ -15,7 +15,6 @@ cufftComplex *device_noise_image;
 cufftComplex *device_fg_image;
 cufftComplex *device_image;
 
-float global_time = 0;
 
 float *device_dphi;
 
@@ -95,6 +94,8 @@ inline bool IsAppBuiltAs64()
 }
 
 __host__ int main(int argc, char **argv) {
+  clock_t t;
+  double start, end;
 	////CHECK FOR AVAILABLE GPUs
 	cudaGetDeviceCount(&num_gpus);
 
@@ -125,8 +126,7 @@ __host__ int main(int argc, char **argv) {
   printf("---------------------------\n");
 
 	float noise_min = 1E32;
-	clock_t t;
-  t = clock();
+
 	Vars variables = getOptions(argc, argv);
 	char *msinput = variables.input;
 	char *msoutput = variables.output;
@@ -136,6 +136,7 @@ __host__ int main(int argc, char **argv) {
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
+
 
   if(selected > num_gpus || selected < 0){
     printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
@@ -163,8 +164,8 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
- printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
- printf("number of FINAL CUDA devices:\t%d\n", num_gpus);
+ //printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
+ printf("Number of CUDA devices and threads: \t%d\n", num_gpus);
 
  //Check peer access if there is more than 1 GPU
   if(num_gpus > 1){
@@ -229,10 +230,11 @@ __host__ int main(int argc, char **argv) {
 	readMS(msinput, modinput, beaminput, visibilities);
   printf("MS File Successfully Read\n");
 
+  //Declaring block size and number of blocks for visibilities
 	for(int i=0; i<data.total_frequencies; i++){
 		visibilities[i].numVisibilities = data.numVisibilitiesPerFreq[i];
 		long UVpow2 = NearestPowerOf2(visibilities[i].numVisibilities);
-    visibilities[i].threadsPerBlockUV = 1024;
+    visibilities[i].threadsPerBlockUV = variables.blockSizeV;
 		visibilities[i].numBlocksUV = UVpow2/visibilities[i].threadsPerBlockUV;
   }
 
@@ -257,9 +259,6 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	for(int i=0; i<data.total_frequencies; i++){
-		printf("NumVisibilities per frequency[%d] = %d ------> Frequency value: %lf\n", i, data.numVisibilitiesPerFreq[i], visibilities[i].freq);
-	}
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -304,37 +303,11 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	if(N==128){
-		dim3 threads(8,8);
-		dim3 blocks(M/threads.x, N/threads.y);
-		threadsPerBlockNN = threads;
-		numBlocksNN = blocks;
-	}else if(N==256){
-			dim3 threads(8,8);
-			dim3 blocks(M/threads.x, N/threads.y);
-			threadsPerBlockNN = threads;
-			numBlocksNN = blocks;
-	}else if(N==512){
-			dim3 threads(32,32);
-			dim3 blocks(M/threads.x, N/threads.y);
-			threadsPerBlockNN = threads;
-			numBlocksNN = blocks;
-		} else if(N==1024){
-				dim3 threads(32,32);
-				dim3 blocks(M/threads.x, N/threads.y);
-				threadsPerBlockNN = threads;
-				numBlocksNN = blocks;
-		}else if(N==2048){
-				dim3 threads(32,32);
-				dim3 blocks(M/threads.x, N/threads.y);
-				threadsPerBlockNN = threads;
-				numBlocksNN = blocks;
-	  }else{
-        dim3 threads(32,32);
-        dim3 blocks(M/threads.x, N/threads.y);
-        threadsPerBlockNN = threads;
-        numBlocksNN = blocks;
-    }
+  //Declaring block size and number of blocks for Image
+  dim3 threads(variables.blockSizeX, variables.blockSizeY);
+	dim3 blocks(M/threads.x, N/threads.y);
+	threadsPerBlockNN = threads;
+	numBlocksNN = blocks;
 
 	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){
@@ -461,20 +434,14 @@ __host__ int main(int argc, char **argv) {
 
 	}
 
-	cudaEvent_t start, stop;
-	float time;
+  //Time is taken from first kernel
+  t = clock();
+  start = omp_get_wtime();
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			hermitianSymmetry<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].Vo, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			global_time = global_time + time;
 		}
 	}else{
 		#pragma omp parallel for schedule(static,1)
@@ -486,16 +453,8 @@ __host__ int main(int argc, char **argv) {
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			hermitianSymmetry<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].Vo, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			global_time = global_time + time;
 		}
 
 	}
@@ -503,16 +462,8 @@ __host__ int main(int argc, char **argv) {
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			//printf("CUDA atten noise execution time = %f ms\n",time);
-			global_time = global_time + time;
       toFitsFloat(device_vars[i].atten, i, M, N, 4);
 		}
 	}else{
@@ -525,17 +476,8 @@ __host__ int main(int argc, char **argv) {
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			//printf("CUDA atten noise execution time = %f ms\n",time);
-			global_time = global_time + time;
       toFitsFloat(device_vars[i].atten, i, M, N, 4);
 		}
 	}
@@ -544,16 +486,9 @@ __host__ int main(int argc, char **argv) {
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			//printf("CUDA atten noise execution time = %f ms\n",time);
-			global_time = global_time + time;
+
 		}
 	}else{
     #pragma omp parallel for schedule(static,1)
@@ -565,19 +500,10 @@ __host__ int main(int argc, char **argv) {
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
 			#pragma omp critical
 			{
-				cudaEventCreate(&start);
-				cudaEventCreate(&stop);
-				cudaEventRecord(start, 0);
 				total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
 				gpuErrchk(cudaDeviceSynchronize());
-				cudaEventRecord(stop, 0);
-				cudaEventSynchronize(stop);
-				cudaEventElapsedTime(&time, start, stop);
-				//printf("CUDA atten noise execution time = %f ms\n",time);
-				global_time = global_time + time;
 			}
 		}
 	}
@@ -585,28 +511,13 @@ __host__ int main(int argc, char **argv) {
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-		cudaEventRecord(start, 0);
 		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
 		gpuErrchk(cudaDeviceSynchronize());
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		cudaEventElapsedTime(&time, start, stop);
-		//printf("CUDA atten noise execution time = %f ms\n",time);
-		global_time = global_time + time;
 	}else{
     cudaSetDevice(0);
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-		cudaEventRecord(start, 0);
 		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
 		gpuErrchk(cudaDeviceSynchronize());
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		cudaEventElapsedTime(&time, start, stop);
-		//printf("CUDA atten noise execution time = %f ms\n",time);
-		global_time = global_time + time;
+
 	}
 
   toFitsFloat(device_total_atten_image, 0, M, N, 5);
@@ -615,16 +526,9 @@ __host__ int main(int argc, char **argv) {
   }else{
 	   cudaSetDevice(0);
    }
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
-	cudaEventRecord(start, 0);
+
 	noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_noise_image, difmap_noise, N);
 	gpuErrchk(cudaDeviceSynchronize());
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&time, start, stop);
-	//printf("CUDA atten noise execution time = %f ms\n",time);
-	global_time = global_time + time;
 	toFitsFloat(device_noise_image, 0, M, N, 6);
 	//exit(0);
 	cufftComplex *host_noise_image = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
@@ -649,13 +553,14 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
 	frprmn(device_I	, ftol, &fret, chiCuadrado, dchiCuadrado);
-  //armijoTest(device_I	, chiCuadrado, dchiCuadrado);
-	t = clock() - t;
-	float time_taken = ((float)t)/CLOCKS_PER_SEC;
-	printf("Minimization ended successfully in %lf seconds at iteration %d\n", time_taken, iter);
-	/////////////////////////////////////////////////////////////////Simple Clipping//////////////////////////////////////////////////////////////////////
-	//clipping(device_I, iterations);
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  t = clock() - t;
+  end = omp_get_wtime();
+  printf("Minimization ended successfully\n");
+	double time_taken = ((double)t)/CLOCKS_PER_SEC;
+  double wall_time = end-start;
+  printf("Total CPU time: %lf\n", time_taken);
+  printf("Wall time: %lf\n\n\n", wall_time);
+
 	//Pass residuals to host
 	printf("Passing final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);
@@ -663,15 +568,8 @@ __host__ int main(int argc, char **argv) {
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			global_time = global_time + time;
 		}
 	}else{
 		#pragma omp parallel for schedule(static,1)
@@ -684,15 +582,8 @@ __host__ int main(int argc, char **argv) {
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
 			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start, 0);
 			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
 			gpuErrchk(cudaDeviceSynchronize());
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaEventElapsedTime(&time, start, stop);
-			global_time = global_time + time;
 		}
 	}
 
