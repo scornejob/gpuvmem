@@ -32,8 +32,6 @@ extern int blocksVectorNN;
 extern float difmap_noise;
 extern float fg_scale;
 
-extern float global_time;
-
 extern float global_xobs;
 extern float global_yobs;
 
@@ -1294,117 +1292,47 @@ __host__ float chiCuadrado(cufftComplex *I)
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
   float resultH  = 0.0;
-  cudaEvent_t start, stop;
-	float time;
 
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, 0);
+
   clip<<<numBlocksNN, threadsPerBlockNN>>>(I, MINPIX, N);
   gpuErrchk(cudaDeviceSynchronize());
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  //printf("CUDA clipping time = %f ms\n",time);
-  global_time = global_time + time;
 
-  //ACA SE HACE UNA ASIGNACION DE FG_IMAGE = P
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, 0);
+
   clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_fg_image, device_noise_image, I, N, noise_cut, MINPIX);
   gpuErrchk(cudaDeviceSynchronize());
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  //printf("CUDA clipping noise time = %f ms\n",time);
-  global_time = global_time + time;
+
 
   if(iter>=1 && MINPIX!=0.0){
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start, 0);
     HVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
     gpuErrchk(cudaDeviceSynchronize());
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&time, start, stop);
-    //printf("CUDA HVector time = %f ms\n",time);
-    global_time = global_time + time;
   }
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
 
-      cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
     	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(device_image, device_fg_image, N, global_xobs, global_yobs, fg_scale, visibilities[i].freq, DELTAX, DELTAY);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA applybeam execution time = %f ms\n",time);
-      global_time = global_time + time;
 
-
-    	//FFT
-
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
+    	//FFT 2D
     	if ((cufftExecC2C(plan1GPU, (cufftComplex*)device_image, (cufftComplex*)device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
     		printf("CUFFT exec error\n");
     		goToError();
     	}
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA FFT execution time = %f ms\n",time);
-      global_time = global_time + time;
-
-
 
       //PHASE_ROTATE VISIBILITIES
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
       phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, global_xobs, global_yobs);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA phase_rotate time = %f ms\n",time);
-      global_time = global_time + time;
 
       //RESIDUAL CALCULATION
-
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
       residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA residual time = %f ms\n",time);
-      global_time = global_time + time;
 
-    	//CALCULATING chi2 VECTOR AND H VECTOR
 
     	////chi 2 VECTOR
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
     	chi2Vector<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].chi2, device_visibilities[i].Vr, device_visibilities[i].weight, data.numVisibilitiesPerFreq[i]);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA chi2Vector time = %f ms\n",time);
-      global_time = global_time + time;
 
     	//REDUCTIONS
     	//chi2
@@ -1422,77 +1350,31 @@ __host__ float chiCuadrado(cufftComplex *I)
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
 
-      cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
     	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].device_image, device_fg_image, N, global_xobs, global_yobs, fg_scale, visibilities[i].freq, DELTAX, DELTAY);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA applybeam execution time = %f ms\n",time);
-      global_time = global_time + time;
 
-
-    	//FFT
-
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
+    	//FFT 2D
     	if ((cufftExecC2C(device_vars[i].plan, (cufftComplex*)device_vars[i].device_image, (cufftComplex*)device_vars[i].device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
     		printf("CUFFT exec error\n");
     		//return -1 ;
     		goToError();
     	}
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA FFT execution time = %f ms\n",time);
-      global_time = global_time + time;
-
-
 
       //PHASE_ROTATE VISIBILITIES
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
       phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].device_V, M, N, global_xobs, global_yobs);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA phase_rotate time = %f ms\n",time);
-      global_time = global_time + time;
 
       //RESIDUAL CALCULATION
-
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
       residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA residual time = %f ms\n",time);
-      global_time = global_time + time;
 
-    	//CALCULATING chi2 VECTOR AND H VECTOR
 
-    	////chi 2 VECTOR
-    	cudaEventCreate(&start);
-    	cudaEventCreate(&stop);
-    	cudaEventRecord(start, 0);
+    	////chi2 VECTOR
     	chi2Vector<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].chi2, device_visibilities[i].Vr, device_visibilities[i].weight, data.numVisibilitiesPerFreq[i]);
     	gpuErrchk(cudaDeviceSynchronize());
-    	cudaEventRecord(stop, 0);
-    	cudaEventSynchronize(stop);
-    	cudaEventElapsedTime(&time, start, stop);
-    	//printf("CUDA chi2Vector time = %f ms\n",time);
-      global_time = global_time + time;
+
 
       result = deviceReduce(device_vars[i].chi2, data.numVisibilitiesPerFreq[i]);
     	//REDUCTIONS
@@ -1525,68 +1407,41 @@ __host__ float chiCuadrado(cufftComplex *I)
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 {
 	//printf("**************Calculating dphi - Iteration %d *************\n", iter);
-	cudaEvent_t start, stop;
-  float time;
+
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
     cudaSetDevice(0);
   }
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, 0);
+
   clip<<<numBlocksNN, threadsPerBlockNN>>>(I, MINPIX, N);
   gpuErrchk(cudaDeviceSynchronize());
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  //printf("CUDA clipping time = %f ms\n",time);
 
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, 0);
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_H, N);
   gpuErrchk(cudaDeviceSynchronize());
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
+
 
   toFitsFloat(I, iter, M, N, 1);
   //toFitsFloat(device_V, iter, M, N, 2);
 
   if(iter >= 1 && MINPIX!=0.0){
 
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start, 0);
     DH<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
     gpuErrchk(cudaDeviceSynchronize());
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&time, start, stop);
+
   }
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
-        cudaEventCreate(&start);
-      	cudaEventCreate(&stop);
-      	cudaEventRecord(start, 0);
+
         DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
       	gpuErrchk(cudaDeviceSynchronize());
-      	cudaEventRecord(stop, 0);
-      	cudaEventSynchronize(stop);
-      	cudaEventElapsedTime(&time, start, stop);
 
-        cudaEventCreate(&start);
-      	cudaEventCreate(&stop);
-      	cudaEventRecord(start, 0);
         DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
       	gpuErrchk(cudaDeviceSynchronize());
-      	cudaEventRecord(stop, 0);
-      	cudaEventSynchronize(stop);
-      	cudaEventElapsedTime(&time, start, stop);
+
     }
   }else{
     #pragma omp parallel for schedule(static,1)
@@ -1598,26 +1453,13 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
       int gpu_id = -1;
       cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
       cudaGetDevice(&gpu_id);
-      //printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
-      cudaEventCreate(&start);
-      cudaEventCreate(&stop);
-      cudaEventRecord(start, 0);
       DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
       gpuErrchk(cudaDeviceSynchronize());
-      cudaEventRecord(stop, 0);
-      cudaEventSynchronize(stop);
-      cudaEventElapsedTime(&time, start, stop);
 
       #pragma omp critical
       {
-        cudaEventCreate(&stop);
-        cudaEventCreate(&start);
-        cudaEventRecord(start, 0);
         DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
         gpuErrchk(cudaDeviceSynchronize());
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&time, start, stop);
       }
 
     }
@@ -1628,14 +1470,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   }else{
     cudaSetDevice(0);
   }
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, 0);
+
   DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
   gpuErrchk(cudaDeviceSynchronize());
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
+
 
 
   //dxi2 = device_dphi;

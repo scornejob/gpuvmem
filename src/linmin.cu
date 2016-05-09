@@ -33,7 +33,7 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
 
   *fret = brent(ax, xx, bx, TOL, &xmin, f1dim);
 
-  printf("\n\nBrent xmin = %f\n\n", xmin);
+  printf("alpha = %f\n\n", xmin);
 
   //GPU MUL AND ADD
   //xi     = xi*xmin;
