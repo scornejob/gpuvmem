@@ -1,4 +1,4 @@
-lambda_entropy  0.01
+lambda_entropy  0.1
 noise_cut	100.5         
 minpix_factor   1000.0
 ftol		1.0e-12

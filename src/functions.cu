@@ -1149,6 +1149,26 @@ __global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
 
   H[N*i+j] = entropy;
 }
+
+
+__global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float tv = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+    if(i!= N-1 || j!=N-1){
+      float dx = I[N*i+(j+1)].x - I[N*i+j].x;
+      float dy = I[N*(i+1)+j].x - I[N*i+j].x;
+      tv = sqrtf((dx * dx) + (dy * dy));
+    }else{
+      tv = 0;
+    }
+  }
+
+  TV[N*i+j] = tv;
+}
 __global__ void searchDirection(float *g, float *xi, float *h, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1185,6 +1205,34 @@ __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_
 
   if(noise[N*i+j].x <= noise_cut){
     dH[N*i+j] = lambda * (log(I[N*i+j].x / MINPIX) + 1.0);
+  }
+}
+
+
+__global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float dtv = 0.0;
+  float num = 0.0;
+  float den = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+    if(i!= N-1 || j!=N-1){
+      float a = I[N*i+(j+1)].x;
+      float b = I[N*(i+1)+j].x;
+      float y = I[N*i+j].x;
+      float num = -a-b+(2*y);
+      float den = (a*a) - 2*y*(a+b) + (b*b) + 2*(y*y);
+      if(den <= 0){
+        dtv = MINPIX;
+      }else{
+        dtv = num/sqrtf(den);
+      }
+    }else{
+      dtv = MINPIX;
+    }
+    dTV[N*i+j] = lambda * dtv;
   }
 }
 
@@ -1282,6 +1330,7 @@ __global__ void copyImage(cufftComplex *p, float *device_xt, long N)
 
   p[N*i+j].x = device_xt[N*i+j];
 }
+
 
 __host__ float chiCuadrado(cufftComplex *I)
 {
