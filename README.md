@@ -44,16 +44,20 @@ random_probability 0.0
 Use GPUVMEM:
 
 Example: `./bin/gpuvmem options [ arguments ...]`
-- -h  --help       Shows this
-- -i  --input      The name of the input file of visibilities(SQLite)
-- -o  --output     The name of the output file of residual visibilities(SQLite)
-- -d  --inputdat   The name of the input file of parameters
-- -m  --modin      mod_in_0 FITS file
-- -b  --beam       beam_0 FITS file
-- -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)
-- -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
-- -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
-
+```
+-h  --help       Shows this
+-X --blockSizeX  Block X Size for Image (Needs to be pow of 2)
+-Y --blockSizeY  Block Y Size for Image (Needs to be pow of 2)
+-V --blockSizeV  Block Size for Visibilities (Needs to be pow of 2) 
+-i  --input      The name of the input file of visibilities(SQLite)
+-o  --output     The name of the output file of residual visibilities(SQLite)
+-d  --inputdat   The name of the input file of parameters
+-m  --modin      mod_in_0 FITS file
+-b  --beam       beam_0 FITS file
+-p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)
+-g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
+-s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
+```
 #IMPORTANT
 
 Remember to create the mem folder to save the FITS images
