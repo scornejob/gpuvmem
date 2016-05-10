@@ -7832,6 +7832,18 @@ normVectorCalculation	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global
 copyImage	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void copyImage(cufftComplex *p, float *device_xt, long N)$/;"	function	line:1276	signature:(cufftComplex *p, float *device_xt, long N)
 chiCuadrado	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ float chiCuadrado(cufftComplex *I)$/;"	function	line:1284	signature:(cufftComplex *I)
 dchiCuadrado	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void dchiCuadrado(cufftComplex *I, float *dxi2)$/;"	function	line:1407	signature:(cufftComplex *I, float *dxi2)
+TOL	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^#define TOL /;"	macro	line:2	file:
+device_pcom	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^cufftComplex *device_pcom;$/;"	variable	line:4
+device_xicom	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^float *device_xicom, (*nrfunc)(cufftComplex*);$/;"	variable	line:5
+linmin	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^__host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))\/\/p and xi are in GPU$/;"	function	line:13	signature:(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))
+TOL	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^#undef TOL$/;"	macro	line:47	file:
+EPS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define EPS /;"	macro	line:15	file:
+ITERATIONS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ITERATIONS /;"	macro	line:16	file:
+ARMIJOTOLERANCE	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ARMIJOTOLERANCE /;"	macro	line:18	file:
+ALPHA	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ALPHA /;"	macro	line:19	file:
+FREEALL	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define FREEALL /;"	macro	line:22	file:
+armijoTest	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:26	signature:(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
+frprmn	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:154	signature:(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
 M	/home/miguel/Documents/gpuvmem/src/main.cu	/^long M;$/;"	variable	line:5
 N	/home/miguel/Documents/gpuvmem/src/main.cu	/^long N;$/;"	variable	line:6
 numVisibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^long numVisibilities;$/;"	variable	line:7
@@ -7869,10 +7881,10 @@ deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	l
 beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:55
 beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:56
 beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:57
-ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^float ra;$/;"	variable	line:58
-dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^float dec;$/;"	variable	line:59
-obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^float obsra;$/;"	variable	line:60
-obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^float obsdec;$/;"	variable	line:61
+ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:58
+dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:59
+obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:60
+obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:61
 crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix1;$/;"	variable	line:62
 crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix2;$/;"	variable	line:63
 data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:64
@@ -7888,15 +7900,3 @@ mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable
 IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:78	signature:(cudaDeviceProp *pProp)
 IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:87	signature:()
 main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:96	signature:(int argc, char **argv)
-TOL	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^#define TOL /;"	macro	line:2	file:
-device_pcom	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^cufftComplex *device_pcom;$/;"	variable	line:4
-device_xicom	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^float *device_xicom, (*nrfunc)(cufftComplex*);$/;"	variable	line:5
-linmin	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^__host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))\/\/p and xi are in GPU$/;"	function	line:13	signature:(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))
-TOL	/home/miguel/Documents/gpuvmem/src/linmin.cu	/^#undef TOL$/;"	macro	line:47	file:
-EPS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define EPS /;"	macro	line:15	file:
-ITERATIONS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ITERATIONS /;"	macro	line:16	file:
-ARMIJOTOLERANCE	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ARMIJOTOLERANCE /;"	macro	line:18	file:
-ALPHA	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ALPHA /;"	macro	line:19	file:
-FREEALL	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define FREEALL /;"	macro	line:22	file:
-armijoTest	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:26	signature:(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
-frprmn	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:154	signature:(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))

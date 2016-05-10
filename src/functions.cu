@@ -51,10 +51,10 @@ extern float random_probability;
 extern float beam_noise;
 extern float beam_bmaj;
 extern float beam_bmin;
-extern float ra;
-extern float dec;
-extern float obsra;
-extern float obsdec;
+extern double ra;
+extern double dec;
+extern double obsra;
+extern double obsdec;
 extern float crpix1;
 extern float crpix2;
 extern freqData data;
@@ -227,8 +227,8 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
 
   fits_read_key(mod_in, TFLOAT, "CDELT1", &DELTAX, NULL, &status_mod_in);
   fits_read_key(mod_in, TFLOAT, "CDELT2", &DELTAY, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "CRVAL1", &ra, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "CRVAL2", &dec, NULL, &status_mod_in);
+  fits_read_key(mod_in, TDOUBLE, "CRVAL1", &ra, NULL, &status_mod_in);
+  fits_read_key(mod_in, TDOUBLE, "CRVAL2", &dec, NULL, &status_mod_in);
   fits_read_key(mod_in, TFLOAT, "CRPIX1", &crpix1, NULL, &status_mod_in);
   fits_read_key(mod_in, TFLOAT, "CRPIX2", &crpix2, NULL, &status_mod_in);
   fits_read_key(mod_in, TLONG, "NAXIS1", &M, NULL, &status_mod_in);

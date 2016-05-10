@@ -55,10 +55,10 @@ float deltav;
 float beam_noise;
 float beam_bmaj;
 float beam_bmin;
-float ra;
-float dec;
-float obsra;
-float obsdec;
+double ra;
+double dec;
+double obsra;
+double obsdec;
 float crpix1;
 float crpix2;
 freqData data;
@@ -325,18 +325,22 @@ __host__ int main(int argc, char **argv) {
 
 	cufftComplex *host_I = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 	cufftComplex *device_total_atten_image;
-	/////////////////////////////////////////MAKE UV GRID/////////////////////////////////////////////////////////////
-	float lobs, mobs;
-	float raimage = ra * RPDEG;
-	float decimage = dec * RPDEG;
+  /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
+	double lobs, mobs;
+	double raimage = ra * RPDEG_D;
+	double decimage = dec * RPDEG_D;
 
-	printf("MS: Ra: %f, dec: %f\n", obsra, obsdec);
-	printf("FITS: Ra: %f, dec: %f\n", raimage, decimage);
+	printf("MS: Ra: %.20lf, dec: %.20lf\n", obsra, obsdec);
+	printf("FITS: Ra: %.20lf, dec: %.20lf\n", raimage, decimage);
 
 	direccos(obsra, obsdec, raimage, decimage, &lobs,  &mobs);
 
-	global_xobs = (crpix1 - 1.0) + lobs/deltax;
-	global_yobs = (crpix2 - 1.0) + mobs/deltay;
+  float ld = lobs/deltax;
+  float md = mobs/deltay;
+
+
+	global_xobs = (crpix1 - 1.0) + ld;
+	global_yobs = (crpix2 - 1.0) + md;
 	printf("Image Center: %f, %f\n", global_xobs, global_yobs);
 
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////

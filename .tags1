@@ -4,10 +4,59 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-EPS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define EPS /;"	macro	line:15	file:
-ITERATIONS	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ITERATIONS /;"	macro	line:16	file:
-ARMIJOTOLERANCE	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ARMIJOTOLERANCE /;"	macro	line:18	file:
-ALPHA	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define ALPHA /;"	macro	line:19	file:
-FREEALL	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^#define FREEALL /;"	macro	line:22	file:
-armijoTest	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:26	signature:(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
-frprmn	/home/miguel/Documents/gpuvmem/src/frprmn.cu	/^__host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))$/;"	function	line:154	signature:(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
+M	/home/miguel/Documents/gpuvmem/src/main.cu	/^long M;$/;"	variable	line:5
+N	/home/miguel/Documents/gpuvmem/src/main.cu	/^long N;$/;"	variable	line:6
+numVisibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^long numVisibilities;$/;"	variable	line:7
+iter	/home/miguel/Documents/gpuvmem/src/main.cu	/^int iter=0;$/;"	variable	line:8
+plan1GPU	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftHandle plan1GPU;$/;"	variable	line:10
+device_I	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_I;$/;"	variable	line:12
+device_V	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_V;$/;"	variable	line:13
+device_noise_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_noise_image;$/;"	variable	line:14
+device_fg_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_fg_image;$/;"	variable	line:15
+device_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_image;$/;"	variable	line:16
+device_dphi	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dphi;$/;"	variable	line:19
+device_dchi2_total	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dchi2_total;$/;"	variable	line:21
+device_dH	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dH;$/;"	variable	line:22
+device_chi2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_chi2;$/;"	variable	line:24
+device_H	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_H;$/;"	variable	line:25
+threadsPerBlockNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 threadsPerBlockNN;$/;"	variable	line:27
+numBlocksNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 numBlocksNN;$/;"	variable	line:28
+threadsVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int threadsVectorReduceNN;$/;"	variable	line:30
+blocksVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int blocksVectorReduceNN;$/;"	variable	line:31
+difmap_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float difmap_noise;$/;"	variable	line:33
+fg_scale	/home/miguel/Documents/gpuvmem/src/main.cu	/^float fg_scale;$/;"	variable	line:35
+output	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *output;$/;"	variable	line:36
+global_xobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_xobs;$/;"	variable	line:37
+global_yobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_yobs;$/;"	variable	line:38
+noise_cut	/home/miguel/Documents/gpuvmem/src/main.cu	/^float noise_cut;$/;"	variable	line:40
+MINPIX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float MINPIX;$/;"	variable	line:41
+minpix_factor	/home/miguel/Documents/gpuvmem/src/main.cu	/^float minpix_factor;$/;"	variable	line:42
+lambda	/home/miguel/Documents/gpuvmem/src/main.cu	/^float lambda;$/;"	variable	line:43
+ftol	/home/miguel/Documents/gpuvmem/src/main.cu	/^float ftol;$/;"	variable	line:44
+random_probability	/home/miguel/Documents/gpuvmem/src/main.cu	/^float random_probability;$/;"	variable	line:45
+DELTAX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAX;$/;"	variable	line:49
+DELTAY	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAY;$/;"	variable	line:50
+deltau	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltau;$/;"	variable	line:51
+deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	line:52
+beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:55
+beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:56
+beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:57
+ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:58
+dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:59
+obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:60
+obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:61
+crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix1;$/;"	variable	line:62
+crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix2;$/;"	variable	line:63
+data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:64
+device_vars	/home/miguel/Documents/gpuvmem/src/main.cu	/^VPF *device_vars;$/;"	variable	line:65
+visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *visibilities;$/;"	variable	line:66
+device_visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *device_visibilities;$/;"	variable	line:67
+num_gpus	/home/miguel/Documents/gpuvmem/src/main.cu	/^int num_gpus;$/;"	variable	line:69
+multigpu	/home/miguel/Documents/gpuvmem/src/main.cu	/^int multigpu;$/;"	variable	line:70
+selected	/home/miguel/Documents/gpuvmem/src/main.cu	/^int selected;$/;"	variable	line:71
+mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^fitsfile *mod_in;$/;"	variable	line:73
+status_mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^int status_mod_in;$/;"	variable	line:74
+mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable	line:76
+IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:78	signature:(cudaDeviceProp *pProp)
+IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:87	signature:()
+main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:96	signature:(int argc, char **argv)

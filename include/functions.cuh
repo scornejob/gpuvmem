@@ -36,7 +36,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 const float PI = CUDART_PI_F;
+const double PI_D = CUDART_PI;
 const float RPDEG = (PI/180.0);
+const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
 const float FWHM = (8.4220/60.0)*RPARCM;
 const float BEAM_FREQ = 691.4;

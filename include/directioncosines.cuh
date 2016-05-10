@@ -2,5 +2,5 @@
   #define DIRECTIONCOSINES_CUH
   #include <math.h>
 
-  __host__ void direccos(float ra, float dec, float ra0, float dec0, float* l, float* m);
+__host__ void direccos(double ra, double dec, double ra0, double dec0, double* l, double* m);
   #endif
