@@ -137,6 +137,7 @@ __host__ int main(int argc, char **argv) {
   selected = variables.select;
   mempath = variables.path;
 
+
   if(selected > num_gpus || selected < 0){
     printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
     exit(-1);
@@ -229,10 +230,11 @@ __host__ int main(int argc, char **argv) {
 	readMS(msinput, modinput, beaminput, visibilities);
   printf("MS File Successfully Read\n");
 
+  //Declaring block size and number of blocks for visibilities
 	for(int i=0; i<data.total_frequencies; i++){
 		visibilities[i].numVisibilities = data.numVisibilitiesPerFreq[i];
 		long UVpow2 = NearestPowerOf2(visibilities[i].numVisibilities);
-    visibilities[i].threadsPerBlockUV = 1024;
+    visibilities[i].threadsPerBlockUV = variables.blockSizeV;
 		visibilities[i].numBlocksUV = UVpow2/visibilities[i].threadsPerBlockUV;
   }
 
@@ -301,37 +303,11 @@ __host__ int main(int argc, char **argv) {
 		}
 	}
 
-	if(N==128){
-		dim3 threads(8,8);
-		dim3 blocks(M/threads.x, N/threads.y);
-		threadsPerBlockNN = threads;
-		numBlocksNN = blocks;
-	}else if(N==256){
-			dim3 threads(8,8);
-			dim3 blocks(M/threads.x, N/threads.y);
-			threadsPerBlockNN = threads;
-			numBlocksNN = blocks;
-	}else if(N==512){
-			dim3 threads(32,32);
-			dim3 blocks(M/threads.x, N/threads.y);
-			threadsPerBlockNN = threads;
-			numBlocksNN = blocks;
-		} else if(N==1024){
-				dim3 threads(32,32);
-				dim3 blocks(M/threads.x, N/threads.y);
-				threadsPerBlockNN = threads;
-				numBlocksNN = blocks;
-		}else if(N==2048){
-				dim3 threads(32,32);
-				dim3 blocks(M/threads.x, N/threads.y);
-				threadsPerBlockNN = threads;
-				numBlocksNN = blocks;
-	  }else{
-        dim3 threads(32,32);
-        dim3 blocks(M/threads.x, N/threads.y);
-        threadsPerBlockNN = threads;
-        numBlocksNN = blocks;
-    }
+  //Declaring block size and number of blocks for Image
+  dim3 threads(variables.blockSizeX, variables.blockSizeY);
+	dim3 blocks(M/threads.x, N/threads.y);
+	threadsPerBlockNN = threads;
+	numBlocksNN = blocks;
 
 	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){

@@ -448,9 +448,7 @@ __host__ void writeMS(char *file, Vis *visibilities) {
    printf("Output Database connection okay!\n");
  }
 
- //char *sql = "UPDATE SET Re = ?, Im = ? WHERE u = ? AND v = ? AND Re = ? AND Im = ? AND We = ?";
 
- //char *sql = "UPDATE visibilities SET re = ?, im = ? WHERE flag=0 AND id_sample= ? AND stokes = ?";
  char *sql = "DELETE FROM visibilities WHERE flag = 0";
  //rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
  rc = sqlite3_exec(db, sql, NULL, NULL, 0);
@@ -538,7 +536,10 @@ __host__ void writeMS(char *file, Vis *visibilities) {
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
-	printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
+  printf(	"    -X  --blockSizeX      Block X Size for Image (Needs to be pow of 2)\n");
+  printf(	"    -Y  --blockSizeY      Block Y Size for Image (Needs to be pow of 2)\n");
+  printf(	"    -V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)\n");
+  printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
   printf("    -d  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
@@ -558,12 +559,18 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.path = (char*) malloc(2000*sizeof(char));
   variables.multigpu = 0;
   variables.select = 0;
+  variables.blockSizeX = -1;
+  variables.blockSizeY = -1;
+  variables.blockSizeV = -1;
 
 	long next_op;
-	const char* const short_op = "hi:o:d:m:b:g:s:p:";
+	const char* const short_op = "hi:o:d:m:b:g:s:p:X:Y:V:";
 
-	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
-                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, {"path", 1, NULL, 'p'}, { NULL, 0, NULL, 0 }};
+	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
+                                    {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
+                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, {"path", 1, NULL, 'p'},
+                                    {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -606,16 +613,42 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 's':
       variables.select = atoi(optarg);
       break;
+    case 'X':
+      variables.blockSizeX = atoi(optarg);
+      break;
+    case 'Y':
+      variables.blockSizeY = atoi(optarg);
+      break;
+    case 'V':
+      variables.blockSizeV = atoi(optarg);
+      break;
 		case '?':
 			print_help();
-			exit(1);
+			exit(EXIT_FAILURE);
 		case -1:
 			break;
 		default:
-			abort();
+      print_help();
+			exit(EXIT_FAILURE);
 		}
 	}
 
+  if(variables.blockSizeX == -1 || variables.blockSizeY == -1 || variables.blockSizeV == -1 ||
+     variables.input == "" || variables.output == "" || variables.inputdat == "" ||
+     variables.beam == "" || variables.modin == "" || variables.path == "") {
+        print_help();
+        exit(EXIT_FAILURE);
+  }
+
+  if(!isPow2(variables.blockSizeX) || !isPow2(variables.blockSizeY) || !isPow2(variables.blockSizeV)){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
+  if(variables.multigpu != 0 && variables.select != 0){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
 	return variables;
 }
 
@@ -1147,6 +1180,26 @@ __global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
 
   H[N*i+j] = entropy;
 }
+
+
+__global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float tv = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+    if(i!= N-1 || j!=N-1){
+      float dx = I[N*i+(j+1)].x - I[N*i+j].x;
+      float dy = I[N*(i+1)+j].x - I[N*i+j].x;
+      tv = sqrtf((dx * dx) + (dy * dy));
+    }else{
+      tv = 0;
+    }
+  }
+
+  TV[N*i+j] = tv;
+}
 __global__ void searchDirection(float *g, float *xi, float *h, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1183,6 +1236,34 @@ __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_
 
   if(noise[N*i+j].x <= noise_cut){
     dH[N*i+j] = lambda * (log(I[N*i+j].x / MINPIX) + 1.0);
+  }
+}
+
+
+__global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float dtv = 0.0;
+  float num = 0.0;
+  float den = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+    if(i!= N-1 || j!=N-1){
+      float a = I[N*i+(j+1)].x;
+      float b = I[N*(i+1)+j].x;
+      float y = I[N*i+j].x;
+      float num = -a-b+(2*y);
+      float den = (a*a) - 2*y*(a+b) + (b*b) + 2*(y*y);
+      if(den <= 0){
+        dtv = MINPIX;
+      }else{
+        dtv = num/sqrtf(den);
+      }
+    }else{
+      dtv = MINPIX;
+    }
+    dTV[N*i+j] = lambda * dtv;
   }
 }
 
@@ -1280,6 +1361,7 @@ __global__ void copyImage(cufftComplex *p, float *device_xt, long N)
 
   p[N*i+j].x = device_xt[N*i+j];
 }
+
 
 __host__ float chiCuadrado(cufftComplex *I)
 {
