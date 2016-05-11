@@ -55,8 +55,8 @@ extern double ra;
 extern double dec;
 extern double obsra;
 extern double obsdec;
-extern float crpix1;
-extern float crpix2;
+extern int crpix1;
+extern int crpix2;
 extern freqData data;
 extern VPF *device_vars;
 extern Vis *visibilities;
@@ -229,8 +229,8 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   fits_read_key(mod_in, TFLOAT, "CDELT2", &DELTAY, NULL, &status_mod_in);
   fits_read_key(mod_in, TDOUBLE, "CRVAL1", &ra, NULL, &status_mod_in);
   fits_read_key(mod_in, TDOUBLE, "CRVAL2", &dec, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "CRPIX1", &crpix1, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "CRPIX2", &crpix2, NULL, &status_mod_in);
+  fits_read_key(mod_in, TINT, "CRPIX1", &crpix1, NULL, &status_mod_in);
+  fits_read_key(mod_in, TINT, "CRPIX2", &crpix2, NULL, &status_mod_in);
   fits_read_key(mod_in, TLONG, "NAXIS1", &M, NULL, &status_mod_in);
   fits_read_key(mod_in, TLONG, "NAXIS2", &N, NULL, &status_mod_in);
   if (status_mod_in) {
@@ -919,12 +919,12 @@ __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float
     float x = (j - x0) * DELTAX * RPDEG;
     float y = (i - y0) * DELTAY * RPDEG;
 
-    float arc = sqrt(x*x+y*y);
-    float c = 4.0*log(2.0);
+    float arc = sqrtf(x*x+y*y);
+    float c = 4.0*logf(2.0);
     //printf("frec:%f\n", frec);
     float a = (FWHM*BEAM_FREQ/(frec*1e-9));
     float r = arc/a;
-    float atten = exp(-c*r*r);
+    float atten = expf(-c*r*r);
     attenMatrix[N*i+j].x = atten;
     attenMatrix[N*i+j].y = 0;
 }
@@ -958,7 +958,7 @@ __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image
   float noiseval = 0.0;
   float atten = total_atten[N*i+j].x;
   weight = (atten / difmap_noise) * (atten / difmap_noise);
-  noiseval = sqrt(1.0/weight);
+  noiseval = sqrtf(1.0/weight);
   noise_image[N*i+j].x = noiseval;
   noise_image[N*i+j].y = 0;
 }
@@ -973,11 +973,11 @@ __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, 
     float dy = DELTAY * 60.0;
     float x = (j - xobs) * dx;
     float y = (i - yobs) * dy;
-    float arc = RPARCM*sqrt(x*x+y*y);
-    float c = 4.0*log(2.0);
+    float arc = RPARCM*sqrtf(x*x+y*y);
+    float c = 4.0*logf(2.0);
     float a = (FWHM*BEAM_FREQ/(frec*1e-9));
     float r = arc/a;
-    float atten = exp(-c*r*r);
+    float atten = expf(-c*r*r);
 
     image[N*i+j].x = fg_image[N*i+j].x * fg_scale * atten;
     image[N*i+j].y = 0.f;
@@ -1040,7 +1040,7 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
     float u = Ux[i]/deltau;
     float v = Vx[i]/deltav;
 
-    if (fabs(u) > (N/2)+0.5 || fabs(v) > (N/2)+0.5) {
+    if (fabsf(u) > (N/2)+0.5 || fabsf(v) > (N/2)+0.5) {
       printf("Error in residual: u,v = %f,%f\n", u, v);
       asm("trap;");
     }
@@ -1175,7 +1175,7 @@ __global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
 
   float entropy = 0.0;
   if(noise[N*i+j].x <= noise_cut){
-    entropy = I[N*i+j].x * log(I[N*i+j].x / MINPIX);
+    entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
   }
 
   H[N*i+j] = entropy;
@@ -1235,7 +1235,7 @@ __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j].x <= noise_cut){
-    dH[N*i+j] = lambda * (log(I[N*i+j].x / MINPIX) + 1.0);
+    dH[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
   }
 }
 

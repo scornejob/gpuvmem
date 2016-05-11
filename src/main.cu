@@ -59,8 +59,8 @@ double ra;
 double dec;
 double obsra;
 double obsdec;
-float crpix1;
-float crpix2;
+int crpix1;
+int crpix2;
 freqData data;
 VPF *device_vars;
 Vis *visibilities;
@@ -330,17 +330,13 @@ __host__ int main(int argc, char **argv) {
 	double raimage = ra * RPDEG_D;
 	double decimage = dec * RPDEG_D;
 
-	printf("MS: Ra: %.20lf, dec: %.20lf\n", obsra, obsdec);
-	printf("FITS: Ra: %.20lf, dec: %.20lf\n", raimage, decimage);
+	printf("MS: Ra: %lf, dec: %lf\n", obsra, obsdec);
+	printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
 
 	direccos(obsra, obsdec, raimage, decimage, &lobs,  &mobs);
 
-  float ld = lobs/deltax;
-  float md = mobs/deltay;
-
-
-	global_xobs = (crpix1 - 1.0) + ld;
-	global_yobs = (crpix2 - 1.0) + md;
+	global_xobs = (crpix1 - 1.0) + lobs/deltax;
+	global_yobs = (crpix2 - 1.0) + mobs/deltay;
 	printf("Image Center: %f, %f\n", global_xobs, global_yobs);
 
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
