@@ -12,7 +12,6 @@ SMS ?= 20 30 35 37 50 52
 
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified <<<)
-SAMPLE_ENABLED := 0
 endif
 
 ifeq ($(ARCHFLAG),)

@@ -693,7 +693,15 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 
 
 	fits_create_file(&fpointer, name, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
   fits_copy_header(mod_in, fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
   if(option==0){
     fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
   }
@@ -725,8 +733,15 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
 	fits_close_file(fpointer, &status);
-	fits_report_error(stderr, status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
 
   free(host_IFITS);
 	free(image2D);
