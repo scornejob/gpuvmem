@@ -6,6 +6,7 @@ extern long N;
 extern float MINPIX;
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
+extern int positivity;
 
 __host__ float f1dim(float x)
 {
@@ -17,8 +18,13 @@ __host__ float f1dim(float x)
 
     //printf("Se evalua en f1dim %f\n", x);
     //xt = pcom+x*xicom;
-    evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
-    gpuErrchk(cudaDeviceSynchronize());
+    if(positivity == 1){
+      evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
+      gpuErrchk(cudaDeviceSynchronize());
+    }else{
+      evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);
+      gpuErrchk(cudaDeviceSynchronize());
+    }
 
     f = (*nrfunc)(device_xt);
     cudaFree(device_xt);

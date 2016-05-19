@@ -46,6 +46,7 @@ extern float minpix_factor;
 extern float lambda;
 extern float ftol;
 extern float random_probability;
+extern int positivity;
 
 
 extern float beam_noise;
@@ -189,7 +190,7 @@ __host__ void readInputDat(char *file)
   char item[50];
   float status;
   if((fp = fopen(file, "r")) == NULL){
-    printf("ERROR. The file path wasn't provided by the user.\n");
+    printf("ERROR. The input file wasn't provided by the user.\n");
     goToError();
   }else{
     while(true){
@@ -208,7 +209,9 @@ __host__ void readInputDat(char *file)
           ftol = status;
         } else if(strcmp(item,"random_probability")==0){
           random_probability = status;
-        } else{
+        } else if(strcmp(item,"positivity")==0){
+            positivity = status;
+        }else{
           break;
         }
       }
@@ -1105,21 +1108,6 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
 
 
 
-__global__ void clip(cufftComplex *I, float MINPIX, long N)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-	if(I[N*i+j].x <= MINPIX){
-		I[N*i+j].x = MINPIX;
-	}
-  I[N*i+j].y = 0;
-
-  //printf("%f\n", I[N*k+l].x);
-
-
-}
-
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1160,16 +1148,35 @@ __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long 
   p[N*i+j].y = 0.0;
 }
 
+__global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  xi[N*i+j] *= xmin;
+  p[N*i+j].x += xi[N*i+j];
+  p[N*i+j].y = 0.0;
+}
+
 __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(pcom[N*i+j].x + x * xicom[N*i+j] > MINPIX){
-      xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
+    xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
       xt[N*i+j].x = MINPIX;
   }
+  xt[N*i+j].y = 0.0;
+}
+
+__global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   xt[N*i+j].y = 0.0;
 }
 
@@ -1391,10 +1398,6 @@ __host__ float chiCuadrado(cufftComplex *I)
   float resultH  = 0.0;
 
 
-  clip<<<numBlocksNN, threadsPerBlockNN>>>(I, MINPIX, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-
   clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_fg_image, device_noise_image, I, N, noise_cut, MINPIX);
   gpuErrchk(cudaDeviceSynchronize());
 
@@ -1511,9 +1514,6 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   }else{
     cudaSetDevice(0);
   }
-
-  clip<<<numBlocksNN, threadsPerBlockNN>>>(I, MINPIX, N);
-  gpuErrchk(cudaDeviceSynchronize());
 
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_H, N);
   gpuErrchk(cudaDeviceSynchronize());
