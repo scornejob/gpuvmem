@@ -1203,6 +1203,23 @@ __global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
   H[N*i+j] = entropy;
 }
 
+__global__ void QVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float entropy = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+    if((i>0 && i<N) && (j>0 && j<N)){
+      entropy = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x) + (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
+      entropy /= 2;
+    }else{
+      entropy = I[N*i+j].x;
+    }
+  }
+
+  H[N*i+j] = entropy;
+}
 
 __global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
@@ -1261,6 +1278,21 @@ __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_
   }
 }
 
+__global__ void DQ(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j].x <= noise_cut){
+    if((i>0 && i<N) && (j>0 && j<N)){
+    //dQ[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
+    dQ[N*i+j] = (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x)  + (I[N*i+j].x - I[N*(i+1)+j].x);
+  }else{
+    dQ[N*i+j] = I[N*i+j].x;
+    }
+    dQ[N*i+j] *= lambda;
+  }
+}
 
 __global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
