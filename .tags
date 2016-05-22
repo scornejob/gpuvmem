@@ -7874,29 +7874,30 @@ minpix_factor	/home/miguel/Documents/gpuvmem/src/main.cu	/^float minpix_factor;$
 lambda	/home/miguel/Documents/gpuvmem/src/main.cu	/^float lambda;$/;"	variable	line:43
 ftol	/home/miguel/Documents/gpuvmem/src/main.cu	/^float ftol;$/;"	variable	line:44
 random_probability	/home/miguel/Documents/gpuvmem/src/main.cu	/^float random_probability;$/;"	variable	line:45
-DELTAX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAX;$/;"	variable	line:49
-DELTAY	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAY;$/;"	variable	line:50
-deltau	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltau;$/;"	variable	line:51
-deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	line:52
-beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:55
-beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:56
-beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:57
-ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:58
-dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:59
-obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:60
-obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:61
-crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix1;$/;"	variable	line:62
-crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float crpix2;$/;"	variable	line:63
-data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:64
-device_vars	/home/miguel/Documents/gpuvmem/src/main.cu	/^VPF *device_vars;$/;"	variable	line:65
-visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *visibilities;$/;"	variable	line:66
-device_visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *device_visibilities;$/;"	variable	line:67
-num_gpus	/home/miguel/Documents/gpuvmem/src/main.cu	/^int num_gpus;$/;"	variable	line:69
-multigpu	/home/miguel/Documents/gpuvmem/src/main.cu	/^int multigpu;$/;"	variable	line:70
-selected	/home/miguel/Documents/gpuvmem/src/main.cu	/^int selected;$/;"	variable	line:71
-mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^fitsfile *mod_in;$/;"	variable	line:73
-status_mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^int status_mod_in;$/;"	variable	line:74
-mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable	line:76
-IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:78	signature:(cudaDeviceProp *pProp)
-IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:87	signature:()
-main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:96	signature:(int argc, char **argv)
+positivity	/home/miguel/Documents/gpuvmem/src/main.cu	/^int positivity = 1;$/;"	variable	line:46
+DELTAX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAX;$/;"	variable	line:50
+DELTAY	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAY;$/;"	variable	line:51
+deltau	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltau;$/;"	variable	line:52
+deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	line:53
+beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:56
+beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:57
+beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:58
+ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:59
+dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:60
+obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:61
+obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:62
+crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix1;$/;"	variable	line:63
+crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix2;$/;"	variable	line:64
+data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:65
+device_vars	/home/miguel/Documents/gpuvmem/src/main.cu	/^VPF *device_vars;$/;"	variable	line:66
+visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *visibilities;$/;"	variable	line:67
+device_visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *device_visibilities;$/;"	variable	line:68
+num_gpus	/home/miguel/Documents/gpuvmem/src/main.cu	/^int num_gpus;$/;"	variable	line:70
+multigpu	/home/miguel/Documents/gpuvmem/src/main.cu	/^int multigpu;$/;"	variable	line:71
+selected	/home/miguel/Documents/gpuvmem/src/main.cu	/^int selected;$/;"	variable	line:72
+mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^fitsfile *mod_in;$/;"	variable	line:74
+status_mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^int status_mod_in;$/;"	variable	line:75
+mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable	line:77
+IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:79	signature:(cudaDeviceProp *pProp)
+IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:88	signature:()
+main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:97	signature:(int argc, char **argv)
