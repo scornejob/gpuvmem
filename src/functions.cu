@@ -571,7 +571,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
                                     {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
-                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, {"path", 1, NULL, 'p'},
+                                    {"multigpu", 1, NULL, 'g'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     { NULL, 0, NULL, 0 }};
 
