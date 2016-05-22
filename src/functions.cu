@@ -1499,7 +1499,7 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       //RESIDUAL CALCULATION
-      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
+      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_vars[i].device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
 
 
