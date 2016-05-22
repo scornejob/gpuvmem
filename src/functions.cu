@@ -487,7 +487,7 @@ __host__ void writeMS(char *file, Vis *visibilities) {
        int s = sqlite3_step(stmt);
        sqlite3_clear_bindings(stmt);
        sqlite3_reset(stmt);
-       printf("\rIF[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
+       printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
        fflush(stdout);
      }
      printf("\n");
@@ -521,7 +521,7 @@ __host__ void writeMS(char *file, Vis *visibilities) {
         sqlite3_clear_bindings(stmt);
         sqlite3_reset(stmt);
         //printf("u: %f, v: %f, id: %d, freq: %d", visibilities[l].u[k], visibilities[l].v[k], visibilities[l].id[k], i);
-        printf("\rIF[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
+        printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
         fflush(stdout);
       }
       printf("\n");
