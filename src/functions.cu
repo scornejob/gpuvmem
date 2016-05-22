@@ -482,8 +482,8 @@ __host__ void writeMS(char *file, Vis *visibilities) {
        sqlite3_bind_int(stmt, 1, visibilities[l].id[k]);
        sqlite3_bind_int(stmt, 2, visibilities[l].stokes[k]);
        sqlite3_bind_int(stmt, 3, j);
-       sqlite3_bind_double(stmt, 4, visibilities[l].Vr[k].x);
-       sqlite3_bind_double(stmt, 5, visibilities[l].Vr[k].y);
+       sqlite3_bind_double(stmt, 4, -visibilities[l].Vr[k].x);
+       sqlite3_bind_double(stmt, 5, -visibilities[l].Vr[k].y);
        int s = sqlite3_step(stmt);
        sqlite3_clear_bindings(stmt);
        sqlite3_reset(stmt);
