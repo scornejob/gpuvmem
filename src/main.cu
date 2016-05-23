@@ -654,19 +654,19 @@ __host__ int main(int argc, char **argv) {
 	cudaFree(device_H);
 
   //Disabling UVA
+  if(num_gpus > 1){
+    for(int i=1; i<num_gpus; i++){
+          cudaSetDevice(0);
+          cudaDeviceDisablePeerAccess(i);
+          cudaSetDevice(i%num_gpus);
+          cudaDeviceDisablePeerAccess(0);
+    }
 
-  for(int i=1; i<num_gpus; i++){
-        cudaSetDevice(0);
-        cudaDeviceDisablePeerAccess(i);
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceDisablePeerAccess(0);
+    for(int i=0; i<num_gpus; i++ ){
+          cudaSetDevice(i%num_gpus);
+          cudaDeviceReset();
+    }
   }
-
-  for(int i=0; i<num_gpus; i++ ){
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceReset();
-  }
-
 	free(host_I);
 	free(msinput);
 	free(msoutput);

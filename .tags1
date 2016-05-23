@@ -4,50 +4,60 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-goToError	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void goToError()$/;"	function	line:74	signature:()
-getFreqs	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ freqData getFreqs(char * file)$/;"	function	line:93	signature:(char * file)
-NearestPowerOf2	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ long NearestPowerOf2(long n)$/;"	function	line:168	signature:(long n)
-isPow2	/home/miguel/Documents/gpuvmem/src/functions.cu	/^bool isPow2(unsigned int x)$/;"	function	line:181	signature:(unsigned int x)
-readInputDat	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void readInputDat(char *file)$/;"	function	line:187	signature:(char *file)
-readMS	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {$/;"	function	line:221	signature:(char *file, char *file2, char *file3, Vis *visibilities)
-residualsToHost	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data){$/;"	function	line:417	signature:(Vis *device_visibilities, Vis *visibilities, freqData data)
-writeMS	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void writeMS(char *file, Vis *visibilities) {$/;"	function	line:440	signature:(char *file, Vis *visibilities)
-print_help	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void print_help() {$/;"	function	line:539	signature:()
-getOptions	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ Vars getOptions(int argc, char **argv) {$/;"	function	line:555	signature:(int argc, char **argv)
-toFitsFloat	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option)$/;"	function	line:658	signature:(cufftComplex *I, int iteration, long M, long N, int option)
-deviceReduceKernel	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n)$/;"	function	line:755	signature:(float *g_idata, float *g_odata, unsigned int n)
-deviceReduce	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ float deviceReduce(float *in, long N) {$/;"	function	line:873	signature:(float *in, long N)
-hermitianSymmetry	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities)$/;"	function	line:904	signature:(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities)
-backUV	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities)$/;"	function	line:919	signature:(float *Ux, float *Vx, float freq, int numVisibilities)
-attenuation	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY)$/;"	function	line:929	signature:(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY)
-total_attenuation	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N)$/;"	function	line:952	signature:(cufftComplex *total_atten, cufftComplex *attenperFreq, long N)
-mean_attenuation	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N)$/;"	function	line:961	signature:(cufftComplex *total_atten, int channels, long N)
-noise_image	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N)$/;"	function	line:970	signature:(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N)
-apply_beam	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY)$/;"	function	line:984	signature:(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY)
-phase_rotate	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs)$/;"	function	line:1009	signature:(cufftComplex *data, long M, long N, float xphs, float yphs)
-residual	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)$/;"	function	line:1049	signature:(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
-clipWNoise	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)$/;"	function	line:1111	signature:(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-getGandDGG	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N)$/;"	function	line:1127	signature:(float *gg, float *dgg, float *xi, float *g, long N)
-newP	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)$/;"	function	line:1136	signature:(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
-newPNoPositivity	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N)$/;"	function	line:1151	signature:(cufftComplex *p, float *xi, float xmin, long N)
-evaluateXt	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)$/;"	function	line:1161	signature:(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
-evaluateXtNoPositivity	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N)$/;"	function	line:1174	signature:(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N)
-chi2Vector	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisibilities){$/;"	function	line:1184	signature:(float *chi2, cufftComplex *Vr, float *w, long numVisibilities)
-HVector	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)$/;"	function	line:1193	signature:(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-QVector	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void QVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)$/;"	function	line:1206	signature:(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-TVVector	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)$/;"	function	line:1224	signature:(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-searchDirection	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void searchDirection(float *g, float *xi, float *h, long N)$/;"	function	line:1242	signature:(float *g, float *xi, float *h, long N)
-newXi	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void newXi(float *g, float *xi, float *h, float gam, long N)$/;"	function	line:1251	signature:(float *g, float *xi, float *h, float gam, long N)
-restartDPhi	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)$/;"	function	line:1260	signature:(float *dphi, float *dChi2, float *dH, long N)
-DH	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)$/;"	function	line:1271	signature:(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
-DQ	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DQ(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)$/;"	function	line:1281	signature:(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
-DTV	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)$/;"	function	line:1297	signature:(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
-DChi2	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)$/;"	function	line:1324	signature:(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)
-DChi2_total	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DChi2_total(float *dchi2_total, float *dchi2, long N)$/;"	function	line:1360	signature:(float *dchi2_total, float *dchi2, long N)
-DPhi	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void DPhi(float *dphi, float *dchi2, float *dH, long N)$/;"	function	line:1369	signature:(float *dphi, float *dchi2, float *dH, long N)
-substraction	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N)$/;"	function	line:1377	signature:(float *x, cufftComplex *xc, float *gc, float lambda, long N)
-projection	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void projection(float *px, float *x, float MINPIX, long N){$/;"	function	line:1385	signature:(float *px, float *x, float MINPIX, long N)
-normVectorCalculation	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void normVectorCalculation(float *normVector, float *gc, long N){$/;"	function	line:1404	signature:(float *normVector, float *gc, long N)
-copyImage	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__global__ void copyImage(cufftComplex *p, float *device_xt, long N)$/;"	function	line:1411	signature:(cufftComplex *p, float *device_xt, long N)
-chiCuadrado	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ float chiCuadrado(cufftComplex *I)$/;"	function	line:1420	signature:(cufftComplex *I)
-dchiCuadrado	/home/miguel/Documents/gpuvmem/src/functions.cu	/^__host__ void dchiCuadrado(cufftComplex *I, float *dxi2)$/;"	function	line:1539	signature:(cufftComplex *I, float *dxi2)
+M	/home/miguel/Documents/gpuvmem/src/main.cu	/^long M;$/;"	variable	line:5
+N	/home/miguel/Documents/gpuvmem/src/main.cu	/^long N;$/;"	variable	line:6
+numVisibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^long numVisibilities;$/;"	variable	line:7
+iter	/home/miguel/Documents/gpuvmem/src/main.cu	/^int iter=0;$/;"	variable	line:8
+plan1GPU	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftHandle plan1GPU;$/;"	variable	line:10
+device_I	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_I;$/;"	variable	line:12
+device_V	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_V;$/;"	variable	line:13
+device_noise_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_noise_image;$/;"	variable	line:14
+device_fg_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_fg_image;$/;"	variable	line:15
+device_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_image;$/;"	variable	line:16
+device_dphi	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dphi;$/;"	variable	line:19
+device_dchi2_total	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dchi2_total;$/;"	variable	line:21
+device_dH	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dH;$/;"	variable	line:22
+device_chi2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_chi2;$/;"	variable	line:24
+device_H	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_H;$/;"	variable	line:25
+threadsPerBlockNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 threadsPerBlockNN;$/;"	variable	line:27
+numBlocksNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 numBlocksNN;$/;"	variable	line:28
+threadsVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int threadsVectorReduceNN;$/;"	variable	line:30
+blocksVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int blocksVectorReduceNN;$/;"	variable	line:31
+difmap_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float difmap_noise;$/;"	variable	line:33
+fg_scale	/home/miguel/Documents/gpuvmem/src/main.cu	/^float fg_scale;$/;"	variable	line:35
+output	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *output;$/;"	variable	line:36
+global_xobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_xobs;$/;"	variable	line:37
+global_yobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_yobs;$/;"	variable	line:38
+noise_cut	/home/miguel/Documents/gpuvmem/src/main.cu	/^float noise_cut;$/;"	variable	line:40
+MINPIX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float MINPIX;$/;"	variable	line:41
+minpix_factor	/home/miguel/Documents/gpuvmem/src/main.cu	/^float minpix_factor;$/;"	variable	line:42
+lambda	/home/miguel/Documents/gpuvmem/src/main.cu	/^float lambda;$/;"	variable	line:43
+ftol	/home/miguel/Documents/gpuvmem/src/main.cu	/^float ftol;$/;"	variable	line:44
+random_probability	/home/miguel/Documents/gpuvmem/src/main.cu	/^float random_probability;$/;"	variable	line:45
+positivity	/home/miguel/Documents/gpuvmem/src/main.cu	/^int positivity = 1;$/;"	variable	line:46
+DELTAX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAX;$/;"	variable	line:50
+DELTAY	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAY;$/;"	variable	line:51
+deltau	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltau;$/;"	variable	line:52
+deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	line:53
+beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:56
+beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:57
+beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:58
+ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:59
+dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:60
+obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:61
+obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:62
+crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix1;$/;"	variable	line:63
+crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix2;$/;"	variable	line:64
+data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:65
+device_vars	/home/miguel/Documents/gpuvmem/src/main.cu	/^VPF *device_vars;$/;"	variable	line:66
+visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *visibilities;$/;"	variable	line:67
+device_visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *device_visibilities;$/;"	variable	line:68
+num_gpus	/home/miguel/Documents/gpuvmem/src/main.cu	/^int num_gpus;$/;"	variable	line:70
+multigpu	/home/miguel/Documents/gpuvmem/src/main.cu	/^int multigpu;$/;"	variable	line:71
+selected	/home/miguel/Documents/gpuvmem/src/main.cu	/^int selected;$/;"	variable	line:72
+mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^fitsfile *mod_in;$/;"	variable	line:74
+status_mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^int status_mod_in;$/;"	variable	line:75
+mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable	line:77
+IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:79	signature:(cudaDeviceProp *pProp)
+IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:88	signature:()
+main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:97	signature:(int argc, char **argv)
