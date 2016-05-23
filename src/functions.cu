@@ -482,12 +482,12 @@ __host__ void writeMS(char *file, Vis *visibilities) {
        sqlite3_bind_int(stmt, 1, visibilities[l].id[k]);
        sqlite3_bind_int(stmt, 2, visibilities[l].stokes[k]);
        sqlite3_bind_int(stmt, 3, j);
-       sqlite3_bind_double(stmt, 4, visibilities[l].Vr[k].x);
-       sqlite3_bind_double(stmt, 5, visibilities[l].Vr[k].y);
+       sqlite3_bind_double(stmt, 4, -visibilities[l].Vr[k].x);
+       sqlite3_bind_double(stmt, 5, -visibilities[l].Vr[k].y);
        int s = sqlite3_step(stmt);
        sqlite3_clear_bindings(stmt);
        sqlite3_reset(stmt);
-       printf("\rIF[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
+       printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
        fflush(stdout);
      }
      printf("\n");
@@ -521,7 +521,7 @@ __host__ void writeMS(char *file, Vis *visibilities) {
         sqlite3_clear_bindings(stmt);
         sqlite3_reset(stmt);
         //printf("u: %f, v: %f, id: %d, freq: %d", visibilities[l].u[k], visibilities[l].v[k], visibilities[l].id[k], i);
-        printf("\rIF[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
+        printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
         fflush(stdout);
       }
       printf("\n");
@@ -571,7 +571,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
                                     {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
-                                    {"multigpu", 0, NULL, 'g'}, {"select", 0, NULL, 's'}, {"path", 1, NULL, 'p'},
+                                    {"multigpu", 1, NULL, 'g'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     { NULL, 0, NULL, 0 }};
 
@@ -1499,7 +1499,7 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       //RESIDUAL CALCULATION
-      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
+      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_vars[i].device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
 
 

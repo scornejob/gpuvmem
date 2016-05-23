@@ -479,9 +479,16 @@ __host__ int main(int argc, char **argv) {
 			cudaGetDevice(&gpu_id);
 			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
 			gpuErrchk(cudaDeviceSynchronize());
-      toFitsFloat(device_vars[i].atten, i, M, N, 4);
 		}
+
+    for (int i = 0; i < data.total_frequencies; i++)
+    {
+      cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+      toFitsFloat(device_vars[i].atten, i, M, N, 4);
+    }
 	}
+
+
 
 
 	if(num_gpus == 1){
@@ -647,19 +654,19 @@ __host__ int main(int argc, char **argv) {
 	cudaFree(device_H);
 
   //Disabling UVA
+  if(num_gpus > 1){
+    for(int i=1; i<num_gpus; i++){
+          cudaSetDevice(0);
+          cudaDeviceDisablePeerAccess(i);
+          cudaSetDevice(i%num_gpus);
+          cudaDeviceDisablePeerAccess(0);
+    }
 
-  for(int i=1; i<num_gpus; i++){
-        cudaSetDevice(0);
-        cudaDeviceDisablePeerAccess(i);
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceDisablePeerAccess(0);
+    for(int i=0; i<num_gpus; i++ ){
+          cudaSetDevice(i%num_gpus);
+          cudaDeviceReset();
+    }
   }
-
-  for(int i=0; i<num_gpus; i++ ){
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceReset();
-  }
-
 	free(host_I);
 	free(msinput);
 	free(msoutput);

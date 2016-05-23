@@ -7,6 +7,8 @@ INC_DIRS = -Iinclude
 CFFLAG = -Llib -lcfitsio -lm
 SQLITE = -lsqlite3
 LDFLAGS = -lcuda -lcudart
+FOPENFLAG = -Xcompiler -fopenmp -lgomp
+CCFLAG = -lstdc++
 # Gencode arguments
 SMS ?= 20 30 35 37 50 52
 
@@ -25,54 +27,50 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-
-#ARCHFLAG = -arch=sm_50
-FOPENFLAG = -Xcompiler -fopenmp -lgomp
-
 main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
-	@ nvcc $(LDFLAGS) build/*.o -o bin/mem $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc build/*.o -o bin/mem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
 	@ echo "Building Main"
 	@ mkdir -p build
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/main.cu -o build/main.o $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/main.cu -o build/main.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/functions.o: src/functions.cu
 	@ echo "Building Functions"
 	@ mkdir -p lib
 	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/functions.cu -o build/functions.o $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/functions.cu -o build/functions.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/directioncosines.o: src/directioncosines.cu
 	@ echo "Building directioncosines"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/directioncosines.cu -o build/directioncosines.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/directioncosines.cu -o build/directioncosines.o  $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/rngs.o: src/rngs.cu
 	@ echo "Building Random number generator"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/rngs.cu -o build/rngs.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/rngs.cu -o build/rngs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/f1dim.o: src/f1dim.cu
 	@ echo "Building f1dim"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/f1dim.cu -o build/f1dim.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/f1dim.cu -o build/f1dim.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/mnbrak.o: src/mnbrak.cu
 	@ echo "Building mnbrak"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/mnbrak.cu -o build/mnbrak.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/mnbrak.cu -o build/mnbrak.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/brent.o: src/brent.cu
 	@ echo "Building brent"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/brent.cu -o build/brent.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/brent.cu -o build/brent.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/linmin.o: src/linmin.cu
 	@ echo "Building linmin"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/linmin.cu -o build/linmin.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/linmin.cu -o build/linmin.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/frprmn.o: src/frprmn.cu
 	@ echo "Building frprmn"
-	@ nvcc $(CFLAGS) $(INC_DIRS) $(LDFLAGS) src/frprmn.cu -o build/frprmn.o $(CFFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 clean:
 	@ clear
