@@ -10,6 +10,8 @@ extern int positivity;
 
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
+extern int verbose_flag;
+
 
 __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))//p and xi are in GPU
 {
@@ -33,8 +35,9 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
 
 
   *fret = brent(ax, xx, bx, TOL, &xmin, f1dim);
-
-  printf("alpha = %f\n\n", xmin);
+  if(verbose_flag){
+    printf("alpha = %f\n\n", xmin);
+  }
 
   //GPU MUL AND ADD
   //xi     = xi*xmin;

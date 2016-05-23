@@ -70,6 +70,7 @@ extern char* mempath;
 
 extern fitsfile *mod_in;
 extern int status_mod_in;
+extern int verbose_flag;
 
 __host__ void goToError()
 {
@@ -104,7 +105,9 @@ __host__ freqData getFreqs(char * file)
     sqlite3_close(db);
     goToError();
   }else{
-    printf("Database connection okay!\n");
+    if(verbose_flag){
+      printf("Database connection okay!\n");
+    }
   }
 
   char *sql = "SELECT n_internal_frequencies as nfreq FROM header";
@@ -261,8 +264,9 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
     fits_report_error(stderr, status2); /* print error message */
     goToError();
   }
-
-  printf("FITS Files READ\n");
+  if(verbose_flag){
+    printf("FITS Files READ\n");
+  }
 
   ///////////////////////////////////////////////////MS SQLITE READING/////////////////////////////////////////////////////////
   sqlite3 *db;
@@ -278,7 +282,9 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
    sqlite3_close(db);
    goToError();
   }else{
-   printf("Database connection okay again!\n");
+   if(verbose_flag){
+     printf("Database connection okay again!\n");
+   }
  }
 
   char *sql;
@@ -362,7 +368,9 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
       }
     }
   }
-  printf("Visibilities read!\n");
+  if(verbose_flag){
+    printf("Visibilities read!\n");
+  }
 
 
 
@@ -377,7 +385,9 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   sqlite3_step(stmt);
   obsra = sqlite3_column_double(stmt, 0);
   obsdec = sqlite3_column_double(stmt, 1);
-  printf("Center read!\n");
+  if(verbose_flag){
+    printf("Center read!\n");
+  }
 
   sql = "SELECT frequency as freq_vector FROM channels WHERE internal_freq_id = ? AND channel = ?";
   rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
@@ -408,7 +418,9 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
       sqlite3_clear_bindings(stmt);
     }
   }
-  printf("Frequencies read!\n");
+  if(verbose_flag){
+    printf("Frequencies read!\n");
+  }
 
   sqlite3_close(db);
 }
@@ -544,11 +556,11 @@ __host__ void print_help() {
   printf(	"    -V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)\n");
   printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
-  printf("    -d  --inputdat   The name of the input file of parameters\n");
+  printf("    -I  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
-  printf("    -g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
+  printf("    -M  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
 }
 
@@ -567,11 +579,16 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeV = -1;
 
 	long next_op;
-	const char* const short_op = "hi:o:d:m:b:g:s:p:X:Y:V:";
+	const char* const short_op = "hi:o:I:m:b:M:s:p:X:Y:V:";
 
-	const struct option long_op[] = { {"help", 0, NULL, 'h' }, {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
-                                    {"inputdat", 1, NULL, 'd'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
-                                    {"multigpu", 1, NULL, 'g'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
+	const struct option long_op[] = { //Flag for help
+                                    {"help", 0, NULL, 'h' },
+                                    /* These options set a flag. */
+                                    {"verbose", 0, &verbose_flag, 1},
+                                    /* These options don’t set a flag. */
+                                    {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
+                                    {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
+                                    {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     { NULL, 0, NULL, 0 }};
 
@@ -581,14 +598,23 @@ __host__ Vars getOptions(int argc, char **argv) {
 		print_help();
 		exit(EXIT_SUCCESS);
 	}
-
+  int option_index = 0;
 	while (1) {
-		next_op = getopt_long(argc, argv, short_op, long_op, NULL);
+		next_op = getopt_long(argc, argv, short_op, long_op, &option_index);
 		if (next_op == -1) {
 			break;
 		}
 
 		switch (next_op) {
+    case 0:
+      /* If this option set a flag, do nothing else now. */
+      if (long_op[option_index].flag != 0)
+        break;
+        printf ("option %s", long_op[option_index].name);
+      if (optarg)
+        printf (" with arg %s", optarg);
+        printf ("\n");
+        break;
 		case 'h':
 			print_help();
 			exit(EXIT_SUCCESS);
@@ -598,7 +624,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'o':
   		strcpy(variables.output, optarg);
   		break;
-    case 'd':
+    case 'I':
       strcpy(variables.inputdat, optarg);
       break;
     case 'm':
@@ -610,7 +636,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'p':
       strcpy(variables.path, optarg);
       break;
-    case 'g':
+    case 'M':
       variables.multigpu = atoi(optarg);
       break;
     case 's':

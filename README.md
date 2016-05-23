@@ -33,6 +33,7 @@ noise_cut	100.5
 minpix_factor   1000.0
 ftol		1.0e-12
 random_probability 0.0
+positivity  0
 ```
 
 Use GPUVMEM:
@@ -45,11 +46,11 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -V --blockSizeV  Block Size for Visibilities (Needs to be pow of 2)
 -i  --input      The name of the input file of visibilities(SQLite)
 -o  --output     The name of the output file of residual visibilities(SQLite)
--d  --inputdat   The name of the input file of parameters
+-I  --inputdat   The name of the input file of parameters
 -m  --modin      mod_in_0 FITS file
 -b  --beam       beam_0 FITS file
 -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)
--g  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
+-M  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 ```
 #IMPORTANT

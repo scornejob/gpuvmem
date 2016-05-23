@@ -45,8 +45,6 @@ float ftol;
 float random_probability;
 int positivity = 1;
 
-
-
 float DELTAX;
 float DELTAY;
 float deltau;
@@ -75,6 +73,8 @@ fitsfile *mod_in;
 int status_mod_in;
 
 char *mempath;
+
+int verbose_flag;
 
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
@@ -111,20 +111,21 @@ __host__ int main(int argc, char **argv) {
   }
 
 
+  if(verbose_flag){
+  	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
+    printf("Number of CUDA devices:\t%d\n", num_gpus);
 
-	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
-  printf("Number of CUDA devices:\t%d\n", num_gpus);
 
+  	for(int i = 0; i < num_gpus; i++){
+    	cudaDeviceProp dprop;
+      cudaGetDeviceProperties(&dprop, i);
 
-	for(int i = 0; i < num_gpus; i++){
-  	cudaDeviceProp dprop;
-    cudaGetDeviceProperties(&dprop, i);
+      printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop.name, (IsGPUCapableP2P(&dprop) ? "IS " : "NOT"));
 
-    printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop.name, (IsGPUCapableP2P(&dprop) ? "IS " : "NOT"));
-
-    //printf("   %d: %s\n", i, dprop.name);
+      //printf("   %d: %s\n", i, dprop.name);
+    }
+    printf("---------------------------\n");
   }
-  printf("---------------------------\n");
 
 	float noise_min = 1E32;
 
@@ -146,7 +147,9 @@ __host__ int main(int argc, char **argv) {
 
   readInputDat(inputdat);
 	data = getFreqs(msinput);
-	printf("Number of frequencies file = %d\n", data.total_frequencies);
+  if(verbose_flag){
+	   printf("Number of frequencies file = %d\n", data.total_frequencies);
+  }
 
   if(multigpu < 0 || multigpu > num_gpus){
     printf("ERROR. NUMBER OF GPUS CANNOT BE NEGATIVE OR GREATER THAN THE NUMBER OF GPUS\n");
@@ -166,7 +169,9 @@ __host__ int main(int argc, char **argv) {
   }
 
  //printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
- printf("Number of CUDA devices and threads: \t%d\n", num_gpus);
+ if(verbose_flag){
+   printf("Number of CUDA devices and threads: \t%d\n", num_gpus);
+ }
 
  //Check peer access if there is more than 1 GPU
   if(num_gpus > 1){
@@ -177,8 +182,10 @@ __host__ int main(int argc, char **argv) {
 			int canAccessPeer0_x, canAccessPeerx_0;
 			cudaDeviceCanAccessPeer(&canAccessPeer0_x, 0, i);
 			cudaDeviceCanAccessPeer(&canAccessPeerx_0 , i, 0);
-			printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, 0, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
-    	printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, 0, canAccessPeerx_0 ? "Yes" : "No");
+      if(verbose_flag){
+  			printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, 0, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
+      	printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, 0, canAccessPeerx_0 ? "Yes" : "No");
+      }
 			if(canAccessPeer0_x == 0 || canAccessPeerx_0 == 0){
 				printf("Two or more SM 2.0 class GPUs are required for %s to run.\n", argv[0]);
         printf("Support for UVA requires a GPU with SM 2.0 capabilities.\n");
@@ -186,18 +193,27 @@ __host__ int main(int argc, char **argv) {
         exit(EXIT_SUCCESS);
 			}else{
 				cudaSetDevice(0);
-        printf("Granting access from 0 to %d...\n", i);
+        if(verbose_flag){
+          printf("Granting access from 0 to %d...\n", i);
+        }
 				cudaDeviceEnablePeerAccess(i,0);
 				cudaSetDevice(i%num_gpus);
-        printf("Granting access from %d to 0...\n", i);
+        if(verbose_flag){
+          printf("Granting access from %d to 0...\n", i);
+        }
 				cudaDeviceEnablePeerAccess(0,0);
-
-				printf("Checking GPU%d and GPU%d for UVA capabilities...\n", 0, 1);
+        if(verbose_flag){
+				      printf("Checking GPU%d and GPU%d for UVA capabilities...\n", 0, 1);
+        }
 				const bool has_uva = (dprop0.unifiedAddressing && dpropX.unifiedAddressing);
-				printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, 0, (dprop0.unifiedAddressing ? "Yes" : "No"));
-    		printf("> %s (GPU%d) supports UVA: %s\n", dpropX.name, i, (dpropX.unifiedAddressing ? "Yes" : "No"));
+        if(verbose_flag){
+  				printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, 0, (dprop0.unifiedAddressing ? "Yes" : "No"));
+      		printf("> %s (GPU%d) supports UVA: %s\n", dpropX.name, i, (dpropX.unifiedAddressing ? "Yes" : "No"));
+        }
 				if (has_uva){
-        	printf("Both GPUs can support UVA, enabling...\n");
+          if(verbose_flag){
+        	   printf("Both GPUs can support UVA, enabling...\n");
+          }
     		}
     		else{
         	printf("At least one of the two GPUs does NOT support UVA, waiving test.\n");
@@ -226,10 +242,13 @@ __host__ int main(int argc, char **argv) {
 	}
 
 
-
-	printf("Reading visibilities and FITS input files...\n");
+  if(verbose_flag){
+	   printf("Reading visibilities and FITS input files...\n");
+  }
 	readMS(msinput, modinput, beaminput, visibilities);
-  printf("MS File Successfully Read\n");
+  if(verbose_flag){
+    printf("MS File Successfully Read\n");
+  }
 
   //Declaring block size and number of blocks for visibilities
 	for(int i=0; i<data.total_frequencies; i++){
@@ -330,15 +349,18 @@ __host__ int main(int argc, char **argv) {
 	double lobs, mobs;
 	double raimage = ra * RPDEG_D;
 	double decimage = dec * RPDEG_D;
-
-	printf("MS: Ra: %lf, dec: %lf\n", obsra, obsdec);
-	printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  if(verbose_flag){
+  	printf("MS: Ra: %lf, dec: %lf\n", obsra, obsdec);
+  	printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  }
 
 	direccos(obsra, obsdec, raimage, decimage, &lobs,  &mobs);
 
 	global_xobs = (crpix1 - 1.0) + lobs/deltax;
 	global_yobs = (crpix2 - 1.0) + mobs/deltay;
-	printf("Image Center: %f, %f\n", global_xobs, global_yobs);
+  if(verbose_flag){
+	   printf("Image Center: %f, %f\n", global_xobs, global_yobs);
+  }
 
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 
@@ -551,7 +573,9 @@ __host__ int main(int argc, char **argv) {
 
 	fg_scale = noise_min;
 	noise_cut = noise_cut * noise_min;
-	printf("fg_scale = %f\n", fg_scale);
+  if(verbose_flag){
+	   printf("fg_scale = %f\n", fg_scale);
+  }
 	free(host_noise_image);
   cudaFree(device_total_atten_image);
 	//return;

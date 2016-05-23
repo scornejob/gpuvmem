@@ -11,6 +11,7 @@ extern int threadsVectorNN;
 extern int blocksVectorNN;
 
 extern float MINPIX;
+extern int verbose_flag;
 
 #define EPS 1.0e-10
 #define ITERATIONS 500
@@ -177,7 +178,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   gpuErrchk(cudaMemset(device_dgg_vector, 0, sizeof(float)*M*N));
 
   fp = (*func)(p);
-  printf("Starting function value = %f\n", fp);
+  if(verbose_flag){
+    printf("Starting function value = %f\n", fp);
+  }
   (*dfunc)(p,xi);
   //g=-xi
   //xi=h=g
@@ -190,7 +193,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   for(int i=1; i <= ITERATIONS; i++){
     start = omp_get_wtime();
     iter = i;
-    printf("\n\n**********Iteration %d **********\n\n", i);
+    if(verbose_flag){
+      printf("\n\n**********Iteration %d **********\n\n", i);
+    }
     linmin(p, xi, fret, func);
 
     if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPS)) {
@@ -200,7 +205,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 		}
 
     fp=(*func)(p);
-    printf("Function value = %f\n", fp);
+    if(verbose_flag){
+      printf("Function value = %f\n", fp);
+    }
     (*dfunc)(p,xi);
     dgg = gg = 0.0;
     ////gg = g*g
@@ -223,7 +230,9 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   	gpuErrchk(cudaDeviceSynchronize());
     end = omp_get_wtime();
     double wall_time = end-start;
-    printf("Time: %lf seconds\n", i, wall_time);
+    if(verbose_flag){
+      printf("Time: %lf seconds\n", i, wall_time);
+    }
   }
   printf("Too many iterations in frprmn\n");
   FREEALL
