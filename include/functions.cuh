@@ -108,6 +108,7 @@ __host__ float chiCuadrado(cufftComplex *I);
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);
 __host__ float deviceReduce(float *in, long N);
+__host__ float2 minmaxV(cufftComplex *visibilities, int N);
 
 
 

@@ -547,6 +547,26 @@ __host__ void writeMS(char *file, Vis *visibilities) {
 
 }
 
+__host__ float2 minmaxV(cufftComplex *visibilities, int N){
+  float max = visibilities[0].x;
+  float min = visibilities[0].x;
+  for(int i = 0; i<N; i++)
+  {
+        if(visibilities[i].x > max){
+          max = visibilities[i].x;
+        }
+
+        if(visibilities[i].x < min){
+          min = visibilities[i].x;
+        }
+
+  }
+  float2 result;
+  result.x = min;
+  result.y = max;
+  return result;
+}
+
 
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
