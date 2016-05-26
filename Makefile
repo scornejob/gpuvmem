@@ -27,7 +27,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o build/frprmn.o
+main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -51,6 +51,10 @@ build/directioncosines.o: src/directioncosines.cu
 build/rngs.o: src/rngs.cu
 	@ echo "Building Random number generator"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/rngs.cu -o build/rngs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
+
+build/rvgs.o: src/rvgs.cu
+	@ echo "Building Random number generator 2"
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/rvgs.cu -o build/rvgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/f1dim.o: src/f1dim.cu
 	@ echo "Building f1dim"

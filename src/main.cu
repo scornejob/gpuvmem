@@ -258,11 +258,6 @@ __host__ int main(int argc, char **argv) {
 		visibilities[i].numBlocksUV = UVpow2/visibilities[i].threadsPerBlockUV;
   }
 
-  for(int i=0; i < data.total_frequencies; i++){
-    float2 minmax = minmaxV(visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
-    printf("Freq[%d]----> Min = %f, Max %f\n", i, minmax.x, minmax.y);
-  }
-
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
