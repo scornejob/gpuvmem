@@ -546,7 +546,7 @@ __host__ void writeMS(char *file, Vis *visibilities) {
  sqlite3_close(db);
 
 }
-
+|
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
