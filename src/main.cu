@@ -73,6 +73,7 @@ fitsfile *mod_in;
 int status_mod_in;
 
 char *mempath;
+char *out_image;
 
 int verbose_flag;
 
@@ -138,6 +139,7 @@ __host__ int main(int argc, char **argv) {
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
+  out_image = variables.output_image;
 
 
   if(selected > num_gpus || selected < 0){

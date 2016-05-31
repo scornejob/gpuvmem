@@ -84,6 +84,7 @@ typedef struct variables {
   char *beam;
   char *modin;
   char *path;
+  char *output_image;
   int multigpu;
   int select;
   int blockSizeX;

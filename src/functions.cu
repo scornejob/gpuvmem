@@ -67,6 +67,7 @@ extern int num_gpus;
 extern int selected;
 
 extern char* mempath;
+extern char *out_image;
 
 extern fitsfile *mod_in;
 extern int status_mod_in;
@@ -555,12 +556,14 @@ __host__ void print_help() {
   printf(	"    -V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)\n");
   printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
+  printf(	"    -O  --outputImage     The name of the output image FITS file\n");
   printf("    -I  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -M  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
+  printf("        --verbose    Shows information through all the execution\n");
 }
 
 __host__ Vars getOptions(int argc, char **argv) {
@@ -571,6 +574,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.beam = (char*) malloc(2000*sizeof(char));
   variables.modin = (char*) malloc(2000*sizeof(char));
   variables.path = (char*) malloc(2000*sizeof(char));
+  variables.output_image = (char*) malloc(2000*sizeof(char));
   variables.multigpu = 0;
   variables.select = 0;
   variables.blockSizeX = -1;
@@ -578,14 +582,14 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeV = -1;
 
 	long next_op;
-	const char* const short_op = "hi:o:I:m:b:M:s:p:X:Y:V:";
+	const char* const short_op = "hi:o:O:I:m:b:M:s:p:X:Y:V:";
 
 	const struct option long_op[] = { //Flag for help
                                     {"help", 0, NULL, 'h' },
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
                                     /* These options don’t set a flag. */
-                                    {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'},
+                                    {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"outputImage", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
                                     {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
@@ -623,6 +627,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'o':
   		strcpy(variables.output, optarg);
   		break;
+    case 'O':
+    	strcpy(variables.output_image, optarg);
+    	break;
     case 'I':
       strcpy(variables.inputdat, optarg);
       break;
@@ -662,7 +669,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 	}
 
   if(variables.blockSizeX == -1 || variables.blockSizeY == -1 || variables.blockSizeV == -1 ||
-     variables.input == "" || variables.output == "" || variables.inputdat == "" ||
+     variables.input == "" || variables.output == "" || variables.output_image == "" || variables.inputdat == "" ||
      variables.beam == "" || variables.modin == "" || variables.path == "") {
         print_help();
         exit(EXIT_FAILURE);
@@ -692,7 +699,7 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
   char *unit = "JY/PIXEL";
   switch(option){
     case 0:
-      sprintf(name, "!%smod_out.fits", mempath, iteration);
+      sprintf(name, "!%s", out_image);
       break;
     case 1:
       sprintf(name, "!%sMEM_%d.fits", mempath, iteration);
