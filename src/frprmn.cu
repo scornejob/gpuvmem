@@ -194,7 +194,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
     start = omp_get_wtime();
     iter = i;
     if(verbose_flag){
-      printf("\n\n**********Iteration %d **********\n\n", i);
+      printf("\n\n********** Iteration %d **********\n\n", i);
     }
     linmin(p, xi, fret, func);
 

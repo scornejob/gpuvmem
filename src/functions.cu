@@ -1456,7 +1456,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   }else{
     cudaSetDevice(0);
   }
-  //printf("**************Calculating phi - Iteration %d **************\n", iter);
+
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
   float resultH  = 0.0;
@@ -1501,7 +1501,6 @@ __host__ float chiCuadrado(cufftComplex *I)
     	//REDUCTIONS
     	//chi2
     	resultchi2  += deviceReduce(device_vars[i].chi2, data.numVisibilitiesPerFreq[i]);
-      //printf("resultchi2: %f\n", resultchi2);
     }
   }else{
     #pragma omp parallel for schedule(static,1)
@@ -1550,28 +1549,26 @@ __host__ float chiCuadrado(cufftComplex *I)
 
     }
   }
-    if(num_gpus == 1){
-      cudaSetDevice(selected);
-    }else{
-      cudaSetDevice(0);
-    }
-    resultH  = deviceReduce(device_H, M*N);
-    resultPhi = (0.5 * resultchi2) + (lambda * resultH);
-    /*printf("chi2 value = %.5f\n", resultchi2);
-    printf("H value = %.5f\n", resultH);
-    printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
-    printf("lambda * H value = %.5f\n", lambda*resultH);
-    printf("Phi value = %.5f\n\n", resultPhi);*/
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(0);
+  }
+  resultH  = deviceReduce(device_H, M*N);
+  resultPhi = (0.5 * resultchi2) + (lambda * resultH);
+  /*printf("chi2 value = %.5f\n", resultchi2);
+  printf("H value = %.5f\n", resultH);
+  printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
+  printf("lambda * H value = %.5f\n", lambda*resultH);
+  printf("Phi value = %.5f\n\n", resultPhi);*/
 
-  	return resultPhi;
+  return resultPhi;
 }
 
 
 
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 {
-	//printf("**************Calculating dphi - Iteration %d *************\n", iter);
-
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -1635,9 +1632,6 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-
-
-  //dxi2 = device_dphi;
   gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float), device_dphi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
 
 }

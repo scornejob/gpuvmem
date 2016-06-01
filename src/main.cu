@@ -136,10 +136,10 @@ __host__ int main(int argc, char **argv) {
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
 	char *beaminput = variables.beam;
+  out_image = variables.output_image;
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
-  out_image = variables.output_image;
 
 
   if(selected > num_gpus || selected < 0){
@@ -259,6 +259,7 @@ __host__ int main(int argc, char **argv) {
     visibilities[i].threadsPerBlockUV = variables.blockSizeV;
 		visibilities[i].numBlocksUV = UVpow2/visibilities[i].threadsPerBlockUV;
   }
+
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
