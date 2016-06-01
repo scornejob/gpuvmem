@@ -668,14 +668,14 @@ __host__ Vars getOptions(int argc, char **argv) {
 		}
 	}
 
-  if(variables.blockSizeX == -1 || variables.blockSizeY == -1 || variables.blockSizeV == -1 ||
-     variables.input == "" || variables.output == "" || variables.output_image == "" || variables.inputdat == "" ||
-     variables.beam == "" || variables.modin == "" || variables.path == "") {
+  if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
+     variables.input == "" && variables.output == "" && variables.output_image == "" && variables.inputdat == "" ||
+     variables.beam == "" && variables.modin == "" && variables.path == "") {
         print_help();
         exit(EXIT_FAILURE);
   }
 
-  if(!isPow2(variables.blockSizeX) || !isPow2(variables.blockSizeY) || !isPow2(variables.blockSizeV)){
+  if(!isPow2(variables.blockSizeX) && !isPow2(variables.blockSizeY) && !isPow2(variables.blockSizeV)){
     print_help();
     exit(EXIT_FAILURE);
   }
