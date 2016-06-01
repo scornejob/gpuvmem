@@ -46,7 +46,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -V --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)
 -i  --input           The name of the input file of visibilities(SQLite)
 -o  --output          The name of the output file of residual visibilities(SQLite)
--O  --output_image    The name of the output image FITS file
+-O  --output-image    The name of the output image FITS file
 -I  --inputdat        The name of the input file of parameters
 -m  --modin           mod_in_0 FITS file
 -b  --beam            beam_0 FITS file
@@ -58,6 +58,25 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 #IMPORTANT
 
 Remember to create the mem folder to save the FITS images
+
+#RESTORING YOUR IMAGE
+
+Usage:
+
+- RUN in the same folder:
+`casapy --log2term --nogui -c restore_continuum_ms.py`
+
+- CONFIG:
+On the same file please edit first seven lines
+```
+residual_ms = "<MS_RESIDUAL_VISIBILITIES>"
+model_fits = "<FITS_MODEL_IMAGE>"
+restored = "<RESTORED_OUTPUT_FILENAME>"
+pix_size="0.0084arcsec"
+pix_num=2048
+weight="briggs"
+polarization="I"
+```
 
 #Contributors
 

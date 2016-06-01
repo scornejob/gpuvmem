@@ -556,7 +556,7 @@ __host__ void print_help() {
   printf(	"    -V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)\n");
   printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
   printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
-  printf(	"    -O  --outputImage     The name of the output image FITS file\n");
+  printf(	"    -O  --output-image     The name of the output image FITS file\n");
   printf("    -I  --inputdat   The name of the input file of parameters\n");
   printf("    -m  --modin      mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
@@ -589,7 +589,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
                                     /* These options don’t set a flag. */
-                                    {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"outputImage", 1, NULL, 'O'},
+                                    {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
                                     {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
