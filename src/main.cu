@@ -77,6 +77,9 @@ char *out_image;
 
 int verbose_flag;
 
+float final_chi2;
+float final_H;
+
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
   #ifdef _WIN32
@@ -140,7 +143,7 @@ __host__ int main(int argc, char **argv) {
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
-
+  int total_visibilities = 0;
 
   if(selected > num_gpus || selected < 0){
     printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
@@ -230,9 +233,7 @@ __host__ int main(int argc, char **argv) {
 	device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
 	device_vars = (VPF*)malloc(data.total_frequencies*sizeof(VPF));
 
-
-
-  //ONLY CPU
+  //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
 	for(int i=0; i < data.total_frequencies; i++){
 		visibilities[i].id = (int*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(int));
 		visibilities[i].stokes = (int*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(int));
@@ -241,6 +242,7 @@ __host__ int main(int argc, char **argv) {
 		visibilities[i].weight = (float*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(float));
 		visibilities[i].Vo = (cufftComplex*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
 		visibilities[i].Vr = (cufftComplex*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+    total_visibilities += data.numVisibilitiesPerFreq[i];
 	}
 
 
@@ -589,7 +591,12 @@ __host__ int main(int argc, char **argv) {
 	frprmn(device_I	, ftol, &fret, chiCuadrado, dchiCuadrado);
   t = clock() - t;
   end = omp_get_wtime();
-  printf("Minimization ended successfully\n");
+  printf("Minimization ended successfully\n\n");
+  printf("chi2: %f\n", final_chi2);
+  printf("0.5*chi2: %f\n", 0.5*final_chi2);
+  printf("Reduced-chi2: %f\n", final_chi2/total_visibilities);
+  printf("S: %f\n", final_H);
+  printf("lambda*S: %f\n\n", lambda*final_H);
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
   double wall_time = end-start;
   printf("Total CPU time: %lf\n", time_taken);

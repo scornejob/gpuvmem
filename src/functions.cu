@@ -73,6 +73,9 @@ extern fitsfile *mod_in;
 extern int status_mod_in;
 extern int verbose_flag;
 
+extern float final_chi2;
+extern float final_H;
+
 __host__ void goToError()
 {
   for(int i=1; i<num_gpus; i++){
@@ -1556,6 +1559,9 @@ __host__ float chiCuadrado(cufftComplex *I)
   }
   resultH  = deviceReduce(device_H, M*N);
   resultPhi = (0.5 * resultchi2) + (lambda * resultH);
+
+  final_chi2 = resultchi2;
+  final_H = resultH;
   /*printf("chi2 value = %.5f\n", resultchi2);
   printf("H value = %.5f\n", resultH);
   printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
