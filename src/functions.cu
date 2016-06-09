@@ -72,6 +72,7 @@ extern char *out_image;
 extern fitsfile *mod_in;
 extern int status_mod_in;
 extern int verbose_flag;
+extern int xcorr_flag;
 
 extern float final_chi2;
 extern float final_H;
@@ -566,6 +567,7 @@ __host__ void print_help() {
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -M  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
+  printf("        --xcorr      Run gpuvmem with cross-correlation\n");
   printf("        --verbose    Shows information through all the execution\n");
 }
 
@@ -591,6 +593,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"help", 0, NULL, 'h' },
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
+                                    {"xcorr", 0, &xcorr_flag, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
@@ -1081,7 +1084,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 /*
  * Interpolate in the visibility array to find the visibility at (u,v);
  */
-__global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
 {
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   long i1, i2, j1, j2;
@@ -1134,14 +1137,38 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, fl
     v22 = V[N*j2 + i2].y; /* [i2, j2] */
     Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
 
-    Vr[i].x =  Zreal - Vo[i].x;
-    Vr[i].y =  Zimag - Vo[i].y;
+    Vm[i].x = Zreal;
+    Vm[i].y = Zimag;
 
   }
 
 }
 
+__global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < numVisibilities){
+    alpha_num[i] = w[i] * ((Vm[i].x * Vo[i].x) + (Vm[i].y * Vo[i].y));
+    alpha_den[i] = w[i] * ((Vm[i].x * Vm[i].x) + (Vm[i].y * Vm[i].y));
+  }
 
+}
+
+__global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < numVisibilities){
+    Vr[i].x = Vm[i].x - Vo[i].x;
+    Vr[i].y = Vm[i].y - Vo[i].y;
+  }
+}
+
+
+__global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities){
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < numVisibilities){
+    Vr[i].x = (alpha * Vm[i].x) - Vo[i].x;
+    Vr[i].y = (alpha * Vm[i].y) - Vo[i].y;
+  }
+}
 
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
@@ -1392,6 +1419,43 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
   }
 }
 
+
+__global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY)
+{
+
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  int x0 = xobs;
+  int y0 = yobs;
+  float x = (j - x0) * DELTAX * RPDEG;
+  float y = (i - y0) * DELTAY * RPDEG;
+
+	float Ukv;
+	float Vkv;
+
+	float cosk;
+	float sink;
+
+  float dchi2 = 0.0;
+  if(noise[N*i+j].x <= noise_cut){
+  	for(int v=0; v<numVisibilities; v++){
+      Ukv = x * U[v];
+  		Vkv = y * V[v];
+      #if (__CUDA_ARCH__ >= 300 )
+        sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
+      #else
+        cosk = cospif(2.0*(Ukv+Vkv));
+        sink = sinpif(2.0*(Ukv+Vkv));
+      #endif
+      dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
+  	}
+
+  dchi2 *= alpha * fg_scale * atten[N*i+j].x;
+  dChi2[N*i+j] = dchi2;
+  }
+}
+
 __global__ void DChi2_total(float *dchi2_total, float *dchi2, long N)
 {
 
@@ -1493,9 +1557,23 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       //RESIDUAL CALCULATION
-      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
+      vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
 
+      if(xcorr_flag){
+        float alpha_num, alpha_den;
+        alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+
+        alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
+
+        alpha_den = deviceReduce(device_vars[i].alpha_den, data.numVisibilitiesPerFreq[i]);
+
+        device_vars[i].alpha = alpha_num/alpha_den;
+
+        residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
+      }else{
+        residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+      }
 
     	////chi 2 VECTOR
     	chi2Vector<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].chi2, device_visibilities[i].Vr, device_visibilities[i].weight, data.numVisibilitiesPerFreq[i]);
@@ -1533,8 +1611,23 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       //RESIDUAL CALCULATION
-      residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vo, device_vars[i].device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
+      vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
+
+      if(xcorr_flag){
+        float alpha_num, alpha_den;
+        alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+
+        alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
+
+        alpha_den = deviceReduce(device_vars[i].alpha_den, data.numVisibilitiesPerFreq[i]);
+
+        device_vars[i].alpha = alpha_num/alpha_den;
+
+        residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
+      }else{
+        residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+      }
 
 
     	////chi2 VECTOR
@@ -1599,9 +1692,14 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
+        if(xcorr_flag){
+          DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, device_vars[i].alpha, DELTAX, DELTAY);
+        	gpuErrchk(cudaDeviceSynchronize());
+        }else{
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
+        	gpuErrchk(cudaDeviceSynchronize());
+        }
 
-        DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
-      	gpuErrchk(cudaDeviceSynchronize());
 
         DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
       	gpuErrchk(cudaDeviceSynchronize());

@@ -4,64 +4,13 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-M	/home/miguel/Documents/gpuvmem/src/main.cu	/^long M;$/;"	variable	line:5
-N	/home/miguel/Documents/gpuvmem/src/main.cu	/^long N;$/;"	variable	line:6
-numVisibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^long numVisibilities;$/;"	variable	line:7
-iter	/home/miguel/Documents/gpuvmem/src/main.cu	/^int iter=0;$/;"	variable	line:8
-plan1GPU	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftHandle plan1GPU;$/;"	variable	line:10
-device_I	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_I;$/;"	variable	line:12
-device_V	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_V;$/;"	variable	line:13
-device_noise_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_noise_image;$/;"	variable	line:14
-device_fg_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_fg_image;$/;"	variable	line:15
-device_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^cufftComplex *device_image;$/;"	variable	line:16
-device_dphi	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dphi;$/;"	variable	line:19
-device_dchi2_total	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dchi2_total;$/;"	variable	line:21
-device_dH	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_dH;$/;"	variable	line:22
-device_chi2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_chi2;$/;"	variable	line:24
-device_H	/home/miguel/Documents/gpuvmem/src/main.cu	/^float *device_H;$/;"	variable	line:25
-threadsPerBlockNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 threadsPerBlockNN;$/;"	variable	line:27
-numBlocksNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^dim3 numBlocksNN;$/;"	variable	line:28
-threadsVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int threadsVectorReduceNN;$/;"	variable	line:30
-blocksVectorReduceNN	/home/miguel/Documents/gpuvmem/src/main.cu	/^int blocksVectorReduceNN;$/;"	variable	line:31
-difmap_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float difmap_noise;$/;"	variable	line:33
-fg_scale	/home/miguel/Documents/gpuvmem/src/main.cu	/^float fg_scale;$/;"	variable	line:35
-output	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *output;$/;"	variable	line:36
-global_xobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_xobs;$/;"	variable	line:37
-global_yobs	/home/miguel/Documents/gpuvmem/src/main.cu	/^float global_yobs;$/;"	variable	line:38
-noise_cut	/home/miguel/Documents/gpuvmem/src/main.cu	/^float noise_cut;$/;"	variable	line:40
-MINPIX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float MINPIX;$/;"	variable	line:41
-minpix_factor	/home/miguel/Documents/gpuvmem/src/main.cu	/^float minpix_factor;$/;"	variable	line:42
-lambda	/home/miguel/Documents/gpuvmem/src/main.cu	/^float lambda;$/;"	variable	line:43
-ftol	/home/miguel/Documents/gpuvmem/src/main.cu	/^float ftol;$/;"	variable	line:44
-random_probability	/home/miguel/Documents/gpuvmem/src/main.cu	/^float random_probability;$/;"	variable	line:45
-positivity	/home/miguel/Documents/gpuvmem/src/main.cu	/^int positivity = 1;$/;"	variable	line:46
-DELTAX	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAX;$/;"	variable	line:48
-DELTAY	/home/miguel/Documents/gpuvmem/src/main.cu	/^float DELTAY;$/;"	variable	line:49
-deltau	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltau;$/;"	variable	line:50
-deltav	/home/miguel/Documents/gpuvmem/src/main.cu	/^float deltav;$/;"	variable	line:51
-beam_noise	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_noise;$/;"	variable	line:54
-beam_bmaj	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmaj;$/;"	variable	line:55
-beam_bmin	/home/miguel/Documents/gpuvmem/src/main.cu	/^float beam_bmin;$/;"	variable	line:56
-ra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double ra;$/;"	variable	line:57
-dec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double dec;$/;"	variable	line:58
-obsra	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsra;$/;"	variable	line:59
-obsdec	/home/miguel/Documents/gpuvmem/src/main.cu	/^double obsdec;$/;"	variable	line:60
-crpix1	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix1;$/;"	variable	line:61
-crpix2	/home/miguel/Documents/gpuvmem/src/main.cu	/^int crpix2;$/;"	variable	line:62
-data	/home/miguel/Documents/gpuvmem/src/main.cu	/^freqData data;$/;"	variable	line:63
-device_vars	/home/miguel/Documents/gpuvmem/src/main.cu	/^VPF *device_vars;$/;"	variable	line:64
-visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *visibilities;$/;"	variable	line:65
-device_visibilities	/home/miguel/Documents/gpuvmem/src/main.cu	/^Vis *device_visibilities;$/;"	variable	line:66
-num_gpus	/home/miguel/Documents/gpuvmem/src/main.cu	/^int num_gpus;$/;"	variable	line:68
-multigpu	/home/miguel/Documents/gpuvmem/src/main.cu	/^int multigpu;$/;"	variable	line:69
-selected	/home/miguel/Documents/gpuvmem/src/main.cu	/^int selected;$/;"	variable	line:70
-mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^fitsfile *mod_in;$/;"	variable	line:72
-status_mod_in	/home/miguel/Documents/gpuvmem/src/main.cu	/^int status_mod_in;$/;"	variable	line:73
-mempath	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *mempath;$/;"	variable	line:75
-out_image	/home/miguel/Documents/gpuvmem/src/main.cu	/^char *out_image;$/;"	variable	line:76
-verbose_flag	/home/miguel/Documents/gpuvmem/src/main.cu	/^int verbose_flag;$/;"	variable	line:78
-final_chi2	/home/miguel/Documents/gpuvmem/src/main.cu	/^float final_chi2;$/;"	variable	line:80
-final_H	/home/miguel/Documents/gpuvmem/src/main.cu	/^float final_H;$/;"	variable	line:81
-IsGPUCapableP2P	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)$/;"	function	line:83	signature:(cudaDeviceProp *pProp)
-IsAppBuiltAs64	/home/miguel/Documents/gpuvmem/src/main.cu	/^inline bool IsAppBuiltAs64()$/;"	function	line:92	signature:()
-main	/home/miguel/Documents/gpuvmem/src/main.cu	/^__host__ int main(int argc, char **argv) {$/;"	function	line:101	signature:(int argc, char **argv)
+CUFFTFLAG	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^CUFFTFLAG = -lcufft$/;"	macro	line:4
+CFLAGS	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^CFLAGS = -c -w$/;"	macro	line:5
+INC_DIRS	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^INC_DIRS = -Iinclude$/;"	macro	line:6
+CFFLAG	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^CFFLAG = -Llib -lcfitsio -lm$/;"	macro	line:7
+SQLITE	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^SQLITE = -lsqlite3$/;"	macro	line:8
+LDFLAGS	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^LDFLAGS = -lcuda -lcudart$/;"	macro	line:9
+FOPENFLAG	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^FOPENFLAG = -Xcompiler -fopenmp -lgomp$/;"	macro	line:10
+CCFLAG	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^CCFLAG = -lstdc++$/;"	macro	line:11
+SMS	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^SMS ?= 20 30 35 37 50 52$/;"	macro	line:13
+HIGHEST_SM	/home/miguel/Documents/gpuvmem-stable/gpuvmem/Makefile	/^HIGHEST_SM := $(lastword $(sort $(SMS)))$/;"	macro	line:24

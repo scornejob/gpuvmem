@@ -14,7 +14,7 @@ extern float MINPIX;
 extern int verbose_flag;
 
 #define EPS 1.0e-10
-#define ITERATIONS 500
+#define ITERATIONS 50
 
 #define ARMIJOTOLERANCE 1.e-6
 #define ALPHA 1.e-4

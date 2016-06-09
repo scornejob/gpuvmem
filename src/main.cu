@@ -76,6 +76,7 @@ char *mempath;
 char *out_image;
 
 int verbose_flag;
+int xcorr_flag;
 
 float final_chi2;
 float final_H;
@@ -270,6 +271,7 @@ __host__ int main(int argc, char **argv) {
 			gpuErrchk(cudaMalloc(&device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].Vo, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].weight, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMalloc(&device_visibilities[i].Vm, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 		}
 	}else{
@@ -279,6 +281,7 @@ __host__ int main(int argc, char **argv) {
 			gpuErrchk(cudaMalloc(&device_visibilities[i].v, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].Vo, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].weight, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMalloc(&device_visibilities[i].Vm, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMalloc(&device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 		}
 	}
@@ -289,8 +292,14 @@ __host__ int main(int argc, char **argv) {
 		for(int i=0; i < data.total_frequencies; i++){
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].atten, sizeof(cufftComplex)*M*N));
 			gpuErrchk(cudaMemset(device_vars[i].atten, 0, sizeof(cufftComplex)*M*N));
-			gpuErrchk(cudaMalloc((void**)&device_vars[i].chi2, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+
+			gpuErrchk(cudaMalloc(&device_vars[i].chi2, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMemset(device_vars[i].chi2, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+
+      gpuErrchk(cudaMalloc(&device_vars[i].alpha_num, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_num, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMalloc(&device_vars[i].alpha_den, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_den, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 
 
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].dchi2, sizeof(float)*M*N));
@@ -303,7 +312,8 @@ __host__ int main(int argc, char **argv) {
 			gpuErrchk(cudaMemcpy(device_visibilities[i].weight, visibilities[i].weight, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 			gpuErrchk(cudaMemcpy(device_visibilities[i].Vo, visibilities[i].Vo, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
-			gpuErrchk(cudaMemset(device_visibilities[i].Vr, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_visibilities[i].Vr, 0, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMemset(device_visibilities[i].Vm, 0, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 
 		}
 	}else{
@@ -311,8 +321,14 @@ __host__ int main(int argc, char **argv) {
 			cudaSetDevice(i%num_gpus);
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].atten, sizeof(cufftComplex)*M*N));
 			gpuErrchk(cudaMemset(device_vars[i].atten, 0, sizeof(cufftComplex)*M*N));
-			gpuErrchk(cudaMalloc((void**)&device_vars[i].chi2, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMalloc(&device_vars[i].chi2, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 			gpuErrchk(cudaMemset(device_vars[i].chi2, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+
+      gpuErrchk(cudaMalloc(&device_vars[i].alpha_num, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_num, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMalloc(&device_vars[i].alpha_den, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_den, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+
 
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].dchi2, sizeof(float)*M*N));
 			gpuErrchk(cudaMemset(device_vars[i].dchi2, 0, sizeof(float)*M*N));
@@ -324,6 +340,7 @@ __host__ int main(int argc, char **argv) {
 			gpuErrchk(cudaMemcpy(device_visibilities[i].weight, visibilities[i].weight, sizeof(float)*data.numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 			gpuErrchk(cudaMemcpy(device_visibilities[i].Vo, visibilities[i].Vo, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 			gpuErrchk(cudaMemset(device_visibilities[i].Vr, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+      gpuErrchk(cudaMemset(device_visibilities[i].Vm, 0, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i]));
 		}
 	}
 
@@ -594,6 +611,7 @@ __host__ int main(int argc, char **argv) {
   printf("Minimization ended successfully\n\n");
   printf("chi2: %f\n", final_chi2);
   printf("0.5*chi2: %f\n", 0.5*final_chi2);
+  printf("Total visibilities: %d\n", total_visibilities);
   printf("Reduced-chi2: %f\n", final_chi2/total_visibilities);
   printf("S: %f\n", final_H);
   printf("lambda*S: %f\n\n", lambda*final_H);

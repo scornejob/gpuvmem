@@ -50,6 +50,7 @@ typedef struct observedVisibilities{
   float *v;
   float *weight;
   cufftComplex *Vo;
+  cufftComplex *Vm;
   cufftComplex *Vr;
   float freq;
   long numVisibilities;
@@ -64,7 +65,10 @@ typedef struct variablesPerFreq{
   cufftComplex *atten;
   float *chi2;
   float *dchi2;
+  float alpha;
 
+  float *alpha_num;
+  float *alpha_den;
   cufftHandle plan;
   cufftComplex *device_image;
   cufftComplex *device_V;
@@ -125,7 +129,10 @@ __global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N
 __global__ void noise_image(cufftComplex *total_atten, cufftComplex *noise_image, float difmap_noise, long N);
 __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
-__global__ void residual(cufftComplex *Vr, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
+__global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
+__global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
+__global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N);
 __global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N);
