@@ -325,9 +325,9 @@ __host__ int main(int argc, char **argv) {
 			gpuErrchk(cudaMemset(device_vars[i].chi2, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 
       gpuErrchk(cudaMalloc(&device_vars[i].alpha_num, sizeof(float)*data.numVisibilitiesPerFreq[i]));
-			gpuErrchk(cudaMemset(device_vars[i].alpha_num, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_num, 1, sizeof(float)*data.numVisibilitiesPerFreq[i]));
       gpuErrchk(cudaMalloc(&device_vars[i].alpha_den, sizeof(float)*data.numVisibilitiesPerFreq[i]));
-			gpuErrchk(cudaMemset(device_vars[i].alpha_den, 0, sizeof(float)*data.numVisibilitiesPerFreq[i]));
+			gpuErrchk(cudaMemset(device_vars[i].alpha_den, 1, sizeof(float)*data.numVisibilitiesPerFreq[i]));
 
 
 			gpuErrchk(cudaMalloc((void**)&device_vars[i].dchi2, sizeof(float)*M*N));

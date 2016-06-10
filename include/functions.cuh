@@ -144,6 +144,7 @@ __global__ void clip(cufftComplex *I, float *grad, float RMS, long N);
 __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N);
 __global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N);
 __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
+__global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);

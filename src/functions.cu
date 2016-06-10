@@ -1561,7 +1561,8 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       if(xcorr_flag){
-        float alpha_num, alpha_den;
+        float alpha_num = 1.0;
+        float alpha_den = 1.0;
         alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
         alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
@@ -1611,11 +1612,13 @@ __host__ float chiCuadrado(cufftComplex *I)
     	gpuErrchk(cudaDeviceSynchronize());
 
       //RESIDUAL CALCULATION
-      vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
+      vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
     	gpuErrchk(cudaDeviceSynchronize());
 
+
       if(xcorr_flag){
-        float alpha_num, alpha_den;
+        float alpha_num = 1.0;
+        float alpha_den = 1.0;
         alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
         alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
@@ -1715,8 +1718,13 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
       int gpu_id = -1;
       cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
       cudaGetDevice(&gpu_id);
-      DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
-      gpuErrchk(cudaDeviceSynchronize());
+      if(xcorr_flag){
+        DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, device_vars[i].alpha, DELTAX, DELTAY);
+        gpuErrchk(cudaDeviceSynchronize());
+      }else{
+        DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
+        gpuErrchk(cudaDeviceSynchronize());
+      }
 
       #pragma omp critical
       {
