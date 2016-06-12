@@ -116,6 +116,20 @@ __host__ int main(int argc, char **argv) {
   }
 
 
+	float noise_min = 1E32;
+
+	Vars variables = getOptions(argc, argv);
+	char *msinput = variables.input;
+	char *msoutput = variables.output;
+  char *inputdat = variables.inputdat;
+	char *modinput = variables.modin;
+	char *beaminput = variables.beam;
+  out_image = variables.output_image;
+	multigpu = variables.multigpu;
+  selected = variables.select;
+  mempath = variables.path;
+  int total_visibilities = 0;
+
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
     printf("Number of CUDA devices:\t%d\n", num_gpus);
@@ -131,20 +145,6 @@ __host__ int main(int argc, char **argv) {
     }
     printf("---------------------------\n");
   }
-
-	float noise_min = 1E32;
-
-	Vars variables = getOptions(argc, argv);
-	char *msinput = variables.input;
-	char *msoutput = variables.output;
-  char *inputdat = variables.inputdat;
-	char *modinput = variables.modin;
-	char *beaminput = variables.beam;
-  out_image = variables.output_image;
-	multigpu = variables.multigpu;
-  selected = variables.select;
-  mempath = variables.path;
-  int total_visibilities = 0;
 
   if(selected > num_gpus || selected < 0){
     printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
