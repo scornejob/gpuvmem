@@ -573,13 +573,6 @@ __host__ void print_help() {
 
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
-	variables.input = (char*) malloc(2000*sizeof(char));
-  variables.output = (char*) malloc(2000*sizeof(char));
-  variables.inputdat = (char*) malloc(2000*sizeof(char));
-  variables.beam = (char*) malloc(2000*sizeof(char));
-  variables.modin = (char*) malloc(2000*sizeof(char));
-  variables.path = (char*) malloc(2000*sizeof(char));
-  variables.output_image = (char*) malloc(2000*sizeof(char));
   variables.multigpu = 0;
   variables.select = 0;
   variables.blockSizeX = -1;
@@ -628,24 +621,31 @@ __host__ Vars getOptions(int argc, char **argv) {
 			print_help();
 			exit(EXIT_SUCCESS);
 		case 'i':
+      variables.input = (char*) malloc(strlen(optarg)*sizeof(char));
 			strcpy(variables.input, optarg);
 			break;
     case 'o':
+      variables.output = (char*) malloc(strlen(optarg)*sizeof(char));
   		strcpy(variables.output, optarg);
   		break;
     case 'O':
+      variables.output_image = (char*) malloc(strlen(optarg)*sizeof(char));
     	strcpy(variables.output_image, optarg);
     	break;
     case 'I':
+      variables.inputdat = (char*) malloc(strlen(optarg)*sizeof(char));
       strcpy(variables.inputdat, optarg);
       break;
     case 'm':
+      variables.modin = (char*) malloc(strlen(optarg)*sizeof(char));
     	strcpy(variables.modin, optarg);
     	break;
     case 'b':
+      variables.beam = (char*) malloc(strlen(optarg)*sizeof(char));
     	strcpy(variables.beam, optarg);
     	break;
     case 'p':
+      variables.path = (char*) malloc(strlen(optarg)*sizeof(char));
       strcpy(variables.path, optarg);
       break;
     case 'M':
