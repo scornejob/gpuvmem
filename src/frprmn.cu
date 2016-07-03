@@ -14,7 +14,7 @@ extern float MINPIX;
 extern int verbose_flag;
 
 #define EPS 1.0e-10
-#define ITERATIONS 500
+extern int it_maximum;
 
 #define ARMIJOTOLERANCE 1.e-6
 #define ALPHA 1.e-4
@@ -70,7 +70,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
 
   normPGC = deviceReduce(device_normVector, M*N);
   i=1;
-  while(normPGC > ARMIJOTOLERANCE && i <= ITERATIONS){
+  while(normPGC > ARMIJOTOLERANCE && i <= it_maximum){
     start = omp_get_wtime();
     iter = i;
     float lambda2 = 1.0;
@@ -190,7 +190,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
 
 
   ////////////////////////////////////////////////////////////////
-  for(int i=1; i <= ITERATIONS; i++){
+  for(int i=1; i <= it_maximum; i++){
     start = omp_get_wtime();
     iter = i;
     if(verbose_flag){

@@ -97,6 +97,7 @@ co65:
 selfcalband9:
 	@ clear
 	@ ./bin/gpuvmem -i ./tests/selfcalband9/selfcalband9.sqlite -o ./tests/selfcalband9/selfcalband9_out.sqlite -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 32 -Y 32 -V 1024 --verbose
+	
 hco20:
 	@ clear
 	@ ./bin/gpuvmem -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -O ./tests/HCO-chan20/mod_out.fits -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -I ./tests/HCO-chan20/input.dat -p ./tests/HCO-chan20/mem/ -X 32 -Y 32 -V 1024

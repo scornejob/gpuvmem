@@ -53,6 +53,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
+-t  --iterations      Number of iterations for optimization (Default = 50)
     --xcorr           Run gpuvmem with cross-correlation
     --verbose         Shows information through all the execution
 ```

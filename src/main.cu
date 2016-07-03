@@ -78,6 +78,8 @@ char *out_image;
 int verbose_flag;
 int xcorr_flag;
 
+int it_maximum;
+
 float final_chi2;
 float final_H;
 
@@ -128,6 +130,7 @@ __host__ int main(int argc, char **argv) {
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
+  it_maximum = variables.it_max;
   int total_visibilities = 0;
 
   if(verbose_flag){
@@ -392,8 +395,6 @@ __host__ int main(int argc, char **argv) {
 			host_I[N*i+j].y = 0;
 		}
 	}
-
-	int it;
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	//exit(-1);
@@ -609,6 +610,7 @@ __host__ int main(int argc, char **argv) {
   t = clock() - t;
   end = omp_get_wtime();
   printf("Minimization ended successfully\n\n");
+  printf("Iterations: %d\n", iter);
   printf("chi2: %f\n", final_chi2);
   printf("0.5*chi2: %f\n", 0.5*final_chi2);
   printf("Total visibilities: %d\n", total_visibilities);

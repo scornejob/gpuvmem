@@ -95,6 +95,7 @@ typedef struct variables {
   int blockSizeX;
   int blockSizeY;
   int blockSizeV;
+  int it_max;
 } Vars;
 
 __host__ void goToError();
@@ -105,6 +106,7 @@ __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqD
 __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities);
 __host__ void writeMS(char *file, Vis *visibilities);
 __host__ void print_help();
+__host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ void Print2DFloatArray(int rows, int cols, float *array);
 __host__ void Print2DIntArray(int rows, int cols, int *array);

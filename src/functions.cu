@@ -555,20 +555,37 @@ __host__ void writeMS(char *file, Vis *visibilities) {
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
-  printf(	"    -X  --blockSizeX      Block X Size for Image (Needs to be pow of 2)\n");
-  printf(	"    -Y  --blockSizeY      Block Y Size for Image (Needs to be pow of 2)\n");
-  printf(	"    -V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"    -i  --input      The name of the input file of visibilities(SQLite)\n");
-  printf(	"    -o  --output     The name of the output file of residual visibilities(SQLite)\n");
-  printf(	"    -O  --output-image     The name of the output image FITS file\n");
-  printf("    -I  --inputdat   The name of the input file of parameters\n");
-  printf("    -m  --modin      mod_in_0 FITS file\n");
+  printf(	"    -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
+  printf(	"    -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
+  printf(	"    -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
+  printf(	"    -i  --input       The name of the input file of visibilities(SQLite)\n");
+  printf(	"    -o  --output       The name of the output file of residual visibilities(SQLite)\n");
+  printf(	"    -O  --output-image       The name of the output image FITS file\n");
+  printf("    -I  --inputdat       The name of the input file of parameters\n");
+  printf("    -m  --modin       mod_in_0 FITS file\n");
   printf("    -b  --beam       beam_0 FITS file\n");
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
-  printf("    -M  --multigpu   Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
-  printf("    -s  --select     If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
-  printf("        --xcorr      Run gpuvmem with cross-correlation\n");
-  printf("        --verbose    Shows information through all the execution\n");
+  printf("    -M  --multigpu       Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
+  printf("    -s  --select       If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
+  printf("    -t  --iterations       Number of iterations for optimization (Default = 50)\n");
+  printf("        --xcorr       Run gpuvmem with cross-correlation\n");
+  printf("        --verbose       Shows information through all the execution\n");
+}
+
+__host__ char *strip(const char *string, const char *chars)
+{
+  char * newstr = (char*)malloc(strlen(string) + 1);
+  int counter = 0;
+
+  for ( ; *string; string++) {
+    if (!strchr(chars, *string)) {
+      newstr[ counter ] = *string;
+      ++ counter;
+    }
+  }
+
+  newstr[counter] = 0;
+  return newstr;
 }
 
 __host__ Vars getOptions(int argc, char **argv) {
@@ -578,9 +595,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
   variables.blockSizeV = -1;
+  variables.it_max = 500;
+
 
 	long next_op;
-	const char* const short_op = "hi:o:O:I:m:b:M:s:p:X:Y:V:";
+	const char* const short_op = "hi:o:O:I:m:b:M:s:p:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help
                                     {"help", 0, NULL, 'h' },
@@ -592,6 +611,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
                                     {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
+                                    {"iterations", 0, NULL, 't'},
                                     { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
@@ -663,6 +683,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'V':
       variables.blockSizeV = atoi(optarg);
       break;
+    case 't':
+      variables.it_max = atoi(optarg);
+      break;
 		case '?':
 			print_help();
 			exit(EXIT_FAILURE);
@@ -675,8 +698,8 @@ __host__ Vars getOptions(int argc, char **argv) {
 	}
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
-     variables.input == "" && variables.output == "" && variables.output_image == "" && variables.inputdat == "" ||
-     variables.beam == "" && variables.modin == "" && variables.path == "") {
+     strip(variables.input, " ") == "" && strip(variables.output, " ") == "" && strip(variables.output_image, " ") == "" && strip(variables.inputdat, " ") == "" ||
+     strip(variables.beam, " ") == "" && strip(variables.modin, " ") == "" && strip(variables.path, " ") == "") {
         print_help();
         exit(EXIT_FAILURE);
   }
