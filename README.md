@@ -56,6 +56,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -t  --iterations      Number of iterations for optimization (Default = 50)
     --xcorr           Run gpuvmem with cross-correlation
     --verbose         Shows information through all the execution
+    --nopositivity    Run gpuvmem using chi2 with no posititivy restriction
 ```
 #IMPORTANT
 
