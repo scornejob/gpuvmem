@@ -43,7 +43,7 @@ float minpix_factor;
 float lambda;
 float ftol;
 float random_probability;
-int positivity = 1;
+int nopositivity;
 
 float DELTAX;
 float DELTAY;

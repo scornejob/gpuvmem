@@ -6,7 +6,7 @@ float *device_xicom, (*nrfunc)(cufftComplex*);
 extern long M;
 extern long N;
 extern float MINPIX;
-extern int positivity;
+extern int nopositivity;
 
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
@@ -42,7 +42,7 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
   //GPU MUL AND ADD
   //xi     = xi*xmin;
   //p      = p + xi;
-  if(positivity == 1){
+  if(nopositivity == 0){
     newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, MINPIX, N);
     gpuErrchk(cudaDeviceSynchronize());
   }else{

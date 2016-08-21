@@ -46,7 +46,7 @@ extern float minpix_factor;
 extern float lambda;
 extern float ftol;
 extern float random_probability;
-extern int positivity;
+extern int nopositivity;
 
 
 extern float beam_noise;
@@ -217,8 +217,6 @@ __host__ void readInputDat(char *file)
           ftol = status;
         } else if(strcmp(item,"random_probability")==0){
           random_probability = status;
-        } else if(strcmp(item,"positivity")==0){
-            positivity = status;
         }else{
           break;
         }
@@ -569,6 +567,7 @@ __host__ void print_help() {
   printf("    -s  --select       If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
   printf("    -t  --iterations       Number of iterations for optimization (Default = 50)\n");
   printf("        --xcorr       Run gpuvmem with cross-correlation\n");
+  printf("        --nopositivity       Run gpuvmem using chi2 with no posititivy restriction\n");
   printf("        --verbose       Shows information through all the execution\n");
 }
 
@@ -606,6 +605,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
                                     {"xcorr", 0, &xcorr_flag, 1},
+                                    {"nopositivity", 0, &nopositivity, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },

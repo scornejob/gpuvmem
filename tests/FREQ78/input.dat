@@ -1,6 +1,5 @@
-lambda_entropy  0.1  
-noise_cut	10.2            
+lambda_entropy  0.1
+noise_cut	10.2
 minpix_factor   1000.0
 ftol		1.0e-12
 random_probability 0.0
-positivity 1
