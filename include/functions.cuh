@@ -15,6 +15,26 @@
 #include <fcntl.h>
 #include <sqlite3.h>
 #include <omp.h>
+#include <tables/Tables/Table.h>
+#include <tables/Tables/TableRow.h>
+#include <tables/Tables/TableIter.h>
+#include <tables/Tables/ScalarColumn.h>
+#include <tables/Tables/ArrayColumn.h>
+#include <casa/Arrays/Vector.h>
+#include <casa/Arrays/Slicer.h>
+#include <casa/Arrays/ArrayMath.h>
+#include <tables/Tables/TableParse.h>
+#include <ms/MeasurementSets.h>
+
+
+
+#include <tables/Tables/ColumnDesc.h>
+#include <tables/Tables/ScaColDesc.h>
+#include <tables/Tables/ArrColDesc.h>
+
+#include <ms/MeasurementSets/MSMainColumns.h>
+#include <tables/Tables/TableDesc.h>
+#include <ms/MeasurementSets/MSAntennaColumns.h>
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64
