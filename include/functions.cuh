@@ -25,6 +25,12 @@
 #include <casa/Arrays/ArrayMath.h>
 #include <tables/Tables/TableParse.h>
 #include <ms/MeasurementSets.h>
+#include <tables/Tables/ColumnDesc.h>
+#include <tables/Tables/ScaColDesc.h>
+#include <tables/Tables/ArrColDesc.h>
+#include <ms/MeasurementSets/MSMainColumns.h>
+#include <tables/Tables/TableDesc.h>
+#include <ms/MeasurementSets/MSAntennaColumns.h>
 
 
 
