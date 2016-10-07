@@ -4,6 +4,7 @@
 
 To compile GPUVMEM you need:
 
+- casacore
 - sqlite3
 - CUDA
 - OpenMP
