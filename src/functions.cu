@@ -101,6 +101,7 @@ __host__ freqData getFreqs(char * file)
 {
    freqData freqsAndVisibilities;
    string dir = file;
+   string query;
    casa::Vector<double> pointing;
    casa::Table main_tab(dir);
    casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
