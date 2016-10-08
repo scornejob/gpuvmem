@@ -156,7 +156,7 @@ __host__ int main(int argc, char **argv) {
 
   readInputDat(inputdat);
 	data = getFreqs(msinput);
-  if(verbose_flag){
+  /*if(verbose_flag){
 	   printf("Number of frequencies file = %d\n", data.total_frequencies);
   }
 
@@ -728,9 +728,9 @@ __host__ int main(int argc, char **argv) {
 
   fits_close_file(mod_in, &status_mod_in);
   if (status_mod_in) {
-    fits_report_error(stderr, status_mod_in); /* print error message */
+    fits_report_error(stderr, status_mod_in);
     goToError();
   }
-
+  */
 	return 0;
 }

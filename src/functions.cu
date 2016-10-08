@@ -77,6 +77,7 @@ extern int xcorr_flag;
 extern float final_chi2;
 extern float final_H;
 
+
 __host__ void goToError()
 {
   for(int i=1; i<num_gpus; i++){
@@ -99,42 +100,35 @@ __host__ void goToError()
 __host__ freqData getFreqs(char * file)
 {
    freqData freqsAndVisibilities;
-   sqlite3 *db;
-   sqlite3_stmt *stmt;
-   char *err_msg = 0;
+   string dir = file;
+   casa::Vector<double> pointing;
+   casa::Table main_tab(dir);
+   casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
+   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+   casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
+   int fields = field_tab.nrow();
+   //For now only 1 FIELD.
+   casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
+   const casa::TableRecord &values = field_row.get(0);
+   pointing = values.asArrayDouble ("REFERENCE_DIR");
+   obsra = pointing[0];
+   obsdec = pointing[1];
 
-   int rc = sqlite3_open(file, &db);
+   int nsamples = main_tab.nrow();
+   if (nsamples == 0) {
+      printf("ERROR : nsamples is zero... exiting....\n");
+      exit(-1);
+   }
+  printf("Samples: %d\n", nsamples);
 
-   if (rc != SQLITE_OK) {
-    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    goToError();
-  }else{
-    if(verbose_flag){
-      printf("Database connection okay!\n");
-    }
-  }
-
-  char *sql = "SELECT n_internal_frequencies as nfreq FROM header";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
-  sqlite3_step(stmt);
-  freqsAndVisibilities.n_internal_frequencies = sqlite3_column_int(stmt, 0);
+  casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");  //NUMBER OF SPW
+  freqsAndVisibilities.n_internal_frequencies = spectral_window_tab.nrow();
 
   freqsAndVisibilities.channels = (int*)malloc(freqsAndVisibilities.n_internal_frequencies*sizeof(int));
-
-  sql = "SELECT COUNT(*) as channels FROM channels WHERE internal_freq_id = ?";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
-  if (rc != SQLITE_OK ) {
-    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    goToError();
-  }
-
-  for(int i=0; i< freqsAndVisibilities.n_internal_frequencies; i++){
-      sqlite3_bind_int(stmt, 1, i);
-      sqlite3_step(stmt);
-      freqsAndVisibilities.channels[i] = sqlite3_column_int(stmt, 0);
-      sqlite3_reset(stmt);
+  casa::ROScalarColumn<casa::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
+  for(int i = 0; i < freqsAndVisibilities.n_internal_frequencies; i++){
+    freqsAndVisibilities.channels[i] = n_chan_freq(i);
+    printf("SPW %d has %d Channel\n", i, freqsAndVisibilities.channels[i]);
   }
 
   int total_frequencies = 0;
@@ -148,7 +142,7 @@ __host__ freqData getFreqs(char * file)
   freqsAndVisibilities.numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
 
 
-  sql = "SELECT COUNT(*) AS visibilitiesPerFreq FROM(SELECT samples.u as u, samples.v as v, samples.w as w, visibilities.stokes as stokes, samples.id_field as id_field, visibilities.Re as Re, visibilities.Im as Im, weights.weight as We, id_antenna1, id_antenna2, channels.internal_freq_id as  internal_frequency_id , visibilities.channel as channel, frequency FROM visibilities,samples,weights,channels WHERE visibilities.flag=0 and samples.flag_row=0 and visibilities.id_sample = samples.id and weights.id_sample=samples.id and weights.stokes=visibilities.stokes and channels.internal_freq_id=samples.internal_freq_id and visibilities.channel=channels.channel) WHERE internal_frequency_id = ? AND channel = ?";
+  /*sql = "SELECT COUNT(*) AS visibilitiesPerFreq FROM(SELECT samples.u as u, samples.v as v, samples.w as w, visibilities.stokes as stokes, samples.id_field as id_field, visibilities.Re as Re, visibilities.Im as Im, weights.weight as We, id_antenna1, id_antenna2, channels.internal_freq_id as  internal_frequency_id , visibilities.channel as channel, frequency FROM visibilities,samples,weights,channels WHERE visibilities.flag=0 and samples.flag_row=0 and visibilities.id_sample = samples.id and weights.id_sample=samples.id and weights.stokes=visibilities.stokes and channels.internal_freq_id=samples.internal_freq_id and visibilities.channel=channels.channel) WHERE internal_frequency_id = ? AND channel = ?";
   rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
   if (rc != SQLITE_OK ) {
     printf("Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -170,6 +164,7 @@ __host__ freqData getFreqs(char * file)
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
+  */
   return freqsAndVisibilities;
 }
 
@@ -377,7 +372,7 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
 
 
 
-  sql = "SELECT ra, dec FROM fields";
+  /*sql = "SELECT ra, dec FROM fields";
   rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   if (rc != SQLITE_OK ) {
     printf("SQL error: %s\n", error);
@@ -390,7 +385,7 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   obsdec = sqlite3_column_double(stmt, 1);
   if(verbose_flag){
     printf("Center read!\n");
-  }
+  }*/
 
   sql = "SELECT frequency as freq_vector FROM channels WHERE internal_freq_id = ? AND channel = ?";
   rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
@@ -556,8 +551,8 @@ __host__ void print_help() {
   printf(	"    -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
   printf(	"    -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
   printf(	"    -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"    -i  --input       The name of the input file of visibilities(SQLite)\n");
-  printf(	"    -o  --output       The name of the output file of residual visibilities(SQLite)\n");
+  printf(	"    -i  --input       The name of the input file of visibilities(MS)\n");
+  printf(	"    -o  --output       The name of the output file of residual visibilities(MS)\n");
   printf(	"    -O  --output-image       The name of the output image FITS file\n");
   printf("    -I  --inputdat       The name of the input file of parameters\n");
   printf("    -m  --modin       mod_in_0 FITS file\n");

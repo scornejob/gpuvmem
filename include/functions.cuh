@@ -13,8 +13,9 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <fcntl.h>
-#include <sqlite3.h>
 #include <omp.h>
+#include <string.h>
+#include <sqlite3.h>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
 #include <tables/Tables/TableIter.h>
@@ -28,16 +29,6 @@
 #include <tables/Tables/ColumnDesc.h>
 #include <tables/Tables/ScaColDesc.h>
 #include <tables/Tables/ArrColDesc.h>
-#include <ms/MeasurementSets/MSMainColumns.h>
-#include <tables/Tables/TableDesc.h>
-#include <ms/MeasurementSets/MSAntennaColumns.h>
-
-
-
-#include <tables/Tables/ColumnDesc.h>
-#include <tables/Tables/ScaColDesc.h>
-#include <tables/Tables/ArrColDesc.h>
-
 #include <ms/MeasurementSets/MSMainColumns.h>
 #include <tables/Tables/TableDesc.h>
 #include <ms/MeasurementSets/MSAntennaColumns.h>

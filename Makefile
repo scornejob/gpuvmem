@@ -92,7 +92,7 @@ conf:
 
 co65:
 	@ clear
-	@ ./bin/gpuvmem -i ./tests/co65/co65.sqlite -o ./tests/co65/co65_out.sqlite -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 32 -Y 32 -V 1024
+	@ ./bin/gpuvmem -i ./tests/co65/bigballs_hd142.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 32 -Y 32 -V 1024
 
 selfcalband9:
 	@ clear
