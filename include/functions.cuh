@@ -73,7 +73,6 @@ typedef struct observedVisibilities{
   float freq;
   long numVisibilities;
   int *stokes;
-  int *id;
 
   int threadsPerBlockUV;
   int numBlocksUV;
@@ -121,7 +120,8 @@ __host__ long NearestPowerOf2(long N);
 __host__ void readInputDat(char *file);
 __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data);
 __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities);
-__host__ void writeMS(char *file, Vis *visibilities);
+__host__ void MScopy(char const *in_dir, char const *in_dir_dest);
+__host__ void writeMS(char *infile, char *outfile, Vis *visibilities);
 __host__ void print_help();
 __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
@@ -142,7 +142,6 @@ __global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N);
 __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N);
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
-__global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities);
 __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N);
 __global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N);

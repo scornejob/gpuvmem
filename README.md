@@ -5,7 +5,6 @@
 To compile GPUVMEM you need:
 
 - casacore
-- sqlite3
 - CUDA
 - OpenMP
 
@@ -16,14 +15,6 @@ cd gpuvmem
 make
 ```
 #Usage
-
-Convert your ms input file to sql with ms2sql:
-
-`ms2sql --ms-src input.ms --db-dest input.sql --verbose`
-
-Remember to also make a copy of the input.sql to save residuals.
-
-`cp input.sql residuals.sql`
 
 Create your beam_0.fits and mod_in_0.fits with difmap.
 Create your input.dat file with the following data and change the parameters if you want:
@@ -45,8 +36,8 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -X --blockSizeX       Block X Size for Image (Needs to be pow of 2)
 -Y --blockSizeY       Block Y Size for Image (Needs to be pow of 2)
 -V --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)
--i  --input           The name of the input file of visibilities(SQLite)
--o  --output          The name of the output file of residual visibilities(SQLite)
+-i  --input           The name of the input file of visibilities(MS)
+-o  --output          The name of the output file of residual visibilities(MS)
 -O  --output-image    The name of the output image FITS file
 -I  --inputdat        The name of the input file of parameters
 -m  --modin           mod_in_0 FITS file

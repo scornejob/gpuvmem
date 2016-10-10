@@ -77,6 +77,9 @@ extern int xcorr_flag;
 extern float final_chi2;
 extern float final_H;
 
+extern int nsamples;
+extern int nstokes;
+
 
 __host__ void goToError()
 {
@@ -115,12 +118,11 @@ __host__ freqData getFreqs(char * file)
    obsra = pointing[0];
    obsdec = pointing[1];
 
-   int nsamples = main_tab.nrow();
+   nsamples = main_tab.nrow();
    if (nsamples == 0) {
       printf("ERROR : nsamples is zero... exiting....\n");
       exit(-1);
    }
-  printf("Samples: %d\n", nsamples);
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");  //NUMBER OF SPW
   freqsAndVisibilities.n_internal_frequencies = spectral_window_tab.nrow();
@@ -129,7 +131,6 @@ __host__ freqData getFreqs(char * file)
   casa::ROScalarColumn<casa::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
   for(int i = 0; i < freqsAndVisibilities.n_internal_frequencies; i++){
     freqsAndVisibilities.channels[i] = n_chan_freq(i);
-    printf("SPW %d has %d Channel\n", i, freqsAndVisibilities.channels[i]);
   }
 
   int total_frequencies = 0;
@@ -141,31 +142,36 @@ __host__ freqData getFreqs(char * file)
 
   freqsAndVisibilities.total_frequencies = total_frequencies;
   freqsAndVisibilities.numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
-
-
-  /*sql = "SELECT COUNT(*) AS visibilitiesPerFreq FROM(SELECT samples.u as u, samples.v as v, samples.w as w, visibilities.stokes as stokes, samples.id_field as id_field, visibilities.Re as Re, visibilities.Im as Im, weights.weight as We, id_antenna1, id_antenna2, channels.internal_freq_id as  internal_frequency_id , visibilities.channel as channel, frequency FROM visibilities,samples,weights,channels WHERE visibilities.flag=0 and samples.flag_row=0 and visibilities.id_sample = samples.id and weights.id_sample=samples.id and weights.stokes=visibilities.stokes and channels.internal_freq_id=samples.internal_freq_id and visibilities.channel=channels.channel) WHERE internal_frequency_id = ? AND channel = ?";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
-  if (rc != SQLITE_OK ) {
-    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    goToError();
+  for(int i=0;i<freqsAndVisibilities.total_frequencies;i++){
+    freqsAndVisibilities.numVisibilitiesPerFreq[i] = 0;
   }
-  int h=0;
-  for(int i=0; i <freqsAndVisibilities.n_internal_frequencies; i++){
+
+  casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
+  nstokes=n_corr(0);
+
+  casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
+  casa::Vector<casa::Bool> auxbool;
+  bool flag;
+  int spw;
+  int counter = 0;
+  for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
     for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-      sqlite3_bind_int(stmt, 1, i);
-      sqlite3_bind_int(stmt, 2, j);
-      sqlite3_step(stmt);
-      freqsAndVisibilities.numVisibilitiesPerFreq[h] = (long)sqlite3_column_int(stmt, 0);
-      sqlite3_reset(stmt);
-      sqlite3_clear_bindings(stmt);
-      h++;
+      for (int k=0; k < nsamples; k++) {
+        const casa::TableRecord &values = row.get(k);
+        flag = values.asBool("FLAG_ROW");
+        spw = values.asInt("DATA_DESC_ID");
+        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+        for (int sto=0; sto<nstokes; sto++) {
+          auxbool = flagCol[j][sto];
+          if(spw == i && auxbool[0] == false && flag == false){
+            freqsAndVisibilities.numVisibilitiesPerFreq[counter]++;
+          }
+        }
+      }
+      counter++;
     }
   }
 
-  sqlite3_finalize(stmt);
-  sqlite3_close(db);
-  */
   return freqsAndVisibilities;
 }
 
@@ -268,161 +274,131 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   }
 
   ///////////////////////////////////////////////////MS SQLITE READING/////////////////////////////////////////////////////////
-  sqlite3 *db;
-  sqlite3_stmt *stmt;
   char *error = 0;
-  int k = 0;
+  int g = 0;
   int h = 0;
+  string query;
+  string dir = file;
+  casa::Table main_tab(dir);
+  casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
+  casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
 
+  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
+  casa::Vector<int> polarizations;
+  polarizations=correlation_col(0);
 
-  int rc = sqlite3_open(file, &db);
-  if (rc != SQLITE_OK) {
-   printf("Cannot open database: %s\n", sqlite3_errmsg(db));
-   sqlite3_close(db);
-   goToError();
-  }else{
-   if(verbose_flag){
-     printf("Database connection okay again!\n");
-   }
- }
+  casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  char *sql;
-  sql = "SELECT id, stokes, u, v, Re, Im, We FROM(SELECT samples.id as id, samples.u as u, samples.v as v, samples.w as w, visibilities.stokes as stokes, samples.id_field as id_field, visibilities.Re as Re, visibilities.Im as Im, weights.weight as We, id_antenna1, id_antenna2, channels.internal_freq_id as  internal_frequency_id , visibilities.channel as channel, frequency FROM visibilities,samples,weights,channels WHERE visibilities.flag=0 and samples.flag_row=0 and visibilities.id_sample = samples.id and weights.id_sample=samples.id and weights.stokes=visibilities.stokes and channels.internal_freq_id=samples.internal_freq_id and visibilities.channel=channels.channel) WHERE internal_frequency_id = ? AND channel = ?";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-  if (rc != SQLITE_OK ) {
-    printf("Cannot execute SELECT: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    goToError();
-  }
+  casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
+  casa::Vector<casa::Bool> auxbool;
+  casa::Vector<float> v;
+  casa::Vector<float> weights;
+  casa::Vector<double> uvw;
+  bool flag;
+  int spw;
 
-  if(random_probability!=0.0){
+  if(random_probability != 0.0){
     float u;
     SelectStream(0);
     PutSeed(1);
     for(int i=0; i < data.n_internal_frequencies; i++){
       for(int j=0; j < data.channels[i]; j++){
-        sqlite3_bind_int(stmt, 1, i);
-        sqlite3_bind_int(stmt, 2, j);
-        while (1) {
-          int s = sqlite3_step(stmt);
-          if (s == SQLITE_ROW) {
-            u = Random();
-            if(u<1-random_probability){
-              visibilities[k].id[h] = sqlite3_column_int(stmt, 0);
-              visibilities[k].stokes[h] = sqlite3_column_int(stmt, 1);
-              visibilities[k].u[h] = sqlite3_column_double(stmt, 2);
-              visibilities[k].v[h] = sqlite3_column_double(stmt, 3);
-              visibilities[k].Vo[h].x = sqlite3_column_double(stmt, 4);
-              visibilities[k].Vo[h].y = sqlite3_column_double(stmt, 5);
-              visibilities[k].weight[h] = sqlite3_column_double(stmt, 6);
-              h++;
+        for (int k=0; k < nsamples; k++) {
+          const casa::TableRecord &values = row.get(k);
+          uvw = values.asArrayDouble("UVW");
+          flag = values.asBool("FLAG_ROW");
+          spw = values.asInt("DATA_DESC_ID");
+          casa::Array<casa::Complex> dataCol = values.asArrayComplex ("DATA");
+          casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+          weights=values.asArrayFloat ("WEIGHT");
+          for (int sto=0; sto<nstokes; sto++) {
+            auxbool = flagCol[j][sto];
+            if(spw == i && auxbool[0] == false && flag == false){
+              u = Random();
+              if(u<1-random_probability){
+                visibilities[g].stokes[h] = polarizations[sto];
+                visibilities[g].u[h] = uvw[0];
+                visibilities[g].v[h] = uvw[1];
+                v = casa::real(dataCol[j][sto]);
+                visibilities[g].Vo[h].x = v[0];
+                v = casa::imag(dataCol[j][sto]);
+                visibilities[g].Vo[h].y = v[0];
+                visibilities[g].weight[h] = weights[sto];
+                h++;
+              }
             }
-          }else if(s == SQLITE_DONE) {
-            break;
-          }else{
-            printf("Database queries failed ERROR: %d.\n", s);
-            goToError();
           }
         }
-        data.numVisibilitiesPerFreq[k] = (h+1);
-        realloc(visibilities[k].id, (h+1)*sizeof(int));
-        realloc(visibilities[k].stokes, (h+1)*sizeof(int));
-        realloc(visibilities[k].u, (h+1)*sizeof(float));
-        realloc(visibilities[k].v, (h+1)*sizeof(float));
-        realloc(visibilities[k].Vo, (h+1)*sizeof(cufftComplex));
-        realloc(visibilities[k].weight, (h+1)*sizeof(float));
+        data.numVisibilitiesPerFreq[g] = (h+1);
+        realloc(visibilities[g].stokes, (h+1)*sizeof(int));
+        realloc(visibilities[g].u, (h+1)*sizeof(float));
+        realloc(visibilities[g].v, (h+1)*sizeof(float));
+        realloc(visibilities[g].Vo, (h+1)*sizeof(cufftComplex));
+        realloc(visibilities[g].weight, (h+1)*sizeof(float));
         h=0;
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-        k++;
+        g++;
       }
     }
   }else{
     for(int i=0; i < data.n_internal_frequencies; i++){
       for(int j=0; j < data.channels[i]; j++){
-        sqlite3_bind_int(stmt, 1, i);
-        sqlite3_bind_int(stmt, 2, j);
-        while (1) {
-          int s = sqlite3_step(stmt);
-          if (s == SQLITE_ROW) {
-            visibilities[k].id[h] = sqlite3_column_int(stmt, 0);
-            visibilities[k].stokes[h] = sqlite3_column_int(stmt, 1);
-            visibilities[k].u[h] = sqlite3_column_double(stmt, 2);
-            visibilities[k].v[h] = sqlite3_column_double(stmt, 3);
-            visibilities[k].Vo[h].x = sqlite3_column_double(stmt, 4);
-            visibilities[k].Vo[h].y = sqlite3_column_double(stmt, 5);
-            visibilities[k].weight[h] = sqlite3_column_double(stmt, 6);
-            h++;
-          }else if(s == SQLITE_DONE) {
-            break;
-          }else{
-            printf("Database queries failed ERROR: %d.\n", s);
-            goToError();
+        for (int k=0; k < nsamples; k++) {
+          const casa::TableRecord &values = row.get(k);
+          uvw = values.asArrayDouble("UVW");
+          flag = values.asBool("FLAG_ROW");
+          spw = values.asInt("DATA_DESC_ID");
+          casa::Array<casa::Complex> dataCol = values.asArrayComplex("DATA");
+          casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+          weights=values.asArrayFloat("WEIGHT");
+          for (int sto=0; sto<nstokes; sto++) {
+            auxbool = flagCol[j][sto];
+            if(spw == i && auxbool[0] == false && flag == false){
+              visibilities[g].stokes[h] = polarizations[sto];
+              visibilities[g].u[h] = uvw[0];
+              visibilities[g].v[h] = uvw[1];
+              v = casa::real(dataCol[j][sto]);
+              visibilities[g].Vo[h].x = v[0];
+              v = casa::imag(dataCol[j][sto]);
+              visibilities[g].Vo[h].y = v[0];
+              visibilities[g].weight[h] = weights[sto];
+              h++;
+            }
           }
         }
         h=0;
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-        k++;
+        g++;
       }
     }
   }
-  if(verbose_flag){
-    printf("Visibilities read!\n");
-  }
 
 
-
-  /*sql = "SELECT ra, dec FROM fields";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-  if (rc != SQLITE_OK ) {
-    printf("SQL error: %s\n", error);
-    sqlite3_free(error);
-    sqlite3_close(db);
-    goToError();
-  }
-  sqlite3_step(stmt);
-  obsra = sqlite3_column_double(stmt, 0);
-  obsdec = sqlite3_column_double(stmt, 1);
-  if(verbose_flag){
-    printf("Center read!\n");
-  }*/
-
-  sql = "SELECT frequency as freq_vector FROM channels WHERE internal_freq_id = ? AND channel = ?";
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
-  if (rc != SQLITE_OK ) {
-    printf("SQL error: %s\n", error);
-    sqlite3_free(error);
-    sqlite3_close(db);
-    goToError();
-  }
-  h=0;
+  h = 0;
   for(int i = 0; i < data.n_internal_frequencies; i++){
+    casa::Vector<double> chan_freq_vector;
+    chan_freq_vector=chan_freq_col(i);
     for(int j = 0; j < data.channels[i]; j++){
-      sqlite3_bind_int(stmt, 1, i);
-      sqlite3_bind_int(stmt, 2, j);
-      while (1) {
-        int s = sqlite3_step(stmt);
-        if (s == SQLITE_ROW) {
-          visibilities[h].freq = sqlite3_column_double(stmt, 0);
-          h++;
-        }else if(s == SQLITE_DONE) {
-          break;
-        }else{
-          printf("Database queries failed ERROR %d at %d and %d.\n",s, i, j);
-          goToError();
-        }
-      }
-      sqlite3_reset(stmt);
-      sqlite3_clear_bindings(stmt);
+      visibilities[h].freq = chan_freq_vector[j];
+      h++;
     }
   }
-  if(verbose_flag){
-    printf("Frequencies read!\n");
+
+
+}
+
+__host__ void MScopy(char const *in_dir, char const *in_dir_dest) {
+  string dir_origin=in_dir;
+  string dir_dest=in_dir_dest;
+
+  casa::Table tab_src(dir_origin);
+  tab_src.deepCopy(dir_dest,casa::Table::New);
+  if (verbose_flag) {
+      printf("Copied\n");
   }
 
-  sqlite3_close(db);
+
 }
+
 
 
 __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data){
@@ -448,101 +424,60 @@ __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqD
 
 }
 
-__host__ void writeMS(char *file, Vis *visibilities) {
-  sqlite3 *db;
-  sqlite3_stmt *stmt;
-  int rc;
+__host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
+  MScopy(infile, outfile);
+  char* out_col = "RES_DATA";
+  string dir=outfile;
+  string query;
+  casa::Table main_tab(dir,casa::Table::Update);
+  string column_name=out_col;
 
-  rc = sqlite3_open(file, &db);
-  if (rc != SQLITE_OK) {
-   printf("Cannot open output database: %s\n", sqlite3_errmsg(db));
-   sqlite3_close(db);
-   goToError();
+  if (main_tab.tableDesc().isColumn(column_name))
+  {
+      printf("Column %s already exists... skipping creation...\n", column_name);
   }else{
-   printf("Output Database connection okay!\n");
- }
-
-
- char *sql = "DELETE FROM visibilities WHERE flag = 0";
- //rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
- rc = sqlite3_exec(db, sql, NULL, NULL, 0);
- if (rc != SQLITE_OK ) {
-   printf("Cannot execute DELETE: %s\n", sqlite3_errmsg(db));
-   sqlite3_close(db);
-   goToError();
- }else{
-   printf("Observed visibilities deleted from output file!\n");
- }
- sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, 0);
- sqlite3_exec(db, "PRAGMA journal_mode = MEMORY", NULL, NULL, 0);
-
- int l = 0;
- sql = "INSERT INTO visibilities (id_sample, stokes, channel, re, im, flag) VALUES (?, ?, ?, ?, ?, 0)";
- rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
- if (rc != SQLITE_OK ) {
-   printf("Cannot execute INSERT: %s\n", sqlite3_errmsg(db));
-   sqlite3_close(db);
-   goToError();
- }else{
-   printf("Saving residuals to file. Please wait...\n");
- }
-
- for(int i=0; i<data.n_internal_frequencies; i++){
-   for(int j=0; j<data.channels[i]; j++){
-     for(int k=0; k<data.numVisibilitiesPerFreq[l]; k++){
-       sqlite3_bind_int(stmt, 1, visibilities[l].id[k]);
-       sqlite3_bind_int(stmt, 2, visibilities[l].stokes[k]);
-       sqlite3_bind_int(stmt, 3, j);
-       sqlite3_bind_double(stmt, 4, -visibilities[l].Vr[k].x);
-       sqlite3_bind_double(stmt, 5, -visibilities[l].Vr[k].y);
-       int s = sqlite3_step(stmt);
-       sqlite3_clear_bindings(stmt);
-       sqlite3_reset(stmt);
-       printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
-       fflush(stdout);
-     }
-     printf("\n");
-     l++;
-   }
- }
- sqlite3_finalize(stmt);
-
-
- l=0;
-
- sql = "UPDATE samples SET u = ?, v = ? WHERE id = ? AND flag_row = 0 AND internal_freq_id = ?";
-
- rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL );
- if (rc != SQLITE_OK ) {
-   printf("Cannot execute UPDATE: %s\n", sqlite3_errmsg(db));
-   sqlite3_close(db);
-   goToError();
- }else{
-   printf("Passing u,v to file. Please wait...\n");
- }
-
- for(int i=0; i<data.n_internal_frequencies; i++){
-    for(int j=0; j<data.channels[i]; j++){
-      for(int k=0; k<data.numVisibilitiesPerFreq[l]; k++){
-        sqlite3_bind_double(stmt, 1, visibilities[l].u[k]);
-        sqlite3_bind_double(stmt, 2, visibilities[l].v[k]);
-        sqlite3_bind_int(stmt, 3, visibilities[l].id[k]);
-        sqlite3_bind_int(stmt, 4, i);
-        int s = sqlite3_step(stmt);
-        sqlite3_clear_bindings(stmt);
-        sqlite3_reset(stmt);
-        //printf("u: %f, v: %f, id: %d, freq: %d", visibilities[l].u[k], visibilities[l].v[k], visibilities[l].id[k], i);
-        printf("\rSPW[%d/%d], channel[%d/%d]: %d/%d ====> %d %%", i+1, data.n_internal_frequencies, j+1, data.channels[i], k+1, data.numVisibilitiesPerFreq[l], int((k*100.0)/data.numVisibilitiesPerFreq[l])+1);
-        fflush(stdout);
-      }
-      printf("\n");
-      l++;
-    }
+    printf("Adding %s to the main table...\n", out_col);
+    main_tab.addColumn (casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
+    main_tab.flush();
   }
 
-
- sqlite3_finalize(stmt);
- sqlite3_close(db);
+  if (column_name!="DATA")
+  {
+     query="UPDATE "+dir+" set "+column_name+"=DATA";
+     printf("Duplicating DATA column into %s\n", out_col);
+     casa::tableCommand(query);
+  }
+  casa::TableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,DATA_DESC_ID,"+column_name));
+  casa::Complex comp;
+  casa::Vector<casa::Bool> auxbool;
+  bool flag;
+  int spw, h=0, g=0;
+  for(int i=0; i < data.n_internal_frequencies; i++){
+    for(int j=0; j < data.channels[i]; j++){
+      for (int k=0; k < nsamples; k++) {
+        const casa::TableRecord &values = row.get(k);
+        flag = values.asBool("FLAG_ROW");
+        spw = values.asInt("DATA_DESC_ID");
+        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
+        for (int sto=0; sto<nstokes; sto++) {
+          auxbool = flagCol[j][sto];
+          if(spw == i && auxbool[0] == false && flag == false){
+            comp.real() = visibilities[g].Vr[h].x;
+            comp.imag() = visibilities[g].Vr[h].y;
+            dataCol[j][sto]=comp;
+            h++;
+          }
+        }
+        if(spw == i && auxbool[0] == false && flag == false){
+          row.put(k);
+        }
+      }
+      h=0;
+      g++;
+    }
+  }
+  main_tab.flush();
 
 }
 
@@ -970,16 +905,6 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
       }
       Ux[i] = (Ux[i] * freq) / LIGHTSPEED;
       Vx[i] = (Vx[i] * freq) / LIGHTSPEED;
-  }
-}
-
-__global__ void backUV(float *Ux, float *Vx, float freq, int numVisibilities)
-{
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-
-  if (i < numVisibilities){
-      Ux[i] = (Ux[i] * LIGHTSPEED) / freq;
-      Vx[i] = (Vx[i] * LIGHTSPEED) / freq;
   }
 }
 

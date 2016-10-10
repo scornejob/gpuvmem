@@ -83,6 +83,9 @@ int it_maximum;
 float final_chi2;
 float final_H;
 
+int nsamples;
+int nstokes;
+
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
   #ifdef _WIN32
@@ -156,7 +159,7 @@ __host__ int main(int argc, char **argv) {
 
   readInputDat(inputdat);
 	data = getFreqs(msinput);
-  /*if(verbose_flag){
+  if(verbose_flag){
 	   printf("Number of frequencies file = %d\n", data.total_frequencies);
   }
 
@@ -239,7 +242,6 @@ __host__ int main(int argc, char **argv) {
 
   //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
 	for(int i=0; i < data.total_frequencies; i++){
-		visibilities[i].id = (int*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(int));
 		visibilities[i].stokes = (int*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(int));
 		visibilities[i].u = (float*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(float));
 		visibilities[i].v = (float*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(float));
@@ -254,6 +256,7 @@ __host__ int main(int argc, char **argv) {
 	   printf("Reading visibilities and FITS input files...\n");
   }
 	readMS(msinput, modinput, beaminput, visibilities);
+
   if(verbose_flag){
     printf("MS File Successfully Read\n");
   }
@@ -625,34 +628,10 @@ __host__ int main(int argc, char **argv) {
 	//Pass residuals to host
 	printf("Passing final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);
-  printf("Back UV coordinates to normal\n");
-	if(num_gpus == 1){
-    cudaSetDevice(selected);
-		for(int i=0; i<data.total_frequencies; i++){
-			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
-			gpuErrchk(cudaDeviceSynchronize());
-		}
-	}else{
-		#pragma omp parallel for schedule(static,1)
-    for (int i = 0; i < data.total_frequencies; i++)
-		{
-			unsigned int j = omp_get_thread_num();
-			//unsigned int num_cpu_threads = omp_get_num_threads();
-			// set and check the CUDA device for this CPU thread
-			int gpu_id = -1;
-			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
-			cudaGetDevice(&gpu_id);
-			//printf("CPU thread %d takes frequency %d and uses CUDA device %d\n", j, i, gpu_id);
-			backUV<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].u, device_visibilities[i].v, visibilities[i].freq, data.numVisibilitiesPerFreq[i]);
-			gpuErrchk(cudaDeviceSynchronize());
-		}
-	}
-
-
 	//Saving residuals to disk
   residualsToHost(device_visibilities, visibilities, data);
-  printf("Saving residuals to SQL...\n");
-	writeMS(msoutput, visibilities);
+  printf("Saving residuals to MS...\n");
+	writeMS(msinput,msoutput,visibilities);
 	printf("Residuals saved.\n");
 
 	//Free device and host memory
@@ -731,6 +710,6 @@ __host__ int main(int argc, char **argv) {
     fits_report_error(stderr, status_mod_in);
     goToError();
   }
-  */
+
 	return 0;
 }
