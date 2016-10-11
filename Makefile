@@ -93,23 +93,9 @@ conf:
 co65:
 	@ clear
 	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -b ./tests/co65/beam_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 32 -Y 32 -V 1024 --verbose
-
 selfcalband9:
 	@ clear
 	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -b ./tests/selfcalband9/beam_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 32 -Y 32 -V 1024 --verbose
-
-hco20:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/HCO-chan20/HCO-20.sqlite -o ./tests/HCO-chan20/HCO-20_out.sqlite -O ./tests/HCO-chan20/mod_out.fits -m ./tests/HCO-chan20/mod_in_0.fits -b ./tests/HCO-chan20/beam_0.fits -I ./tests/HCO-chan20/input.dat -p ./tests/HCO-chan20/mem/ -X 32 -Y 32 -V 1024
-
-hco23:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/HCO-chan23/HCO-23.sqlite -o ./tests/HCO-chan23/HCO-23_out.sqlite -O ./tests/HCO-chan23/mod_out.fits -m ./tests/HCO-chan23/mod_in_0.fits -b ./tests/HCO-chan23/beam_0.fits -I ./tests/HCO-chan23/input.dat -p ./tests/HCO-chan23/mem/ -X 32 -Y 32 -V 1024
-
 freq78:
 	@ clear
 	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -b ./tests/FREQ78/beam_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 32 -Y 32 -V 1024
-
-phantom:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/phantom/phantom.sql -o ./tests/phantom/phantom_out.sql -O ./tests/phantom/mod_out.fits -m ./tests/phantom/mod_in_0.fits -b ./tests/phantom/beam_0.fits -I ./tests/phantom/input.dat -p ./tests/phantom/mem/ -X 32 -Y 32 -V 1024
