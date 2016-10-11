@@ -25,7 +25,6 @@ noise_cut	100.5
 minpix_factor   1000.0
 ftol		1.0e-12
 random_probability 0.0
-positivity  0
 ```
 
 Use GPUVMEM:
