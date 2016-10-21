@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <omp.h>
 #include <string.h>
-#include <sqlite3.h>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
 #include <tables/Tables/TableIter.h>
