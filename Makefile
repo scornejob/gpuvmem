@@ -5,7 +5,6 @@ CUFFTFLAG = -lcufft
 CFLAGS = -c -w
 INC_DIRS = -Iinclude -I/usr/local/include/casacore/
 CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms
-SQLITE = -lsqlite3
 LDFLAGS = -lcuda -lcudart
 FOPENFLAG = -Xcompiler -fopenmp -lgomp
 CCFLAG = -lstdc++
@@ -30,7 +29,7 @@ endif
 main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
-	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
+	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
@@ -42,7 +41,7 @@ build/functions.o: src/functions.cu
 	@ echo "Building Functions"
 	@ mkdir -p lib
 	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/functions.cu -o build/functions.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(SQLITE) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/functions.cu -o build/functions.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/directioncosines.o: src/directioncosines.cu
 	@ echo "Building directioncosines"
