@@ -434,7 +434,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
 
   if (main_tab.tableDesc().isColumn(column_name))
   {
-      printf("Column %s already exists... skipping creation...\n", column_name);
+      printf("Column %s already exists... skipping creation...\n", out_col);
   }else{
     printf("Adding %s to the main table...\n", out_col);
     main_tab.addColumn (casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
