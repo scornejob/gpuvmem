@@ -617,7 +617,7 @@ __host__ int main(int argc, char **argv) {
   printf("chi2: %f\n", final_chi2);
   printf("0.5*chi2: %f\n", 0.5*final_chi2);
   printf("Total visibilities: %d\n", total_visibilities);
-  printf("Reduced-chi2: %f\n", final_chi2/total_visibilities);
+  printf("Reduced-chi2: %f\n", (0.5*final_chi2)/total_visibilities);
   printf("S: %f\n", final_H);
   printf("lambda*S: %f\n\n", lambda*final_H);
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
