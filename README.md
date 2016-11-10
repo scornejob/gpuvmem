@@ -57,20 +57,7 @@ Remember to create the mem folder to save the FITS images
 
 Usage:
 
-- RUN in the same folder:
-`casapy --log2term --nogui -c restore_continuum_ms.py`
-
-- CONFIG:
-On the same file please edit first seven lines
-```
-residual_ms = "<MS_RESIDUAL_VISIBILITIES>"
-model_fits = "<FITS_MODEL_IMAGE>"
-restored = "<RESTORED_OUTPUT_FILENAME>"
-pix_size="0.0084arcsec"
-pix_num=2048
-weight="briggs"
-polarization="I"
-```
+`casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output`
 
 #Contributors
 
