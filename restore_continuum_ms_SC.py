@@ -1,7 +1,7 @@
 #casapy --log2term --nogui -c restore_continum_ms_SC.py
-residual_ms = "HLTau_B6_spw1_residuals" #input
-model_fits = "mod_out.fits"  # input 
-restored = "restored"  #output
+residual_ms = str(sys.argv[1]); #input
+model_fits = str(sys.argv[2]);  # input 
+restored = str(sys.argv[3]);  #output
 weight="briggs" # "briggs"
 polarization="I" 
 
