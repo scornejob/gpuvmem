@@ -54,6 +54,7 @@ float deltav;
 float beam_noise;
 float beam_bmaj;
 float beam_bmin;
+float b_noise_aux;
 double ra;
 double dec;
 double obsra;
@@ -128,13 +129,13 @@ __host__ int main(int argc, char **argv) {
 	char *msoutput = variables.output;
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
-	char *beaminput = variables.beam;
   out_image = variables.output_image;
 	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
   it_maximum = variables.it_max;
   int total_visibilities = 0;
+  b_noise_aux = variables.noise;
 
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
@@ -255,20 +256,33 @@ __host__ int main(int argc, char **argv) {
   if(verbose_flag){
 	   printf("Reading visibilities and FITS input files...\n");
   }
-	readMS(msinput, modinput, beaminput, visibilities);
+	readMS(msinput, modinput, visibilities);
 
   if(verbose_flag){
     printf("MS File Successfully Read\n");
+    if(beam_noise == -1){
+      printf("Beam noise wasn't provided by the user... Calculating...");
+    }
   }
 
   //Declaring block size and number of blocks for visibilities
-	for(int i=0; i<data.total_frequencies; i++){
+  float sum_inverse_weight = 0.0;
+	for(int i=0; i< data.total_frequencies; i++){
+    if(beam_noise == -1){
+      //Calculating beam noise
+      for(int j=0; j< data.numVisibilitiesPerFreq[i]; j++){
+          sum_inverse_weight += 1/visibilities[i].weight[j];
+      }
+    }
 		visibilities[i].numVisibilities = data.numVisibilitiesPerFreq[i];
 		long UVpow2 = NearestPowerOf2(visibilities[i].numVisibilities);
     visibilities[i].threadsPerBlockUV = variables.blockSizeV;
 		visibilities[i].numBlocksUV = UVpow2/visibilities[i].threadsPerBlockUV;
   }
 
+  if(beam_noise == -1){
+      beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
+  }
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -355,7 +369,7 @@ __host__ int main(int argc, char **argv) {
 	dim3 blocks(M/threads.x, N/threads.y);
 	threadsPerBlockNN = threads;
 	numBlocksNN = blocks;
-
+  
 	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){
     MINPIX = 0.0;
@@ -703,7 +717,6 @@ __host__ int main(int argc, char **argv) {
 	free(msinput);
 	free(msoutput);
 	free(modinput);
-	free(beaminput);
 
   fits_close_file(mod_in, &status_mod_in);
   if (status_mod_in) {

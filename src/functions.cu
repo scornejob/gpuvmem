@@ -52,6 +52,7 @@ extern int nopositivity;
 extern float beam_noise;
 extern float beam_bmaj;
 extern float beam_bmin;
+extern float b_noise_aux;
 extern double ra;
 extern double dec;
 extern double obsra;
@@ -226,9 +227,10 @@ __host__ void readInputDat(char *file)
     }
   }
 }
-__host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
+__host__ void readMS(char *file, char *file2, Vis *visibilities) {
   ///////////////////////////////////////////////////FITS READING///////////////////////////////////////////////////////////
   status_mod_in = 0;
+  int status_noise = 0;
   fits_open_file(&mod_in, file2, 0, &status_mod_in);
   if (status_mod_in) {
     fits_report_error(stderr, status_mod_in); /* print error message */
@@ -244,31 +246,21 @@ __host__ void readMS(char *file, char *file2, char *file3, Vis *visibilities) {
   fits_read_key(mod_in, TINT, "CRPIX2", &crpix2, NULL, &status_mod_in);
   fits_read_key(mod_in, TLONG, "NAXIS1", &M, NULL, &status_mod_in);
   fits_read_key(mod_in, TLONG, "NAXIS2", &N, NULL, &status_mod_in);
+  fits_read_key(mod_in, TFLOAT, "BMAJ", &beam_bmaj, NULL, &status_mod_in);
+  fits_read_key(mod_in, TFLOAT, "BMIN", &beam_bmin, NULL, &status_mod_in);
+  fits_read_key(mod_in, TFLOAT, "NOISE", &beam_noise, NULL, &status_noise);
   if (status_mod_in) {
     fits_report_error(stderr, status_mod_in); /* print error message */
     goToError();
   }
 
+  if(status_noise){
+    beam_noise = b_noise_aux;
+  }
 
-  fitsfile *fpointer2;
-  int status2 = 0;
-  fits_open_file(&fpointer2, file3, 0, &status2);
-  if (status2) {
-    fits_report_error(stderr, status2); /* print error message */
-    goToError();
-  }
-  fits_read_key(fpointer2, TFLOAT, "NOISE", &beam_noise, NULL, &status2);
-  fits_read_key(fpointer2, TFLOAT, "BMAJ", &beam_bmaj, NULL, &status2);
-  fits_read_key(fpointer2, TFLOAT, "BMIN", &beam_bmin, NULL, &status2);
-  if (status2) {
-    fits_report_error(stderr, status2); /* print error message */
-    goToError();
-  }
-  fits_close_file(fpointer2, &status2);
-  if (status2) {
-    fits_report_error(stderr, status2); /* print error message */
-    goToError();
-  }
+  beam_bmaj = beam_bmaj/-DELTAX;
+  beam_bmin = beam_bmin/-DELTAX;
+
   if(verbose_flag){
     printf("FITS Files READ\n");
   }
@@ -494,7 +486,7 @@ __host__ void print_help() {
   printf(	"    -O  --output-image       The name of the output image FITS file\n");
   printf("    -I  --inputdat       The name of the input file of parameters\n");
   printf("    -m  --modin       mod_in_0 FITS file\n");
-  printf("    -b  --beam       beam_0 FITS file\n");
+  printf("    -n  --noise       Noise parameter\n");
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -M  --multigpu       Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select       If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
@@ -528,10 +520,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeY = -1;
   variables.blockSizeV = -1;
   variables.it_max = 500;
+  variables.noise = -1;
 
 
 	long next_op;
-	const char* const short_op = "hi:o:O:I:m:b:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hi:o:O:I:m:n:M:s:p:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help
                                     {"help", 0, NULL, 'h' },
@@ -541,11 +534,10 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"nopositivity", 0, &nopositivity, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
-                                    {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"beam", 1, NULL, 'b' },
+                                    {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
-                                    {"iterations", 0, NULL, 't'},
-                                    { NULL, 0, NULL, 0 }};
+                                    {"iterations", 0, NULL, 't'}, { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -593,10 +585,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
     	strcpy(variables.modin, optarg);
     	break;
-    case 'b':
-      variables.beam = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-    	strcpy(variables.beam, optarg);
-    	break;
+    case 'n':
+      variables.noise = atof(optarg);
+      break;
     case 'p':
       variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));
       strcpy(variables.path, optarg);
@@ -632,7 +623,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strip(variables.input, " ") == "" && strip(variables.output, " ") == "" && strip(variables.output_image, " ") == "" && strip(variables.inputdat, " ") == "" ||
-     strip(variables.beam, " ") == "" && strip(variables.modin, " ") == "" && strip(variables.path, " ") == "") {
+     strip(variables.modin, " ") == "" && strip(variables.path, " ") == "") {
         print_help();
         exit(EXIT_FAILURE);
   }
