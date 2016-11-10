@@ -1576,6 +1576,11 @@ __host__ float chiCuadrado(cufftComplex *I)
 
         alpha_den = deviceReduce(device_vars[i].alpha_den, data.numVisibilitiesPerFreq[i]);
 
+        if(alpha_den == 0.0){
+          alpha_num = 1.0;
+          alpha_den = 1.0;
+        }
+
         device_vars[i].alpha = alpha_num/alpha_den;
 
         residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
