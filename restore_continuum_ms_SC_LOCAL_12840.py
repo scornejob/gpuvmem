@@ -1,4 +1,5 @@
 #casapy --log2term --nogui -c restore_continum_ms_SC.py
+print 'Argument List:', str(sys.argv)
 residual_ms = str(sys.argv[5]); #input
 model_fits = str(sys.argv[6]);  # input 
 restored = str(sys.argv[7]);  #output
