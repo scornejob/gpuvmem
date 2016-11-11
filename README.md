@@ -16,7 +16,7 @@ make
 ```
 #Usage
 
-Create your beam_0.fits and mod_in_0.fits with difmap.
+Create your mod_in_0.fits with difmap or CASA.
 Create your input.dat file with the following data and change the parameters if you want:
 
 ```
