@@ -26,8 +26,6 @@ extern char* mempath, *out_image;
 
 extern fitsfile *mod_in;
 
-
-
 __host__ void goToError()
 {
   for(int i=1; i<num_gpus; i++){
@@ -157,7 +155,9 @@ __host__ void readInputDat(char *file)
         break;
       }else{
         if (strcmp(item,"lambda_entropy")==0) {
-          lambda = status;
+          if(lambda == -1){
+            lambda = status;
+          }
         }else if (strcmp(item,"noise_cut")==0){
           noise_cut = status;
         }else if(strcmp(item,"minpix_factor")==0){
@@ -403,8 +403,8 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
         for (int sto=0; sto<nstokes; sto++) {
           auxbool = flagCol[j][sto];
           if(spw == i && auxbool[0] == false && flag == false){
-            comp.real() = visibilities[g].Vr[h].x;
-            comp.imag() = visibilities[g].Vr[h].y;
+            comp.real() = -visibilities[g].Vr[h].x;
+            comp.imag() = -visibilities[g].Vr[h].y;
             dataCol[j][sto] = comp;
             h++;
           }
@@ -424,15 +424,16 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help       Shows this\n");
-  printf(	"    -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
-  printf(	"    -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
-  printf(	"    -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"    -i  --input       The name of the input file of visibilities(MS)\n");
-  printf(	"    -o  --output       The name of the output file of residual visibilities(MS)\n");
-  printf(	"    -O  --output-image       The name of the output image FITS file\n");
+  printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
+  printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
+  printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
+  printf(	"   -i  --input       The name of the input file of visibilities(MS)\n");
+  printf(	"   -o  --output       The name of the output file of residual visibilities(MS)\n");
+  printf(	"   -O  --output-image       The name of the output image FITS file\n");
   printf("    -I  --inputdat       The name of the input file of parameters\n");
   printf("    -m  --modin       mod_in_0 FITS file\n");
-  printf("    -n  --noise       Noise parameter\n");
+  printf("    -n  --noise       Noise Parameter (Optional)\n");
+  printf("    -l  --lambda      Lambda Regulatization Parameter (Optional)\n");
   printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -M  --multigpu       Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select       If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
@@ -467,10 +468,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeV = -1;
   variables.it_max = 500;
   variables.noise = -1;
+  variables.lambda = -1;
 
 
 	long next_op;
-	const char* const short_op = "hi:o:O:I:m:n:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hi:o:O:I:m:n:l:M:s:p:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help
                                     {"help", 0, NULL, 'h' },
@@ -481,9 +483,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
-                                    {"multigpu", 1, NULL, 'M'}, {"select", 1, NULL, 's'}, {"path", 1, NULL, 'p'},
-                                    {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
-                                    {"iterations", 0, NULL, 't'}, { NULL, 0, NULL, 0 }};
+                                    {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
+                                    {"path", 1, NULL, 'p'}, {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'},
+                                    {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'}, { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -533,6 +535,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     	break;
     case 'n':
       variables.noise = atof(optarg);
+      break;
+    case 'l':
+      variables.lambda = atof(optarg);
       break;
     case 'p':
       variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));

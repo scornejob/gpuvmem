@@ -112,6 +112,7 @@ typedef struct variables {
   int blockSizeV;
   int it_max;
   float noise;
+  float lambda;
 } Vars;
 
 __host__ void goToError();

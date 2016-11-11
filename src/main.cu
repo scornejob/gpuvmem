@@ -77,6 +77,7 @@ __host__ int main(int argc, char **argv) {
   it_maximum = variables.it_max;
   int total_visibilities = 0;
   b_noise_aux = variables.noise;
+  lambda = variables.lambda;
 
   struct stat st = {0};
 
@@ -585,7 +586,7 @@ __host__ int main(int argc, char **argv) {
   printf("Wall time: %lf\n\n\n", wall_time);
 
 	//Pass residuals to host
-	printf("Passing final image to disk\n");
+	printf("Saving final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(device_visibilities, visibilities, data);
