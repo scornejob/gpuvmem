@@ -2,91 +2,32 @@
 #include "directioncosines.cuh"
 #include <time.h>
 
-long M;
-long N;
-long numVisibilities;
+long M, N, numVisibilities;
 int iter=0;
 
 cufftHandle plan1GPU;
 
-cufftComplex *device_I;
-cufftComplex *device_V;
-cufftComplex *device_noise_image;
-cufftComplex *device_fg_image;
-cufftComplex *device_image;
+cufftComplex *device_I, *device_V, *device_noise_image, *device_fg_image, *device_image;
 
-
-float *device_dphi;
-
-float *device_dchi2_total;
-float *device_dH;
-
-float *device_chi2;
-float *device_H;
+float *device_dphi, *device_dchi2_total, *device_dH, *device_chi2, *device_H, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
+float beam_bmin, b_noise_aux, global_xobs, global_yobs, noise_cut, MINPIX, minpix_factor, lambda, ftol, random_probability;
+float difmap_noise, fg_scale, final_chi2, final_H;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN;
-int blocksVectorReduceNN;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity, nsamples, nstokes, verbose_flag, xcorr_flag, it_maximum, status_mod_in;
+int num_gpus, multigpu, selected;
+char *output, *mempath, *out_image;
 
-float difmap_noise;
+double ra, dec, obsra, obsdec;
 
-float fg_scale;
-char *output;
-float global_xobs;
-float global_yobs;
-
-float noise_cut;
-float MINPIX;
-float minpix_factor;
-float lambda;
-float ftol;
-float random_probability;
-int nopositivity;
-
-float DELTAX;
-float DELTAY;
-float deltau;
-float deltav;
-
-
-float beam_noise;
-float beam_bmaj;
-float beam_bmin;
-float b_noise_aux;
-double ra;
-double dec;
-double obsra;
-double obsdec;
-int crpix1;
-int crpix2;
 freqData data;
 VPF *device_vars;
 Vis *visibilities;
 Vis *device_visibilities;
 
-int num_gpus;
-int multigpu;
-int selected;
-
 fitsfile *mod_in;
-int status_mod_in;
-
-char *mempath;
-char *out_image;
-
-int verbose_flag;
-int xcorr_flag;
-
-int it_maximum;
-
-float final_chi2;
-float final_H;
-
-int nsamples;
-int nstokes;
-
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
   #ifdef _WIN32
@@ -136,6 +77,10 @@ __host__ int main(int argc, char **argv) {
   it_maximum = variables.it_max;
   int total_visibilities = 0;
   b_noise_aux = variables.noise;
+
+  struct stat st = {0};
+
+  if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
@@ -369,7 +314,7 @@ __host__ int main(int argc, char **argv) {
 	dim3 blocks(M/threads.x, N/threads.y);
 	threadsPerBlockNN = threads;
 	numBlocksNN = blocks;
-  
+
 	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){
     MINPIX = 0.0;

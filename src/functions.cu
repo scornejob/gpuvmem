@@ -1,85 +1,31 @@
 #include "functions.cuh"
 
 
-extern long M;
-extern long N;
-extern int numVisibilities;
-extern int iterations;
-extern int iter;
-
+extern long M, N;
+extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
+status_mod_in, verbose_flag, xcorr_flag, nsamples, nstokes, num_gpus, selected, iter;
 
 extern cufftHandle plan1GPU;
-extern cufftComplex *device_I;
-extern cufftComplex *device_V;
-extern cufftComplex *device_noise_image;
-extern cufftComplex *device_fg_image;
-extern cufftComplex *device_image;
+extern cufftComplex *device_I, *device_V, *device_noise_image, *device_fg_image, *device_image;
 
-extern float *device_dphi;
+extern float *device_dphi, *device_chi2, *device_H, *device_dchi2_total, *device_dH;
+extern float difmap_noise, fg_scale, global_xobs, global_yobs, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
+minpix_factor, lambda, ftol, random_probability, final_chi2, final_H;
 
+extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float *device_chi2;
-extern float *device_H;
-extern float *device_dchi2_total;
-extern float *device_dH;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux;
+extern double ra, dec, obsra, obsdec;
 
-extern dim3 threadsPerBlockNN;
-extern dim3 numBlocksNN;
-
-extern int threadsVectorNN;
-extern int blocksVectorNN;
-
-extern float difmap_noise;
-extern float fg_scale;
-
-extern float global_xobs;
-extern float global_yobs;
-
-extern float DELTAX;
-extern float DELTAY;
-extern float deltau;
-extern float deltav;
-
-extern float noise_cut;
-extern float MINPIX;
-extern float minpix_factor;
-extern float lambda;
-extern float ftol;
-extern float random_probability;
-extern int nopositivity;
-
-
-extern float beam_noise;
-extern float beam_bmaj;
-extern float beam_bmin;
-extern float b_noise_aux;
-extern double ra;
-extern double dec;
-extern double obsra;
-extern double obsdec;
-extern int crpix1;
-extern int crpix2;
 extern freqData data;
 extern VPF *device_vars;
-extern Vis *visibilities;
-extern Vis *device_visibilities;
+extern Vis *visibilities, *device_visibilities;
 
-extern int num_gpus;
-extern int selected;
 
-extern char* mempath;
-extern char *out_image;
+extern char* mempath, *out_image;
 
 extern fitsfile *mod_in;
-extern int status_mod_in;
-extern int verbose_flag;
-extern int xcorr_flag;
 
-extern float final_chi2;
-extern float final_H;
-
-extern int nsamples;
-extern int nstokes;
 
 
 __host__ void goToError()

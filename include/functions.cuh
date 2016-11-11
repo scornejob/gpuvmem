@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <omp.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
 #include <tables/Tables/TableIter.h>
