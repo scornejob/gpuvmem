@@ -410,7 +410,6 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
           }
         }
         if(spw == i && flag == false){
-          counter++;
           writeRow.put(k);
         }
       }
@@ -418,9 +417,6 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
       g++;
     }
   }
-  printf("SAMPLES: %d\n", nsamples);
-  printf("COUNTER: %d\n", counter);
-  printf("STOKES: %d\n", nstokes);
   main_tab.flush();
 
 }
