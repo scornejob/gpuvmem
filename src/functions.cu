@@ -407,10 +407,10 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             comp.imag() = -visibilities[g].Vr[h].y;
             dataCol[j][sto] = comp;
             h++;
-            counter++;
           }
         }
         if(spw == i && auxbool[0] == false && flag == false){
+          counter++;
           writeRow.put(k);
         }
       }
@@ -420,6 +420,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   }
   printf("SAMPLES: %d\n", nsamples);
   printf("COUNTER: %d\n", counter);
+  printf("STOKES: %d\n", nstokes);
   main_tab.flush();
 
 }
