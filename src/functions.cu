@@ -390,7 +390,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   casa::Complex comp;
   casa::Vector<casa::Bool> auxbool;
   bool flag;
-  int spw, h=0, g=0;
+  int spw, h = 0, g = 0, counter = 0;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
       for (int k=0; k < nsamples; k++) {
@@ -410,6 +410,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
           }
         }
         if(spw == i && auxbool[0] == false && flag == false){
+          counter++;
           writeRow.put(k);
         }
       }
@@ -417,6 +418,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
       g++;
     }
   }
+  printf("COUNTER: %d\n", counter);
   main_tab.flush();
 
 }

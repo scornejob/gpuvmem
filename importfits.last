@@ -1,0 +1,11 @@
+taskname           = "importfits"
+fitsimage          =  "./tests/selfcalband9/test_09/mod_out.fits"
+imagename          =  "mod_out"
+whichrep           =  0
+whichhdu           =  -1
+zeroblanks         =  True
+overwrite          =  False
+defaultaxes        =  False
+defaultaxesvalues    =  []
+beam               =  []
+#importfits(fitsimage="./tests/selfcalband9/test_09/mod_out.fits",imagename="mod_out",whichrep=0,whichhdu=-1,zeroblanks=True,overwrite=False,defaultaxes=False,defaultaxesvalues=[],beam=[])

@@ -1,0 +1,14 @@
+taskname           = "exportfits"
+imagename          =  "./tests/selfcalband9/test_09/restored"
+fitsimage          =  "./tests/selfcalband9/test_09/restored.fits"
+velocity           =  False
+optical            =  False
+bitpix             =  -32
+minpix             =  0
+maxpix             =  -1
+overwrite          =  True
+dropstokes         =  False
+stokeslast         =  True
+history            =  True
+dropdeg            =  False
+#exportfits(imagename="./tests/selfcalband9/test_09/restored",fitsimage="./tests/selfcalband9/test_09/restored.fits",velocity=False,optical=False,bitpix=-32,minpix=0,maxpix=-1,overwrite=True,dropstokes=False,stokeslast=True,history=True,dropdeg=False)

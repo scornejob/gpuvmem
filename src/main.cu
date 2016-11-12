@@ -592,6 +592,7 @@ __host__ int main(int argc, char **argv) {
   residualsToHost(device_visibilities, visibilities, data);
   printf("Saving residuals to MS...\n");
 	writeMS(msinput,msoutput,visibilities);
+  printf("TOTAL VISIBILITIES: %d\n", total_visibilities);
 	printf("Residuals saved.\n");
 
 	//Free device and host memory

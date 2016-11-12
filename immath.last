@@ -1,0 +1,16 @@
+taskname           = "immath"
+imagename          =  ['convolved_mod_out.fits', './tests/selfcalband9/test_09/residuals.ms.img.image.fits']
+mode               =  "evalexpr"
+outfile            =  "./tests/selfcalband9/test_09/restored"
+expr               =  " (IM0   + IM1) "
+varnames           =  ""
+sigma              =  "0.0mJy/beam"
+polithresh         =  ""
+mask               =  ""
+region             =  ""
+box                =  ""
+chans              =  ""
+stokes             =  ""
+stretch            =  False
+imagemd            =  ""
+#immath(imagename=['convolved_mod_out.fits', './tests/selfcalband9/test_09/residuals.ms.img.image.fits'],mode="evalexpr",outfile="./tests/selfcalband9/test_09/restored",expr=" (IM0   + IM1) ",varnames="",sigma="0.0mJy/beam",polithresh="",mask="",region="",box="",chans="",stokes="",stretch=False,imagemd="")
