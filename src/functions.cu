@@ -409,7 +409,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             h++;
           }
         }
-        if(spw == i && auxbool[0] == false && flag == false){
+        if(spw == i && flag == false){
           counter++;
           writeRow.put(k);
         }
