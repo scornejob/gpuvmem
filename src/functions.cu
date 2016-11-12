@@ -407,10 +407,10 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             comp.imag() = -visibilities[g].Vr[h].y;
             dataCol[j][sto] = comp;
             h++;
+            counter++;
           }
         }
         if(spw == i && auxbool[0] == false && flag == false){
-          counter++;
           writeRow.put(k);
         }
       }
