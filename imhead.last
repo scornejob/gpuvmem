@@ -1,7 +1,0 @@
-taskname           = "imhead"
-imagename          =  "./tests/selfcalband9/test_09/residuals.ms.img.image"
-mode               =  "get"
-hdkey              =  "beampa"
-hdvalue            =  ""
-verbose            =  False
-#imhead(imagename="./tests/selfcalband9/test_09/residuals.ms.img.image",mode="get",hdkey="beampa",hdvalue="",verbose=False)
