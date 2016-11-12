@@ -418,6 +418,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
       g++;
     }
   }
+  printf("SAMPLES: %d\n", nsamples);
   printf("COUNTER: %d\n", counter);
   main_tab.flush();
 
