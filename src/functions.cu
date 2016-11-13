@@ -413,7 +413,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
               comp.imag() = -visibilities[g].Vr[h].y;
               printf("Saving Re:%f, Im:%f, spw: %d, sample: %d in dataCol[%d][%d]\n", -visibilities[g].Vr[h].x, -visibilities[g].Vr[h].y, i, k, j, sto);
               if(j>=1){
-                printf("The value stored in dataCol[%d][%d] in sample: %d is: %f, %f\n", j-1, sto, k, casa::real(dataCol[j-1][sto]), casa::imag(dataCol[j-1][sto]));
+                printf("The value stored in dataCol[%d][%d] in sample: %d , spw: %d, is: %f, %f\n", j-1, sto, k, i, casa::real(dataCol[j-1][sto]), casa::imag(dataCol[j-1][sto]));
               }
               dataCol[j][sto] = comp;
               h++;
