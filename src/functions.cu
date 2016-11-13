@@ -396,6 +396,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   casa::Vector<casa::Bool> auxbool;
   bool flag;
   int spw, h = 0, g = 0;
+  cufftComplex before;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
       for (int k=0; k < nsamples; k++){
@@ -410,6 +411,10 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             if(auxbool[0] == false){
               comp.real() = -visibilities[g].Vr[h].x;
               comp.imag() = -visibilities[g].Vr[h].y;
+              printf("Saving Re:%f, Im:%f, spw: %d, sample: %d, channel: %d, stoke: %d\n", -visibilities[g].Vr[h].x, -visibilities[g].Vr[h].y, i, k, j, sto);
+              if(j>=1){
+                printf("The value stored in dataCol[%d][%d] is: %f, %f\n", j-1, sto, casa::real(dataCol[j-1][sto]), casa::imag(dataCol[j-1][sto]));
+              }
               dataCol[j][sto] = comp;
               h++;
             }
