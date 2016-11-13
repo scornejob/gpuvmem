@@ -213,7 +213,6 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
     printf("FITS Files READ\n");
   }
 
-  ///////////////////////////////////////////////////MS SQLITE READING/////////////////////////////////////////////////////////
   char *error = 0;
   int g = 0, h = 0;
   string query;
@@ -296,6 +295,7 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
             for (int sto=0; sto<nstokes; sto++) {
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false){
+                printf("Leyendo sample %d, spw: %d, channel: %d, stoke :%d\n", k, i, j, sto);
                 visibilities[g].stokes[h] = polarizations[sto];
                 visibilities[g].u[h] = uvw[0];
                 visibilities[g].v[h] = uvw[1];
@@ -396,8 +396,6 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   casa::Vector<casa::Bool> auxbool;
   bool flag;
   int spw, h = 0, g = 0;
-  cufftComplex before;
-  casa::Vector<float> v1,v2;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
       for (int k=0; k < nsamples; k++){
@@ -412,12 +410,6 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             if(auxbool[0] == false){
               comp.real() = -visibilities[g].Vr[h].x;
               comp.imag() = -visibilities[g].Vr[h].y;
-              printf("Saving Re:%f, Im:%f, spw: %d, sample: %d in dataCol[%d][%d]\n", -visibilities[g].Vr[h].x, -visibilities[g].Vr[h].y, i, k, j, sto);
-              if(j>=1){
-                v1 = casa::real(dataCol[j-1][sto]);
-                v2 = casa::imag(dataCol[j-1][sto]);
-                printf("The value stored in dataCol[%d][%d] in sample: %d , spw: %d, is: %f, %f\n", j-1, sto, k, i, v1[0], v2[0]);
-              }
               dataCol[j][sto] = comp;
               h++;
             }
