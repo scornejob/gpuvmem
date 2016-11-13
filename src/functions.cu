@@ -59,7 +59,7 @@ __host__ freqData getFreqs(char * file)
    //For now only 1 FIELD.
    casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
    const casa::TableRecord &values = field_row.get(0);
-   pointing = values.asArrayDouble ("REFERENCE_DIR");
+   pointing = values.asArrayDouble("REFERENCE_DIR");
    obsra = pointing[0];
    obsdec = pointing[1];
 
@@ -101,17 +101,19 @@ __host__ freqData getFreqs(char * file)
   int counter = 0;
   for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
     for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-      for (int k=0; k < nsamples; k++) {
+      for (int k=0; k < nsamples; k++){
         const casa::TableRecord &values = row.get(k);
         flag = values.asBool("FLAG_ROW");
         spw = values.asInt("DATA_DESC_ID");
         casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-        for (int sto=0; sto<nstokes; sto++) {
-          auxbool = flagCol[j][sto];
-          if(spw == i && auxbool[0] == false && flag == false){
-            freqsAndVisibilities.numVisibilitiesPerFreq[counter]++;
+        if(spw == i && flag == false){
+          for (int sto=0; sto<nstokes; sto++){
+            auxbool = flagCol[j][sto];
+            if(auxbool[0] == false){
+              freqsAndVisibilities.numVisibilitiesPerFreq[counter]++;
+            }
           }
-        }
+        }else continue;
       }
       counter++;
     }
@@ -213,8 +215,7 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
 
   ///////////////////////////////////////////////////MS SQLITE READING/////////////////////////////////////////////////////////
   char *error = 0;
-  int g = 0;
-  int h = 0;
+  int g = 0, h = 0;
   string query;
   string dir = file;
   casa::Table main_tab(dir);
@@ -242,7 +243,7 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
     PutSeed(1);
     for(int i=0; i < data.n_internal_frequencies; i++){
       for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < nsamples; k++) {
+        for (int k=0; k < nsamples; k++){
           const casa::TableRecord &values = row.get(k);
           uvw = values.asArrayDouble("UVW");
           flag = values.asBool("FLAG_ROW");
@@ -250,23 +251,25 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
           casa::Array<casa::Complex> dataCol = values.asArrayComplex ("DATA");
           casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
           weights=values.asArrayFloat ("WEIGHT");
-          for (int sto=0; sto<nstokes; sto++) {
-            auxbool = flagCol[j][sto];
-            if(spw == i && auxbool[0] == false && flag == false){
-              u = Random();
-              if(u<1-random_probability){
-                visibilities[g].stokes[h] = polarizations[sto];
-                visibilities[g].u[h] = uvw[0];
-                visibilities[g].v[h] = uvw[1];
-                v = casa::real(dataCol[j][sto]);
-                visibilities[g].Vo[h].x = v[0];
-                v = casa::imag(dataCol[j][sto]);
-                visibilities[g].Vo[h].y = v[0];
-                visibilities[g].weight[h] = weights[sto];
-                h++;
+          if(spw == i && flag == false){
+            for (int sto=0; sto<nstokes; sto++){
+              auxbool = flagCol[j][sto];
+              if(auxbool[0] == false){
+                u = Random();
+                if(u<1-random_probability){
+                  visibilities[g].stokes[h] = polarizations[sto];
+                  visibilities[g].u[h] = uvw[0];
+                  visibilities[g].v[h] = uvw[1];
+                  v = casa::real(dataCol[j][sto]);
+                  visibilities[g].Vo[h].x = v[0];
+                  v = casa::imag(dataCol[j][sto]);
+                  visibilities[g].Vo[h].y = v[0];
+                  visibilities[g].weight[h] = weights[sto];
+                  h++;
+                }
               }
             }
-          }
+          }else continue;
         }
         data.numVisibilitiesPerFreq[g] = (h+1);
         realloc(visibilities[g].stokes, (h+1)*sizeof(int));
@@ -281,7 +284,7 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
   }else{
     for(int i=0; i < data.n_internal_frequencies; i++){
       for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < nsamples; k++) {
+        for (int k=0; k < nsamples; k++){
           const casa::TableRecord &values = row.get(k);
           uvw = values.asArrayDouble("UVW");
           flag = values.asBool("FLAG_ROW");
@@ -289,20 +292,22 @@ __host__ void readMS(char *file, char *file2, Vis *visibilities) {
           casa::Array<casa::Complex> dataCol = values.asArrayComplex("DATA");
           casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
           weights=values.asArrayFloat("WEIGHT");
-          for (int sto=0; sto<nstokes; sto++) {
-            auxbool = flagCol[j][sto];
-            if(spw == i && auxbool[0] == false && flag == false){
-              visibilities[g].stokes[h] = polarizations[sto];
-              visibilities[g].u[h] = uvw[0];
-              visibilities[g].v[h] = uvw[1];
-              v = casa::real(dataCol[j][sto]);
-              visibilities[g].Vo[h].x = v[0];
-              v = casa::imag(dataCol[j][sto]);
-              visibilities[g].Vo[h].y = v[0];
-              visibilities[g].weight[h] = weights[sto];
-              h++;
+          if(spw == i && flag == false){
+            for (int sto=0; sto<nstokes; sto++) {
+              auxbool = flagCol[j][sto];
+              if(auxbool[0] == false){
+                visibilities[g].stokes[h] = polarizations[sto];
+                visibilities[g].u[h] = uvw[0];
+                visibilities[g].v[h] = uvw[1];
+                v = casa::real(dataCol[j][sto]);
+                visibilities[g].Vo[h].x = v[0];
+                v = casa::imag(dataCol[j][sto]);
+                visibilities[g].Vo[h].y = v[0];
+                visibilities[g].weight[h] = weights[sto];
+                h++;
+              }
             }
-          }
+          }else continue;
         }
         h=0;
         g++;
@@ -393,22 +398,24 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   int spw, h = 0, g = 0;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
-      for (int k=0; k < nsamples; k++) {
+      for (int k=0; k < nsamples; k++){
         const casa::TableRecord &values = row.get(k);
         flag = values.asBool("FLAG_ROW");
         spw = values.asInt("DATA_DESC_ID");
         casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
         casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-        for (int sto=0; sto<nstokes; sto++) {
-          auxbool = flagCol[j][sto];
-          if(spw == i && auxbool[0] == false && flag == false){
-            comp.real() = -visibilities[g].Vr[h].x;
-            comp.imag() = -visibilities[g].Vr[h].y;
-            dataCol[j][sto] = comp;
-            h++;
+        if(spw == i && flag == false){
+          for (int sto=0; sto<nstokes; sto++){
+            auxbool = flagCol[j][sto];
+            if(auxbool[0] == false){
+              comp.real() = -visibilities[g].Vr[h].x;
+              comp.imag() = -visibilities[g].Vr[h].y;
+              dataCol[j][sto] = comp;
+              h++;
+            }
           }
-        }
-        if(spw == i && flag == false) row.put(k);
+          row.put(k);
+        }else continue;
       }
       h=0;
       g++;
