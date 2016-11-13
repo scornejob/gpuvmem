@@ -397,6 +397,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
   bool flag;
   int spw, h = 0, g = 0;
   cufftComplex before;
+  casa::Vector<float> v1,v2;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
       for (int k=0; k < nsamples; k++){
@@ -413,7 +414,9 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
               comp.imag() = -visibilities[g].Vr[h].y;
               printf("Saving Re:%f, Im:%f, spw: %d, sample: %d in dataCol[%d][%d]\n", -visibilities[g].Vr[h].x, -visibilities[g].Vr[h].y, i, k, j, sto);
               if(j>=1){
-                printf("The value stored in dataCol[%d][%d] in sample: %d , spw: %d, is: %f, %f\n", j-1, sto, k, i, casa::real(dataCol[j-1][sto]), casa::imag(dataCol[j-1][sto]));
+                v1 = casa::real(dataCol[j-1][sto]);
+                v2 = casa::imag(dataCol[j-1][sto]);
+                printf("The value stored in dataCol[%d][%d] in sample: %d , spw: %d, is: %f, %f\n", j-1, sto, k, i, v1[0], v2[0]);
               }
               dataCol[j][sto] = comp;
               h++;
