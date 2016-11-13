@@ -375,7 +375,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
     printf("Column %s already exists... skipping creation...\n", out_col);
   }else{
     printf("Adding %s to the main table...\n", out_col);
-    main_tab.addColumn (casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
+    main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
     main_tab.flush();
   }
 
@@ -385,21 +385,20 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
      printf("Duplicating DATA column into %s\n", out_col);
      casa::tableCommand(query);
   }
-  casa::TableRow writeRow(main_tab, casa::stringToVector(column_name));
-  casa::TableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,DATA_DESC_ID"));
+
+  casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FLAG_ROW,DATA_DESC_ID"));
   casa::Complex comp;
   casa::Vector<casa::Bool> auxbool;
   bool flag;
-  int spw, h = 0, g = 0, counter = 0;
+  int spw, h = 0, g = 0;
   for(int i=0; i < data.n_internal_frequencies; i++){
     for(int j=0; j < data.channels[i]; j++){
       for (int k=0; k < nsamples; k++) {
-        const casa::TableRecord &valuesRead = row.get(k);
-        const casa::TableRecord &valuesWrite = writeRow.get(k);
-        flag = valuesRead.asBool("FLAG_ROW");
-        spw = valuesRead.asInt("DATA_DESC_ID");
-        casa::Array<casa::Bool> flagCol = valuesRead.asArrayBool("FLAG");
-        casa::Array<casa::Complex> dataCol = valuesWrite.asArrayComplex(column_name);
+        const casa::TableRecord &values = row.get(k);
+        flag = values.asBool("FLAG_ROW");
+        spw = values.asInt("DATA_DESC_ID");
+        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
         for (int sto=0; sto<nstokes; sto++) {
           auxbool = flagCol[j][sto];
           if(spw == i && auxbool[0] == false && flag == false){
@@ -409,9 +408,7 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
             h++;
           }
         }
-        if(spw == i && flag == false){
-          writeRow.put(k);
-        }
+        if(spw == i && flag == false) row.put(k);
       }
       h=0;
       g++;

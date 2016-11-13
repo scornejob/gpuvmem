@@ -72,8 +72,8 @@ typedef struct observedVisibilities{
   cufftComplex *Vr;
   float freq;
   long numVisibilities;
+  
   int *stokes;
-
   int threadsPerBlockUV;
   int numBlocksUV;
 }Vis;
