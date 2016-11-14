@@ -72,7 +72,7 @@ typedef struct observedVisibilities{
   cufftComplex *Vr;
   float freq;
   long numVisibilities;
-  
+
   int *stokes;
   int threadsPerBlockUV;
   int numBlocksUV;
@@ -96,6 +96,7 @@ typedef struct freqData{
   long *numVisibilitiesPerFreq;
   int total_frequencies;
   int *channels;
+  int valid_frequencies;
 }freqData;
 
 typedef struct variables {

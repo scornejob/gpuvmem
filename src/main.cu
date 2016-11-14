@@ -470,9 +470,11 @@ __host__ int main(int argc, char **argv) {
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
-			gpuErrchk(cudaDeviceSynchronize());
-      toFitsFloat(device_vars[i].atten, i, M, N, 4);
+      if(data.numVisibilitiesPerFreq[i] != 0){
+  			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
+  			gpuErrchk(cudaDeviceSynchronize());
+        toFitsFloat(device_vars[i].atten, i, M, N, 4);
+      }
 		}
 	}else{
     #pragma omp parallel for schedule(static,1)
@@ -484,14 +486,18 @@ __host__ int main(int argc, char **argv) {
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
-			gpuErrchk(cudaDeviceSynchronize());
+      if(data.numVisibilitiesPerFreq[i] != 0){
+  			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_vars[i].atten, visibilities[i].freq, N, global_xobs, global_yobs, DELTAX, DELTAY);
+  			gpuErrchk(cudaDeviceSynchronize());
+      }
 		}
 
     for (int i = 0; i < data.total_frequencies; i++)
     {
       cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
-      toFitsFloat(device_vars[i].atten, i, M, N, 4);
+      if(data.numVisibilitiesPerFreq[i] != 0){
+        toFitsFloat(device_vars[i].atten, i, M, N, 4);
+      }
     }
 	}
 
@@ -501,9 +507,10 @@ __host__ int main(int argc, char **argv) {
 	if(num_gpus == 1){
     cudaSetDevice(selected);
 		for(int i=0; i<data.total_frequencies; i++){
-			total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
-			gpuErrchk(cudaDeviceSynchronize());
-
+      if(data.numVisibilitiesPerFreq[i] != 0){
+  			total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
+  			gpuErrchk(cudaDeviceSynchronize());
+      }
 		}
 	}else{
     #pragma omp parallel for schedule(static,1)
@@ -515,22 +522,24 @@ __host__ int main(int argc, char **argv) {
 			int gpu_id = -1;
 			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
 			cudaGetDevice(&gpu_id);
-			#pragma omp critical
-			{
-				total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
-				gpuErrchk(cudaDeviceSynchronize());
-			}
+      if(data.numVisibilitiesPerFreq[i] != 0){
+  			#pragma omp critical
+  			{
+  				total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, device_vars[i].atten, N);
+  				gpuErrchk(cudaDeviceSynchronize());
+  			}
+      }
 		}
 	}
 
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
-		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
+		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.valid_frequencies, N);
 		gpuErrchk(cudaDeviceSynchronize());
 	}else{
     cudaSetDevice(0);
-		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.total_frequencies, N);
+		mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(device_total_atten_image, data.valid_frequencies, N);
 		gpuErrchk(cudaDeviceSynchronize());
 
 	}
