@@ -357,19 +357,19 @@ __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqD
   printf("Saving residuals to host memory\n");
   if(num_gpus == 1){
     for(int i=0; i<data.total_frequencies; i++){
-      gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+      gpuErrchk(cudaMemcpy(visibilities[i].Vm, device_visibilities[i].Vm, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
     }
   }else{
     for(int i=0; i<data.total_frequencies; i++){
       cudaSetDevice(i%num_gpus);
-      gpuErrchk(cudaMemcpy(visibilities[i].Vr, device_visibilities[i].Vr, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+      gpuErrchk(cudaMemcpy(visibilities[i].Vm, device_visibilities[i].Vm, sizeof(cufftComplex)*data.numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
     }
   }
 
   for(int i=0; i<data.total_frequencies; i++){
     for(int j=0; j<data.numVisibilitiesPerFreq[i];j++){
       if(visibilities[i].u[j]<0){
-        visibilities[i].Vr[j].y *= -1;
+        visibilities[i].Vm[j].y *= -1;
       }
     }
   }
@@ -417,8 +417,8 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
           for (int sto=0; sto<nstokes; sto++){
             auxbool = flagCol[j][sto];
             if(auxbool[0] == false){
-              comp.real() = -visibilities[g].Vr[h].x;
-              comp.imag() = -visibilities[g].Vr[h].y;
+              comp.real() = visibilities[g].Vo[h].x - visibilities[g].Vm[h].x;
+              comp.imag() = visibilities[g].Vo[h].y - visibilities[g].Vm[h].y;
               dataCol[j][sto] = comp;
               h++;
             }
@@ -1066,8 +1066,10 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities){
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   if (i < numVisibilities){
-    Vr[i].x = (alpha * Vm[i].x) - Vo[i].x;
-    Vr[i].y = (alpha * Vm[i].y) - Vo[i].y;
+    Vm[i].x *= alpha;
+    Vm[i].y *= alpha;
+    Vr[i].x = Vm[i].x - Vo[i].x;
+    Vr[i].y = Vm[i].y - Vo[i].y;
   }
 }
 

@@ -194,7 +194,7 @@ __host__ int main(int argc, char **argv) {
 		visibilities[i].v = (float*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(float));
 		visibilities[i].weight = (float*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(float));
 		visibilities[i].Vo = (cufftComplex*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
-		visibilities[i].Vr = (cufftComplex*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+    visibilities[i].Vm = (cufftComplex*)malloc(data.numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
     total_visibilities += data.numVisibilitiesPerFreq[i];
 	}
 
