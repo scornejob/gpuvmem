@@ -1468,8 +1468,8 @@ __host__ float chiCuadrado(cufftComplex *I)
       	gpuErrchk(cudaDeviceSynchronize());
 
         if(xcorr_flag){
-          float alpha_num = 1.0;
-          float alpha_den = 1.0;
+          float alpha_num = 0.0;
+          float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
@@ -1528,8 +1528,8 @@ __host__ float chiCuadrado(cufftComplex *I)
 
 
         if(xcorr_flag){
-          float alpha_num = 1.0;
-          float alpha_den = 1.0;
+          float alpha_num = 0.0;
+          float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
