@@ -819,7 +819,8 @@ __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int 
 
 
 
-__host__ float deviceReduce(float *in, long N) {
+__host__ float deviceReduce(float *in, long N)
+{
   float *device_out;
   gpuErrchk(cudaMalloc(&device_out, sizeof(float)*1024));
   gpuErrchk(cudaMemset(device_out, 0, sizeof(float)*1024));
@@ -1048,7 +1049,7 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, flo
 __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   if (i < numVisibilities){
-    alpha_num[i] = w[i] * ((Vm[i].x * Vo[i].x) + (Vm[i].y * Vo[i].y));
+    alpha_num[i] = w[i] * ((Vo[i].x * Vm[i].x) + (Vo[i].y * Vm[i].y));
     alpha_den[i] = w[i] * ((Vm[i].x * Vm[i].x) + (Vm[i].y * Vm[i].y));
   }
 
@@ -1063,7 +1064,8 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
 }
 
 
-__global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities){
+__global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities)
+{
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   if (i < numVisibilities){
     Vm[i].x *= alpha;
@@ -1146,7 +1148,8 @@ __global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, flo
 }
 
 
-__global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisibilities){
+__global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisibilities)
+{
 	int i = threadIdx.x + blockDim.x * blockIdx.x;
 
 	if (i < numVisibilities){
@@ -1464,7 +1467,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
       	gpuErrchk(cudaDeviceSynchronize());
 
-        if(xcorr_flag==1 && iter>1){
+        if(xcorr_flag==1 && iter>0){
           float alpha_num = 1.0;
           float alpha_den = 1.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
@@ -1473,13 +1476,11 @@ __host__ float chiCuadrado(cufftComplex *I)
 
           alpha_den = deviceReduce(device_vars[i].alpha_den, data.numVisibilitiesPerFreq[i]);
 
-          if(alpha_den == 0.0){
-            alpha_num = 1.0;
-            alpha_den = 1.0;
+          if(alpha_den > 0.0){
+            device_vars[i].alpha = alpha_num/alpha_den;
+          }else{
+            device_vars[i].alpha = 1.0;
           }
-
-          device_vars[i].alpha = alpha_num/alpha_den;
-
           residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
         }else{
           residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
@@ -1535,12 +1536,11 @@ __host__ float chiCuadrado(cufftComplex *I)
 
           alpha_den = deviceReduce(device_vars[i].alpha_den, data.numVisibilitiesPerFreq[i]);
 
-          if(alpha_den == 0.0){
-            alpha_num = 1.0;
-            alpha_den = 1.0;
+          if(alpha_den > 0.0){
+            device_vars[i].alpha = alpha_num/alpha_den;
+          }else{
+            device_vars[i].alpha = 1.0;
           }
-
-          device_vars[i].alpha = alpha_num/alpha_den;
 
           residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
         }else{
