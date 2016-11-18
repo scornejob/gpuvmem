@@ -453,6 +453,7 @@ __host__ void print_help() {
   printf("    -t  --iterations       Number of iterations for optimization (Default = 50)\n");
   printf("        --xcorr       Run gpuvmem with cross-correlation\n");
   printf("        --nopositivity       Run gpuvmem using chi2 with no posititivy restriction\n");
+  printf("        --clipping      Clips the image to positive values\n");
   printf("        --verbose       Shows information through all the execution\n");
 }
 
@@ -1170,7 +1171,7 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void HVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1248,7 +1249,7 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 }
 
-__global__ void DH(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DS(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1265,7 +1266,6 @@ __global__ void DQ(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_
 
   if(noise[N*i+j].x <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
-    //dQ[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
     dQ[N*i+j] = (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x)  + (I[N*i+j].x - I[N*(i+1)+j].x);
   }else{
     dQ[N*i+j] = I[N*i+j].x;
@@ -1456,7 +1456,7 @@ __host__ float chiCuadrado(cufftComplex *I)
 
 
   if(iter>0 && MINPIX!=0.0){
-    HVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+    SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
@@ -1614,13 +1614,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 
 
   toFitsFloat(I, iter, M, N, 1);
-  //toFitsFloat(device_V, iter, M, N, 2);
 
   if(iter>0 && MINPIX!=0.0){
-
-    DH<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+    DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
     gpuErrchk(cudaDeviceSynchronize());
-
   }
 
   if(num_gpus == 1){
