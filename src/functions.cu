@@ -1463,13 +1463,13 @@ __host__ float chiCuadrado(cufftComplex *I)
         phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, global_xobs, global_yobs);
       	gpuErrchk(cudaDeviceSynchronize());
 
-        //RESIDUAL CALCULATION
+        //BILINEAR INTERPOLATION
         vis_mod<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vm, device_visibilities[i].Vo, device_V, device_visibilities[i].u, device_visibilities[i].v, deltau, deltav, data.numVisibilitiesPerFreq[i], N);
       	gpuErrchk(cudaDeviceSynchronize());
 
         if(xcorr_flag){
-          float alpha_num = 1.0;
-          float alpha_den = 1.0;
+          float alpha_num = 0.0;
+          float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
@@ -1528,8 +1528,8 @@ __host__ float chiCuadrado(cufftComplex *I)
 
 
         if(xcorr_flag){
-          float alpha_num = 1.0;
-          float alpha_den = 1.0;
+          float alpha_num = 0.0;
+          float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
@@ -1552,10 +1552,10 @@ __host__ float chiCuadrado(cufftComplex *I)
       	chi2Vector<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].chi2, device_visibilities[i].Vr, device_visibilities[i].weight, data.numVisibilitiesPerFreq[i]);
       	gpuErrchk(cudaDeviceSynchronize());
 
-
-        result = deviceReduce(device_vars[i].chi2, data.numVisibilitiesPerFreq[i]);
-      	//REDUCTIONS
+        //REDUCTIONS
       	//chi2
+        result = deviceReduce(device_vars[i].chi2, data.numVisibilitiesPerFreq[i]);
+
         #pragma omp critical
         {
           resultchi2  += result;
@@ -1573,11 +1573,6 @@ __host__ float chiCuadrado(cufftComplex *I)
 
   final_chi2 = resultchi2;
   final_H = resultH;
-  /*printf("chi2 value = %.5f\n", resultchi2);
-  printf("H value = %.5f\n", resultH);
-  printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
-  printf("lambda * H value = %.5f\n", lambda*resultH);
-  printf("Phi value = %.5f\n\n", resultPhi);*/
 
   return resultPhi;
 }
