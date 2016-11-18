@@ -1606,18 +1606,16 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     cudaSetDevice(selected);
     for(int i=0; i<data.total_frequencies;i++){
       if(data.numVisibilitiesPerFreq[i] != 0){
-          if(xcorr_flag){
-            DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, device_vars[i].alpha, DELTAX, DELTAY);
-          	gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
-          	gpuErrchk(cudaDeviceSynchronize());
-          }
-
-
-          DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
-        	gpuErrchk(cudaDeviceSynchronize());
+        if(xcorr_flag){
+          DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, device_vars[i].alpha, DELTAX, DELTAY);
+          gpuErrchk(cudaDeviceSynchronize());
+        }else{
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
+          gpuErrchk(cudaDeviceSynchronize());
         }
+        DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
+        gpuErrchk(cudaDeviceSynchronize());
+      }
     }
   }else{
     #pragma omp parallel for schedule(static,1)
@@ -1655,7 +1653,6 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 
   DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
   gpuErrchk(cudaDeviceSynchronize());
-
   gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float), device_dphi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
 
 }
