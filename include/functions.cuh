@@ -143,6 +143,7 @@ __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftCom
 __global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N);
 __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N);
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N);
+__global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N);
