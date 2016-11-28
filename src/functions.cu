@@ -436,25 +436,25 @@ __host__ void writeMS(char *infile, char *outfile, Vis *visibilities) {
 
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
-	printf("    -h  --help       Shows this\n");
+	printf("    -h  --help             Shows this\n");
   printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
   printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
   printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"   -i  --input       The name of the input file of visibilities(MS)\n");
-  printf(	"   -o  --output       The name of the output file of residual visibilities(MS)\n");
-  printf(	"   -O  --output-image       The name of the output image FITS file\n");
-  printf("    -I  --inputdat       The name of the input file of parameters\n");
-  printf("    -m  --modin       mod_in_0 FITS file\n");
-  printf("    -n  --noise       Noise Parameter (Optional)\n");
-  printf("    -l  --lambda      Lambda Regulatization Parameter (Optional)\n");
-  printf("    -p  --path       MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
-  printf("    -M  --multigpu       Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
-  printf("    -s  --select       If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
+  printf(	"   -i  --input            The name of the input file of visibilities(MS)\n");
+  printf(	"   -o  --output           The name of the output file of residual visibilities(MS)\n");
+  printf(	"   -O  --output-image     The name of the output image FITS file\n");
+  printf("    -I  --inputdat         The name of the input file of parameters\n");
+  printf("    -m  --modin            mod_in_0 FITS file\n");
+  printf("    -n  --noise            Noise Parameter (Optional)\n");
+  printf("    -l  --lambda           Lambda Regulatization Parameter (Optional)\n");
+  printf("    -p  --path             MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
+  printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
+  printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
   printf("    -t  --iterations       Number of iterations for optimization (Default = 50)\n");
-  printf("        --xcorr       Run gpuvmem with cross-correlation\n");
-  printf("        --nopositivity       Run gpuvmem using chi2 with no posititivy restriction\n");
-  printf("        --clipping      Clips the image to positive values\n");
-  printf("        --verbose       Shows information through all the execution\n");
+  printf("        --xcorr            Run gpuvmem with cross-correlation\n");
+  printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
+  printf("        --clipping         Clips the image to positive values\n");
+  printf("        --verbose          Shows information through all the execution\n");
 }
 
 __host__ char *strip(const char *string, const char *chars)
