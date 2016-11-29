@@ -1487,6 +1487,7 @@ __host__ float chiCuadrado(cufftComplex *I)
           float alpha_num = 0.0;
           float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
 
@@ -1498,8 +1499,10 @@ __host__ float chiCuadrado(cufftComplex *I)
             device_vars[i].alpha = 1.0;
           }
           residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
         }else{
           residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
         }
 
       	////chi 2 VECTOR
@@ -1547,6 +1550,7 @@ __host__ float chiCuadrado(cufftComplex *I)
           float alpha_num = 0.0;
           float alpha_den = 0.0;
           alphaVectors<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_vars[i].alpha_num, device_vars[i].alpha_den, device_visibilities[i].weight, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
 
           alpha_num = deviceReduce(device_vars[i].alpha_num, data.numVisibilitiesPerFreq[i]);
 
@@ -1559,8 +1563,10 @@ __host__ float chiCuadrado(cufftComplex *I)
           }
 
           residual_XCORR<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, device_vars[i].alpha, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
         }else{
           residual<<<visibilities[i].numBlocksUV, visibilities[i].threadsPerBlockUV>>>(device_visibilities[i].Vr, device_visibilities[i].Vm, device_visibilities[i].Vo, data.numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
         }
 
 
