@@ -32,9 +32,9 @@ Use GPUVMEM:
 Example: `./bin/gpuvmem options [ arguments ...]`
 ```
 -h  --help            Shows this
--X --blockSizeX       Block X Size for Image (Needs to be pow of 2)
--Y --blockSizeY       Block Y Size for Image (Needs to be pow of 2)
--V --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)
+-X  --blockSizeX      Block X Size for Image (Needs to be pow of 2)
+-Y  --blockSizeY      Block Y Size for Image (Needs to be pow of 2)
+-V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)
 -i  --input           The name of the input file of visibilities(MS)
 -o  --output          The name of the output file of residual visibilities(MS)
 -O  --output-image    The name of the output image FITS file
