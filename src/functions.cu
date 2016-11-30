@@ -3,7 +3,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nstokes, num_gpus, selected, iter;
+status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_noise_image, *device_fg_image, *device_image;
@@ -55,7 +55,7 @@ __host__ freqData getFreqs(char * file)
    casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
    casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
    casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-   int fields = field_tab.nrow();
+   nfields = field_tab.nrow();
    //For now only 1 FIELD.
    casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
    const casa::TableRecord &values = field_row.get(0);

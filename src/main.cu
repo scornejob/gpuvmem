@@ -16,7 +16,7 @@ float difmap_noise, fg_scale, final_chi2, final_H;
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, nsamples, nstokes, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, nsamples, nfields, nstokes, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
 int num_gpus, multigpu, selected;
 char *output, *mempath, *out_image;
 
