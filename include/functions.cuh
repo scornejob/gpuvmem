@@ -83,7 +83,6 @@ typedef struct variablesPerFreq{
   float *chi2;
   float *dchi2;
   float alpha;
-
   float *alpha_num;
   float *alpha_den;
   cufftHandle plan;
@@ -93,11 +92,21 @@ typedef struct variablesPerFreq{
 
 typedef struct freqData{
   int n_internal_frequencies;
-  long *numVisibilitiesPerFreq;
   int total_frequencies;
   int *channels;
-  int valid_frequencies;
 }freqData;
+
+typedef struct field{
+  int valid_frequencies;
+  double obsra, obsdec;
+  float global_xobs, global_yobs;
+  long *numVisibilitiesPerFreq;
+  cufftComplex *device_total_atten_image;
+  cufftComplex *device_noise_image;
+  VPF *device_vars;
+  Vis *visibilities;
+  Vis *device_visibilities;
+}Field;
 
 typedef struct variables {
 	char *input;
@@ -121,7 +130,7 @@ __host__ freqData getFreqs(char * file);
 __host__ long NearestPowerOf2(long N);
 __host__ void readInputDat(char *file);
 __host__ void residualsToHost(Vis *device_visibilities, Vis *visibilities, freqData data);
-__host__ void readMS(char *file, char *file2, Vis *visibilities);
+__host__ void readMS(char *file, char *file2, Field *fields);
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest);
 __host__ void writeMS(char *infile, char *outfile, Vis *visibilities);
 __host__ void print_help();
