@@ -1631,8 +1631,6 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
             DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_vars[i].atten, device_vars[i].dchi2, device_visibilities[i].Vr, device_visibilities[i].u, device_visibilities[i].v, device_visibilities[i].weight, N, data.numVisibilitiesPerFreq[i], fg_scale, noise_cut, global_xobs, global_yobs, DELTAX, DELTAY);
           	gpuErrchk(cudaDeviceSynchronize());
           }
-
-
           DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_vars[i].dchi2, N);
         	gpuErrchk(cudaDeviceSynchronize());
         }
