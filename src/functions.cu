@@ -1088,7 +1088,6 @@ __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftCom
   }
 
   fg_image[N*i+j].x = I[N*i+j].x;
-  //printf("%f\n", fg_image[N*i+j].x);
   fg_image[N*i+j].y = 0;
 }
 
