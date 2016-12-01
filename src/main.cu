@@ -553,7 +553,7 @@ __host__ int main(int argc, char **argv) {
   			int gpu_id = -1;
   			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
-        if(data.numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[i] != 0){
     			#pragma omp critical
     			{
     				total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_total_atten_image, fields[f].device_vars[i].atten, N);
@@ -580,7 +580,7 @@ __host__ int main(int argc, char **argv) {
 
 	}
   for(int f=0; f<nfields; f++){
-    toFitsFloat(device_total_atten_image, f, M, N, 4);
+    toFitsFloat(fields[f].device_total_atten_image, f, M, N, 4);
   }
   if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -589,9 +589,9 @@ __host__ int main(int argc, char **argv) {
    }
 
   for(int f=0; f<nfields; f++){
-  	noise_image<<<numBlocksNN, threadsPerBlockNN>>>(fields[i].device_total_atten_image, fields[i].device_noise_image, difmap_noise, N);
+  	noise_image<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_total_atten_image, fields[f].device_noise_image, difmap_noise, N);
   	gpuErrchk(cudaDeviceSynchronize());
-  	toFitsFloat(device_noise_image, f, M, N, 5);
+  	toFitsFloat(fields[f].device_noise_image, f, M, N, 5);
   }
 	//exit(0);
 	cufftComplex *host_noise_image = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
