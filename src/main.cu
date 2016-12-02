@@ -470,7 +470,7 @@ __host__ int main(int argc, char **argv) {
   start = omp_get_wtime();
 	if(num_gpus == 1){
     cudaSetDevice(selected);
-    for(int f = 0; f < nfields; f++){
+    for(int f=0; f < nfields; f++){
   		for(int i=0; i<data.total_frequencies; i++){
   			hermitianSymmetry<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].freq, fields[f].numVisibilitiesPerFreq[i]);
   			gpuErrchk(cudaDeviceSynchronize());
@@ -493,11 +493,7 @@ __host__ int main(int argc, char **argv) {
 
   	}
   }
-  /*for(int f=0; f<nfields; f++){
-    printf("Field %d, Visibilities non flagged: %d\n", f, fields[f].numVisibilitiesPerFreq[0]);
-  }
-  exit(-1);*/
-
+  
 	if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int f = 0; f<nfields; f++){

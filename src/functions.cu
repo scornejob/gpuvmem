@@ -956,7 +956,7 @@ __global__ void weight_image(cufftComplex *weight_image, cufftComplex *total_att
   weight_image[N*i+j].y = 0;
 }
 
-__global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float frec, float DELTAX, float DELTAY)
+__global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
 {
     int j = threadIdx.x + blockDim.x * blockIdx.x;
     int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -968,7 +968,7 @@ __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, 
     float y = (i - yobs) * dy;
     float arc = RPARCM*sqrtf(x*x+y*y);
     float c = 4.0*logf(2.0);
-    float a = (FWHM*BEAM_FREQ/(frec*1e-9));
+    float a = (FWHM*BEAM_FREQ/(freq*1e-9));
     float r = arc/a;
     float atten = expf(-c*r*r);
 
@@ -1029,6 +1029,11 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, flo
   float v11, v12, v21, v22;
   float Zreal;
   float Zimag;
+
+  /*if(Ux[i] < 0.0 && i==2916){
+    printf("What?.. i = %d, Error in residual: u,v = %f,%f\n", i, Ux[i], Vx[i]);
+  }*/
+
   if (i < numVisibilities){
     float u = Ux[i]/deltau;
     float v = Vx[i]/deltav;
@@ -1091,9 +1096,6 @@ __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufft
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   if (i < numVisibilities){
-    if(i==0){
-      printf("model vis.re %f, vis.im %f\n", Vm[i].x, Vm[i].y);
-    }
     Vr[i].x = Vm[i].x - Vo[i].x;
     Vr[i].y = Vm[i].y - Vo[i].y;
   }
