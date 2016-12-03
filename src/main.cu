@@ -283,8 +283,6 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float)*M*N));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
-
-
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
@@ -461,9 +459,7 @@ __host__ int main(int argc, char **argv) {
   			}
   		}
     }
-
 	}
-
 
   //Time is taken from first kernel
   t = clock();
@@ -493,7 +489,8 @@ __host__ int main(int argc, char **argv) {
 
   	}
   }
-  
+
+
 	if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int f = 0; f<nfields; f++){

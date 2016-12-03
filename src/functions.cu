@@ -100,9 +100,7 @@ __host__ freqData getFreqs(char * file)
   casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
   casa::Vector<casa::Bool> auxbool;
   bool flag;
-  int spw;
-  int field;
-  int counter;
+  int spw, field, counter;
   for(int f=0; f<nfields; f++){
     counter = 0;
     for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
@@ -242,8 +240,7 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
   bool flag;
-  int spw;
-  int field;
+  int spw, field;
 
   if(random_probability != 0.0){
     float u;
@@ -894,7 +891,7 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
   }
 }
 
-__global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float xobs, float yobs, float DELTAX, float DELTAY)
+__global__ void attenuation(cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
 		int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -908,7 +905,7 @@ __global__ void attenuation(cufftComplex *attenMatrix, float frec, long N, float
     float arc = sqrtf(x*x+y*y);
     float c = 4.0*logf(2.0);
     //printf("frec:%f\n", frec);
-    float a = (FWHM*BEAM_FREQ/(frec*1e-9));
+    float a = (FWHM*BEAM_FREQ/(freq*1e-9));
     float r = arc/a;
     float atten = expf(-c*r*r);
     attenMatrix[N*i+j].x = atten;
@@ -987,7 +984,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 		int j = threadIdx.x + blockDim.x * blockIdx.x;
 		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-    float u,v;
+    float u,v, phase, c, s, re, im;
     float du = xphs/M;
     float dv = yphs/N;
 
@@ -1003,16 +1000,15 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
       v = dv * (i-N);
     }
 
-    float phase = -2.0*(u+v);
-    float c, s;
+    phase = -2.0*(u+v);
     #if (__CUDA_ARCH__ >= 300 )
       sincospif(phase, &s, &c);
     #else
       c = cospif(phase);
       s = sinpif(phase);
     #endif
-    float re = data[N*i+j].x;
-    float im = data[N*i+j].y;
+    re = data[N*i+j].x;
+    im = data[N*i+j].y;
     data[N*i+j].x = re * c - im * s;
     data[N*i+j].y = re * s + im * c;
 }
@@ -1025,18 +1021,15 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, flo
 {
   int i = threadIdx.x + blockDim.x * blockIdx.x;
   long i1, i2, j1, j2;
-  float du, dv;
+  float du, dv, u, v;
   float v11, v12, v21, v22;
   float Zreal;
   float Zimag;
 
-  /*if(Ux[i] < 0.0 && i==2916){
-    printf("What?.. i = %d, Error in residual: u,v = %f,%f\n", i, Ux[i], Vx[i]);
-  }*/
-
   if (i < numVisibilities){
-    float u = Ux[i]/deltau;
-    float v = Vx[i]/deltav;
+
+    u = Ux[i]/deltau;
+    v = Vx[i]/deltav;
 
     if (fabsf(u) > (N/2)+0.5 || fabsf(v) > (N/2)+0.5) {
       printf("Error in residual: u,v = %f,%f\n", u, v);
@@ -1062,7 +1055,6 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, flo
       printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
       asm("trap;");
     }
-
 
     /* Bilinear interpolation: real part */
     v11 = V[N*j1 + i1].x; /* [i1, j1] */
@@ -1511,7 +1503,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         	}
         	gpuErrchk(cudaDeviceSynchronize());
 
-          //PHASE_ROTATE VISIBILITIES
+          //PHASE_ROTATE
           phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, fields[f].global_xobs, fields[f].global_yobs);
         	gpuErrchk(cudaDeviceSynchronize());
 
@@ -1550,8 +1542,8 @@ __host__ float chiCuadrado(cufftComplex *I)
           /*gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
           for(int z=0; z<fields[f].numVisibilitiesPerFreq[i]; z++){
             printf("Field %d, Canal %d, Re: %f, Im :%f\n", f, i, fields[f].visibilities[i].Vm[z].x, fields[f].visibilities[i].Vm[z].y);
-          }
-          exit(-1);*/
+          }*/
+
         	resultchi2  += deviceReduce(fields[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
         }
       }
@@ -1580,7 +1572,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         	}
         	gpuErrchk(cudaDeviceSynchronize());
 
-          //PHASE_ROTATE VISIBILITIES
+          //PHASE_ROTATE
           phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_V, M, N, fields[f].global_xobs, fields[f].global_yobs);
         	gpuErrchk(cudaDeviceSynchronize());
 
