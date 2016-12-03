@@ -351,11 +351,11 @@ __host__ int main(int argc, char **argv) {
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
+  printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
   for(int f=0; f<nfields; f++){
   	double lobs, mobs;
     if(verbose_flag){
     	printf("MS Field %d: Ra: %lf, dec: %lf\n", f, fields[f].obsra, fields[f].obsdec);
-    	printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
     }
 
   	direccos(fields[f].obsra, fields[f].obsdec, raimage, decimage, &lobs,  &mobs);
@@ -363,7 +363,7 @@ __host__ int main(int argc, char **argv) {
   	fields[f].global_xobs = (crpix1 - 1.0) + lobs/deltax;
   	fields[f].global_yobs = (crpix2 - 1.0) + mobs/deltay;
     if(verbose_flag){
-  	   printf("Image Center Field %d: %f, %f\n", f, fields[f].global_xobs, fields[f].global_yobs);
+  	   printf("Center Field %d: %f, %f\n", f, fields[f].global_xobs, fields[f].global_yobs);
     }
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
@@ -460,6 +460,7 @@ __host__ int main(int argc, char **argv) {
   		}
     }
 	}
+
 
   //Time is taken from first kernel
   t = clock();
@@ -600,10 +601,11 @@ __host__ int main(int argc, char **argv) {
      printf("difmap_noise = %e\n", difmap_noise);
   }
 	free(host_noise_image);
+  cudaFree(device_weight_image);
   for(int f=0; f<nfields; f++){
     cudaFree(fields[f].atten_image);
   }
-	//return;
+
 
 
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
