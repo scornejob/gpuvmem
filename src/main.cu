@@ -365,6 +365,11 @@ __host__ int main(int argc, char **argv) {
     if(verbose_flag){
   	   printf("Center Field %d: %f, %f\n", f, fields[f].global_xobs, fields[f].global_yobs);
     }
+
+    if(fields[f].global_xobs < 0 || fields[f].global_xobs > M || fields[f].global_xobs < 0 || fields[f].global_yobs > N) {
+      printf("Pointing center (%f,%f) is outside the range of the image\n", fields[f].global_xobs, fields[f].global_xobs);
+      goToError();
+    }
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 
