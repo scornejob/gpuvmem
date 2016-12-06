@@ -698,7 +698,7 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       if(option == 0 || option == 1){
 			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
       }else if (option == 2 || option == 3){
-        image2D[N*y+x] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
+        image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
         //image2D[N*x+y] = host_IFITS[N*i+j].y;
       }else if(option == 4 || option == 5){
         image2D[N*i+j] = host_IFITS[N*i+j].x;
@@ -1339,11 +1339,7 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
   float x = (j - x0) * DELTAX * RPDEG;
   float y = (i - y0) * DELTAY * RPDEG;
 
-	float Ukv;
-	float Vkv;
-
-	float cosk;
-	float sink;
+	float Ukv, Vkv, cosk, sink;
 
   float dchi2 = 0.0;
   if(noise[N*i+j].x <= noise_cut){
@@ -1376,11 +1372,7 @@ __global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dCh
   float x = (j - x0) * DELTAX * RPDEG;
   float y = (i - y0) * DELTAY * RPDEG;
 
-	float Ukv;
-	float Vkv;
-
-	float cosk;
-	float sink;
+	float Ukv, Vkv, cosk, sink;
 
   float dchi2 = 0.0;
   if(noise[N*i+j].x <= noise_cut){
@@ -1539,11 +1531,6 @@ __host__ float chiCuadrado(cufftComplex *I)
 
         	//REDUCTIONS
         	//chi2
-          /*gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-          for(int z=0; z<fields[f].numVisibilitiesPerFreq[i]; z++){
-            printf("Field %d, Canal %d, Re: %f, Im :%f\n", f, i, fields[f].visibilities[i].Vm[z].x, fields[f].visibilities[i].Vm[z].y);
-          }*/
-
         	resultchi2  += deviceReduce(fields[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
         }
       }
@@ -1563,6 +1550,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
         	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
+
 
         	//FFT 2D
         	if ((cufftExecC2C(fields[f].device_vars[i].plan, (cufftComplex*)fields[f].device_vars[i].device_image, (cufftComplex*)fields[f].device_vars[i].device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
@@ -1656,9 +1644,8 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_H, N);
+  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
   gpuErrchk(cudaDeviceSynchronize());
-
 
   toFitsFloat(I, iter, M, N, 1);
 
@@ -1681,7 +1668,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
             }
             DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, N);
           	gpuErrchk(cudaDeviceSynchronize());
-          }
+        }
       }
     }
   }else{

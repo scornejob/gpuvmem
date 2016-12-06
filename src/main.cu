@@ -284,8 +284,11 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
   			gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vr, 0, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
@@ -311,16 +314,17 @@ __host__ int main(int argc, char **argv) {
     			gpuErrchk(cudaMemset(fields[f].device_vars[i].alpha_den, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         }
 
-
   			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float)*M*N));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
-
-
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
   			gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vr, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vm, 0, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
   		}
@@ -354,16 +358,13 @@ __host__ int main(int argc, char **argv) {
   printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
   for(int f=0; f<nfields; f++){
   	double lobs, mobs;
-    if(verbose_flag){
-    	printf("MS Field %d: Ra: %lf, dec: %lf\n", f, fields[f].obsra, fields[f].obsdec);
-    }
 
   	direccos(fields[f].obsra, fields[f].obsdec, raimage, decimage, &lobs,  &mobs);
 
   	fields[f].global_xobs = (crpix1 - 1.0) + lobs/deltax;
   	fields[f].global_yobs = (crpix2 - 1.0) + mobs/deltay;
     if(verbose_flag){
-  	   printf("Center Field %d: %f, %f\n", f, fields[f].global_xobs, fields[f].global_yobs);
+  	   printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
     }
 
     if(fields[f].global_xobs < 0 || fields[f].global_xobs > M || fields[f].global_xobs < 0 || fields[f].global_yobs > N) {
@@ -466,7 +467,6 @@ __host__ int main(int argc, char **argv) {
     }
 	}
 
-
   //Time is taken from first kernel
   t = clock();
   start = omp_get_wtime();
@@ -496,7 +496,6 @@ __host__ int main(int argc, char **argv) {
   	}
   }
 
-
 	if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int f = 0; f<nfields; f++){
@@ -525,8 +524,6 @@ __host__ int main(int argc, char **argv) {
   		}
     }
 	}
-
-
 
 
 	if(num_gpus == 1){

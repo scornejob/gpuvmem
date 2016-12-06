@@ -187,8 +187,6 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   searchDirection<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, N);//Search direction
   gpuErrchk(cudaDeviceSynchronize());
 
-
-
   ////////////////////////////////////////////////////////////////
   for(int i=1; i <= it_maximum; i++){
     start = omp_get_wtime();
