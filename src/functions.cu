@@ -985,8 +985,8 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 		int i = threadIdx.y + blockDim.y * blockIdx.y;
 
     float u,v, phase, c, s, re, im;
-    float du = xphs/M;
-    float dv = yphs/N;
+    float du = xphs/(float)M;
+    float dv = yphs/(float)N;
 
     if(j < M/2){
       u = du * j;
