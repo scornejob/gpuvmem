@@ -13,9 +13,6 @@ float *device_dphi, *device_dchi2_total, *device_dH, *device_chi2, *device_H, DE
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix_factor, lambda, ftol, random_probability;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
 
-//float FWHM = (8.4220/60.0)*RPARCM;
-//const float BEAM_FREQ = 691.4;
-
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
