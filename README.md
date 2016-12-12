@@ -29,12 +29,12 @@ t_telescope        2
 ```
 #t_telescope references the following telescopes:
 
-- 1. CBI2
-- 2. ALMA
-- 3. CBI2 Test
-- 4. ATCA
-- 5. VLA
-- 6. SZA
+1. CBI2
+2. ALMA
+3. CBI2 Test
+4. ATCA
+5. VLA
+6. SZA
 
 
 # Use GPUVMEM:
