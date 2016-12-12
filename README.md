@@ -27,7 +27,7 @@ ftol		1.0e-12
 random_probability 0.0
 t_telescope        2
 ```
-#t_telescope can be used with the following telescopes:
+#t_telescope references the following telescopes:
 
 - 1. CBI2
 - 2. ALMA
@@ -37,7 +37,7 @@ t_telescope        2
 - 6. SZA
 
 
-Use GPUVMEM:
+# Use GPUVMEM:
 
 Example: `./bin/gpuvmem options [ arguments ...]`
 ```
