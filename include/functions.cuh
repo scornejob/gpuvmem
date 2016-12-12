@@ -58,10 +58,7 @@ const double PI_D = CUDART_PI;
 const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
-const float FWHM = (8.4220/60.0)*RPARCM;
-const float BEAM_FREQ = 691.4;
 const float LIGHTSPEED = 2.99792458E8;
-
 
 typedef struct observedVisibilities{
   float *u;
@@ -128,6 +125,7 @@ __host__ void goToError();
 __host__ freqData getFreqs(char * file);
 __host__ long NearestPowerOf2(long N);
 __host__ void readInputDat(char *file);
+__host__ void init_beam(int telescope);
 __host__ void residualsToHost(Field *fields, freqData data);
 __host__ void readMS(char *file, char *file2, Field *fields);
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest);
@@ -153,12 +151,12 @@ __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long 
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
-__global__ void attenuation(cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY);
+__global__ void attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N);
 __global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N);
 __global__ void noise_image(cufftComplex *noise_image, cufftComplex *weight_image, float difmap_noise, long N);
 __global__ void weight_image(cufftComplex *weight_image, cufftComplex *total_atten, float difmap_noise, long N);
-__global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY);
+__global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
 __global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
 __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);

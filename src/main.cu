@@ -11,13 +11,16 @@ cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_nois
 
 float *device_dphi, *device_dchi2_total, *device_dH, *device_chi2, *device_H, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix_factor, lambda, ftol, random_probability;
-float difmap_noise, fg_scale, final_chi2, final_H;
+float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
+
+//float FWHM = (8.4220/60.0)*RPARCM;
+//const float BEAM_FREQ = 691.4;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, nsamples, nfields, nstokes, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
-int num_gpus, multigpu, selected;
+int num_gpus, multigpu, selected, t_telescope;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -103,6 +106,7 @@ __host__ int main(int argc, char **argv) {
   }
 
   readInputDat(inputdat);
+  init_beam(t_telescope);
 	data = getFreqs(msinput);
   if(verbose_flag){
 	   printf("Number of frequencies file = %d\n", data.total_frequencies);
@@ -500,8 +504,8 @@ __host__ int main(int argc, char **argv) {
     cudaSetDevice(selected);
     for(int f = 0; f<nfields; f++){
   		for(int i=0; i<data.total_frequencies; i++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
-    			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].atten, fields[f].visibilities[i].freq, N, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
+        if(fields[f].numVisibilitiesPerFreq[i] > 0){
+    			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].atten, fields[f].visibilities[i].freq, N, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
     			gpuErrchk(cudaDeviceSynchronize());
         }
   		}
@@ -517,8 +521,8 @@ __host__ int main(int argc, char **argv) {
   			int gpu_id = -1;
   			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
-    			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].atten, fields[f].visibilities[i].freq, N, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
+        if(fields[f].numVisibilitiesPerFreq[i] > 0){
+    			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].atten, fields[f].visibilities[i].freq, N, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
     			gpuErrchk(cudaDeviceSynchronize());
         }
   		}
@@ -530,7 +534,7 @@ __host__ int main(int argc, char **argv) {
     cudaSetDevice(selected);
     for(int f=0; f<nfields; f++){
   		for(int i=0; i<data.total_frequencies; i++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[i] > 0){
     			total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].atten_image, fields[f].device_vars[i].atten, N);
     			gpuErrchk(cudaDeviceSynchronize());
         }
@@ -547,7 +551,7 @@ __host__ int main(int argc, char **argv) {
   			int gpu_id = -1;
   			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[i] > 0){
     			#pragma omp critical
     			{
     				total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].atten_image, fields[f].device_vars[i].atten, N);

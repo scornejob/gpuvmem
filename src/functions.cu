@@ -3,7 +3,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter;
+status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image;
@@ -14,7 +14,7 @@ minpix_factor, lambda, ftol, random_probability, final_chi2, final_H;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
 extern double ra, dec;
 
 extern freqData data;
@@ -42,6 +42,47 @@ __host__ void goToError()
   printf("An error has ocurred, exiting\n");
   exit(0);
 
+}
+
+__host__ void init_beam(int telescope)
+{
+  switch(telescope) {
+  case 1:
+    beam_fwhm = 33.0*RPARCM;   /* radians CBI2 */
+    beam_freq = 30.0;          /* GHz */
+    beam_cutoff = 90.0*RPARCM; /* radians */
+    break;
+  case 2:
+    beam_fwhm = (8.4220/60)*RPARCM;   /* radians ALMA */
+    beam_freq = 691.4;          /* GHz */
+    beam_cutoff = 1.0*RPARCM; /* radians */
+    break;
+  case 3: //test
+    beam_fwhm = 5*RPARCM;   /* radians CBI2 */
+    beam_freq = 1000;          /* GHz */
+    beam_cutoff = 10*RPARCM; /* radians */
+    break;
+  case 4:
+    beam_fwhm = (9.0/60)*RPARCM*12/22;   /* radians ATCA */
+    beam_freq = 691.4;          /* GHz */
+    beam_cutoff = 1.0*RPARCM; /* radians */
+    break;
+  case 5:
+    beam_fwhm = (9.0/60)*RPARCM*12/25;   /* radians VLA */
+    beam_freq = 691.4;          /* GHz */
+    beam_cutoff = 1.0*RPARCM; /* radians */
+    break;
+  case 6:
+    beam_fwhm = 10.5*RPARCM;   /* radians SZA */
+    beam_freq = 30.9380;          /* GHz */
+    beam_cutoff = 20.0*RPARCM; /* radians */
+    break;
+
+  default:
+    printf("Telescope type not defined\n");
+    goToError();
+    break;
+  }
 }
 
 __host__ freqData getFreqs(char * file)
@@ -168,6 +209,8 @@ __host__ void readInputDat(char *file)
           }
         }else if (strcmp(item,"noise_cut")==0){
           noise_cut = status;
+        }else if (strcmp(item,"t_telescope")==0){
+          t_telescope = status;
         }else if(strcmp(item,"minpix_factor")==0){
           minpix_factor = status;
         } else if(strcmp(item,"ftol")==0){
@@ -891,7 +934,7 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
   }
 }
 
-__global__ void attenuation(cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY)
+__global__ void attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
 		int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -904,12 +947,16 @@ __global__ void attenuation(cufftComplex *attenMatrix, float freq, long N, float
 
     float arc = sqrtf(x*x+y*y);
     float c = 4.0*logf(2.0);
-    //printf("frec:%f\n", frec);
-    float a = (FWHM*BEAM_FREQ/(freq*1e-9));
+    float a = (beam_fwhm*beam_freq/(freq*1e-9));
     float r = arc/a;
     float atten = expf(-c*r*r);
-    attenMatrix[N*i+j].x = atten;
-    attenMatrix[N*i+j].y = 0;
+    if(arc <= beam_cutoff){
+      attenMatrix[N*i+j].x = atten;
+      attenMatrix[N*i+j].y = 0.0;
+    }else{
+      attenMatrix[N*i+j].x = 0.0;
+      attenMatrix[N*i+j].y = 0.0;
+    }
 }
 
 
@@ -953,7 +1000,7 @@ __global__ void weight_image(cufftComplex *weight_image, cufftComplex *total_att
   weight_image[N*i+j].y = 0;
 }
 
-__global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
+__global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
 {
     int j = threadIdx.x + blockDim.x * blockIdx.x;
     int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -965,12 +1012,19 @@ __global__ void apply_beam(cufftComplex *image, cufftComplex *fg_image, long N, 
     float y = (i - yobs) * dy;
     float arc = RPARCM*sqrtf(x*x+y*y);
     float c = 4.0*logf(2.0);
-    float a = (FWHM*BEAM_FREQ/(freq*1e-9));
+    float a = (beam_fwhm*beam_freq/(freq*1e-9));
     float r = arc/a;
     float atten = expf(-c*r*r);
 
-    image[N*i+j].x = fg_image[N*i+j].x * fg_scale * atten;
-    image[N*i+j].y = 0.f;
+    if(arc <= beam_cutoff){
+      image[N*i+j].x = fg_image[N*i+j].x * fg_scale * atten;
+      image[N*i+j].y = 0.0;
+    }else{
+      image[N*i+j].x = 0.0;
+      image[N*i+j].y = 0.0;
+    }
+
+
 }
 
 /*--------------------------------------------------------------------
@@ -1485,7 +1539,7 @@ __host__ float chiCuadrado(cufftComplex *I)
       for(int i=0; i<data.total_frequencies;i++){
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
+        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
 
         	//FFT 2D
@@ -1548,7 +1602,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
+        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
 
 
