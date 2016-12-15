@@ -677,6 +677,88 @@ __host__ Vars getOptions(int argc, char **argv) {
 	return variables;
 }
 
+
+__host__ void toFits(float *I, int iteration, long M, long N, int option)
+{
+	fitsfile *fpointer;
+	int status = 0;
+	long fpixel = 1;
+	long elements = M*N;
+	char name[60]="";
+	long naxes[2]={M,N};
+	long naxis = 2;
+  char *unit = "JY/PIXEL";
+  switch(option){
+    case 0:
+      sprintf(name, "!%s", out_image);
+      break;
+    case 1:
+      sprintf(name, "!%sMEM_%d.fits", mempath, iteration);
+      break;
+    case 4:
+      sprintf(name, "!%satten_%d.fits", mempath, iteration);
+      break;
+    case 5:
+      sprintf(name, "!%snoise_0.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+
+	fits_create_file(&fpointer, name, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+  fits_copy_header(mod_in, fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+  if(option==0 || option==1){
+    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  }
+  float *host_IFITS;
+  host_IFITS = (float*)malloc(M*N*sizeof(float));
+  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(float), I, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
+
+	float* image2D;
+	image2D = (float*) malloc(M*N*sizeof(float));
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+      if(option == 0 || option == 1){
+			  image2D[N*y+x] = host_IFITS[N*i+j] * fg_scale;
+      }else if(option == 4 || option == 5){
+        image2D[N*i+j] = host_IFITS[N*i+j];
+      }
+      x--;
+		}
+    x=M-1;
+    y--;
+	}
+
+	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+	fits_close_file(fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+
+  free(host_IFITS);
+	free(image2D);
+}
+
 __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option)
 {
 	fitsfile *fpointer;
@@ -1722,6 +1804,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
             }
             DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, N);
           	gpuErrchk(cudaDeviceSynchronize());
+            toFits(device_dchi2_total, iter+100+i+f, M, N, 1);
         }
       }
     }
