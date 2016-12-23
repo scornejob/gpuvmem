@@ -232,6 +232,7 @@ __host__ int main(int argc, char **argv) {
 
   if(beam_noise == -1){
       beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      printf("Noise: %f\n", beam_noise);
   }
 
 	if(num_gpus == 1){
