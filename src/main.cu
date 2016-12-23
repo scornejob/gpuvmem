@@ -209,7 +209,7 @@ __host__ int main(int argc, char **argv) {
   if(verbose_flag){
     printf("MS File Successfully Read\n");
     if(beam_noise == -1){
-      printf("Beam noise wasn't provided by the user... Calculating...\n");
+      printf("Beam noise wasn't provided by the user... Calculating...\n");d
     }
   }
 
@@ -232,7 +232,7 @@ __host__ int main(int argc, char **argv) {
 
   if(beam_noise == -1){
       beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
-      printf("Noise: %f\n", beam_noise);
+      printf("Noise: %e\n", beam_noise);
   }
 
 	if(num_gpus == 1){
@@ -363,8 +363,8 @@ __host__ int main(int argc, char **argv) {
 
   	direccos(fields[f].obsra, fields[f].obsdec, raimage, decimage, &lobs,  &mobs);
 
-  	fields[f].global_xobs = (crpix1 - 1.0) + lobs/deltax;
-  	fields[f].global_yobs = (crpix2 - 1.0) + mobs/deltay;
+  	fields[f].global_xobs = (crpix1 - 1.0) - lobs/deltax;
+  	fields[f].global_yobs = (crpix2 - 1.0) - mobs/deltay;
     if(verbose_flag){
   	   printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
     }
