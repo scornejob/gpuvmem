@@ -209,7 +209,7 @@ __host__ int main(int argc, char **argv) {
   if(verbose_flag){
     printf("MS File Successfully Read\n");
     if(beam_noise == -1){
-      printf("Beam noise wasn't provided by the user... Calculating...\n");d
+      printf("Beam noise wasn't provided by the user... Calculating...\n");
     }
   }
 
