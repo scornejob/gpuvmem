@@ -231,7 +231,6 @@ __host__ int main(int argc, char **argv) {
   }
 
   if(beam_noise == -1){
-      printf("Noise wasn't provided... Calculating...\n")
       beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
   }
 
