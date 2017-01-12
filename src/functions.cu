@@ -137,7 +137,7 @@ __host__ freqData getFreqs(char * file)
 
   casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
   nstokes=n_corr(0);
-
+  
   casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
   casa::Vector<casa::Bool> auxbool;
   bool flag;
