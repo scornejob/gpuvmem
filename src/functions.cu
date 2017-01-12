@@ -1055,7 +1055,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
       v = dv * (i-N);
     }
 
-    phase = -2.0*(u+v);
+    phase = 2.0*(u+v);
     #if (__CUDA_ARCH__ >= 300 )
       sincospif(phase, &s, &c);
     #else
@@ -1147,6 +1147,8 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
     Vr[i].y = Vm[i].y - Vo[i].y;
   }
 }
+
+
 
 
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities)
