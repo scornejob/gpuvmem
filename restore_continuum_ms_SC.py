@@ -1,9 +1,9 @@
 #casapy --log2term --nogui -c restore_continum_ms_SC.py
 residual_ms = str(sys.argv[5]); #input
-model_fits = str(sys.argv[6]);  # input 
+model_fits = str(sys.argv[6]);  # input
 restored = str(sys.argv[7]);  #output
-weight="briggs" # "briggs"
-polarization="I" 
+weight=str(sys.argv[8]); # "briggs or natural"
+polarization="I"
 
 ######################################################################
 residual_image=residual_ms+".img"
@@ -67,4 +67,3 @@ imagearr=["convolved_mod_out.fits",residual_image+".image.fits"]
 immath(imagename=imagearr,expr=" (IM0   + IM1) ", outfile=restored)
 
 exportfits(imagename=restored, fitsimage=restored+".fits",overwrite=True)
-
