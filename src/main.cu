@@ -300,6 +300,7 @@ __host__ int main(int argc, char **argv) {
     }
 	}else{
     for(int f=0; f<nfields; f++){
+      cudaSetDevice(0);
       gpuErrchk(cudaMalloc((void**)&fields[f].atten_image, sizeof(cufftComplex)*M*N));
       gpuErrchk(cudaMemset(fields[f].atten_image, 0, sizeof(cufftComplex)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
