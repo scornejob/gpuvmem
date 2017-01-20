@@ -358,7 +358,9 @@ __host__ int main(int argc, char **argv) {
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
-  printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  if(verbose_flag){
+    printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  }
   for(int f=0; f<nfields; f++){
   	double lobs, mobs;
 
