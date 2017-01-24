@@ -171,12 +171,12 @@ __host__ int main(int argc, char **argv) {
         if(verbose_flag){
           printf("Granting access from %d to %d...\n",firstgpu, i);
         }
-				cudaDeviceEnablePeerAccess(i,firstgpu);
+				cudaDeviceEnablePeerAccess(i,0);
 				cudaSetDevice((i%num_gpus) + firstgpu);
         if(verbose_flag){
           printf("Granting access from %d to %d...\n", i, firstgpu);
         }
-				cudaDeviceEnablePeerAccess(firstgpu,firstgpu);
+				cudaDeviceEnablePeerAccess(firstgpu,0);
         if(verbose_flag){
 				      printf("Checking GPU %d and GPU %d for UVA capabilities...\n", firstgpu, i);
         }
