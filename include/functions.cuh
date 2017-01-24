@@ -111,7 +111,7 @@ typedef struct variables {
   char *modin;
   char *path;
   char *output_image;
-  int multigpu;
+  char *multigpu;
   int select;
   int blockSizeX;
   int blockSizeY;

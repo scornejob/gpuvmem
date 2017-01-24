@@ -3,7 +3,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope;
+status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope, multigpu, firstgpu;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image;
@@ -27,16 +27,18 @@ extern Field *fields;
 
 __host__ void goToError()
 {
-  for(int i=1; i<num_gpus; i++){
-        cudaSetDevice(0);
-        cudaDeviceDisablePeerAccess(i);
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceDisablePeerAccess(0);
-  }
+  if(num_gpus > 1){
+    for(int i=firstgpu+1; i<firstgpu + num_gpus; i++){
+          cudaSetDevice(firstgpu);
+          cudaDeviceDisablePeerAccess(i);
+          cudaSetDevice((i%num_gpus) + firstgpu);
+          cudaDeviceDisablePeerAccess(firstgpu);
+    }
 
-  for(int i=0; i<num_gpus; i++ ){
-        cudaSetDevice(i%num_gpus);
-        cudaDeviceReset();
+    for(int i=0; i<num_gpus; i++ ){
+          cudaSetDevice((i%num_gpus) + firstgpu);
+          cudaDeviceReset();
+    }
   }
 
   printf("An error has ocurred, exiting\n");
@@ -137,7 +139,7 @@ __host__ freqData getFreqs(char * file)
 
   casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
   nstokes=n_corr(0);
-  
+
   casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
   casa::Vector<casa::Bool> auxbool;
   bool flag;
@@ -425,7 +427,7 @@ __host__ void residualsToHost(Field *fields, freqData data){
   }else{
     for(int f=0; f<nfields;f++){
       for(int i=0; i<data.total_frequencies; i++){
-        cudaSetDevice(i%num_gpus);
+        cudaSetDevice((i%num_gpus) + firstgpu);
         gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
       }
     }
@@ -546,7 +548,7 @@ __host__ char *strip(const char *string, const char *chars)
 
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
-  variables.multigpu = 0;
+  variables.multigpu = "NULL";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
@@ -630,7 +632,7 @@ __host__ Vars getOptions(int argc, char **argv) {
       strcpy(variables.path, optarg);
       break;
     case 'M':
-      variables.multigpu = atoi(optarg);
+      variables.multigpu = optarg;
       break;
     case 's':
       variables.select = atoi(optarg);
@@ -670,7 +672,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if(variables.multigpu != 0 && variables.select != 0){
+  if(strcmp(variables.multigpu,"NULL")!=0 && variables.select != 0){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1515,7 +1517,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-    cudaSetDevice(0);
+    cudaSetDevice(firstgpu);
   }
 
   float resultPhi = 0.0;
@@ -1602,7 +1604,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   			//unsigned int num_cpu_threads = omp_get_num_threads();
   			// set and check the CUDA device for this CPU thread
   			int gpu_id = -1;
-  			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+  			cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
         	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
@@ -1669,7 +1671,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-    cudaSetDevice(0);
+    cudaSetDevice(firstgpu);
   }
   resultH  = deviceReduce(device_H, M*N);
   resultPhi = (0.5 * resultchi2) + (lambda * resultH);
@@ -1693,7 +1695,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-    cudaSetDevice(0);
+    cudaSetDevice(firstgpu);
   }
 
   if(clip_flag){
@@ -1737,7 +1739,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         //unsigned int num_cpu_threads = omp_get_num_threads();
         // set and check the CUDA device for this CPU thread
         int gpu_id = -1;
-        cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+        cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
         cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
           if(xcorr_flag){
@@ -1761,7 +1763,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-    cudaSetDevice(0);
+    cudaSetDevice(firstgpu);
   }
 
   DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
