@@ -217,12 +217,6 @@ __host__ int main(int argc, char **argv) {
   	}
   }
 
-  for(int f=0; f<nfields; f++){
-    for(int i=0; i < data.total_frequencies; i++){
-      printf("Field %d, Channel %d = %d\n", f, i, fields[f].numVisibilitiesPerFreq[i]);
-    }
-  }
-  exit(-1);
 
 
   if(verbose_flag){
