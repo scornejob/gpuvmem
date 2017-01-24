@@ -172,7 +172,7 @@ __host__ int main(int argc, char **argv) {
           printf("Granting access from %d to %d...\n",firstgpu, i);
         }
 				cudaDeviceEnablePeerAccess(i,0);
-				cudaSetDevice((i%num_gpus) + firstgpu);
+				cudaSetDevice(i);
         if(verbose_flag){
           printf("Granting access from %d to %d...\n", i, firstgpu);
         }
@@ -728,7 +728,7 @@ __host__ int main(int argc, char **argv) {
     for(int i=firstgpu+1; i<num_gpus+firstgpu; i++){
           cudaSetDevice(firstgpu);
           cudaDeviceDisablePeerAccess(i);
-          cudaSetDevice((i%num_gpus) + firstgpu);
+          cudaSetDevice(i);
           cudaDeviceDisablePeerAccess(firstgpu);
     }
 

@@ -31,7 +31,7 @@ __host__ void goToError()
     for(int i=firstgpu+1; i<firstgpu + num_gpus; i++){
           cudaSetDevice(firstgpu);
           cudaDeviceDisablePeerAccess(i);
-          cudaSetDevice((i%num_gpus) + firstgpu);
+          cudaSetDevice(i);
           cudaDeviceDisablePeerAccess(firstgpu);
     }
 
