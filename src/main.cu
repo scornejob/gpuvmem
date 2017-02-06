@@ -17,7 +17,7 @@ dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, nsamples, nfields, nstokes, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
-int num_gpus, multigpu, selected, t_telescope;
+int num_gpus, multigpu, firstgpu, selected, t_telescope;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -69,13 +69,14 @@ __host__ int main(int argc, char **argv) {
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
   out_image = variables.output_image;
-	multigpu = variables.multigpu;
   selected = variables.select;
   mempath = variables.path;
   it_maximum = variables.it_max;
   int total_visibilities = 0;
   b_noise_aux = variables.noise;
   lambda = variables.lambda;
+  multigpu = 0;
+  firstgpu = -1;
 
   struct stat st = {0};
 
@@ -109,6 +110,22 @@ __host__ int main(int argc, char **argv) {
 	   printf("Number of frequencies file = %d\n", data.total_frequencies);
   }
 
+  if(strcmp(variables.multigpu, "NULL")!=0){
+    //Counts number of gpus to use
+    char *pt;
+    pt = strtok(variables.multigpu,",");
+
+    while(pt!=NULL){
+      if(multigpu==0){
+        firstgpu = atoi(pt);
+      }
+      multigpu++;
+      pt = strtok (NULL, ",");
+    }
+  }else{
+    multigpu = 0;
+  }
+
   if(multigpu < 0 || multigpu > num_gpus){
     printf("ERROR. NUMBER OF GPUS CANNOT BE NEGATIVE OR GREATER THAN THE NUMBER OF GPUS\n");
     exit(-1);
@@ -133,16 +150,16 @@ __host__ int main(int argc, char **argv) {
 
  //Check peer access if there is more than 1 GPU
   if(num_gpus > 1){
-	  for(int i=1; i<num_gpus; i++){
+	  for(int i=firstgpu + 1; i< firstgpu + num_gpus; i++){
 			cudaDeviceProp dprop0, dpropX;
-			cudaGetDeviceProperties(&dprop0, 0);
+			cudaGetDeviceProperties(&dprop0, firstgpu);
 			cudaGetDeviceProperties(&dpropX, i);
 			int canAccessPeer0_x, canAccessPeerx_0;
-			cudaDeviceCanAccessPeer(&canAccessPeer0_x, 0, i);
-			cudaDeviceCanAccessPeer(&canAccessPeerx_0 , i, 0);
+			cudaDeviceCanAccessPeer(&canAccessPeer0_x, firstgpu, i);
+			cudaDeviceCanAccessPeer(&canAccessPeerx_0 , i, firstgpu);
       if(verbose_flag){
-  			printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, 0, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
-      	printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, 0, canAccessPeerx_0 ? "Yes" : "No");
+  			printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, firstgpu, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
+      	printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, firstgpu, canAccessPeerx_0 ? "Yes" : "No");
       }
 			if(canAccessPeer0_x == 0 || canAccessPeerx_0 == 0){
 				printf("Two or more SM 2.0 class GPUs are required for %s to run.\n", argv[0]);
@@ -150,22 +167,22 @@ __host__ int main(int argc, char **argv) {
         printf("Peer to Peer access is not available between GPU%d <-> GPU%d, waiving test.\n", 0, i);
         exit(EXIT_SUCCESS);
 			}else{
-				cudaSetDevice(0);
+				cudaSetDevice(firstgpu);
         if(verbose_flag){
-          printf("Granting access from 0 to %d...\n", i);
+          printf("Granting access from %d to %d...\n",firstgpu, i);
         }
 				cudaDeviceEnablePeerAccess(i,0);
-				cudaSetDevice(i%num_gpus);
+				cudaSetDevice(i);
         if(verbose_flag){
-          printf("Granting access from %d to 0...\n", i);
+          printf("Granting access from %d to %d...\n", i, firstgpu);
         }
-				cudaDeviceEnablePeerAccess(0,0);
+				cudaDeviceEnablePeerAccess(firstgpu,0);
         if(verbose_flag){
-				      printf("Checking GPU%d and GPU%d for UVA capabilities...\n", 0, 1);
+				      printf("Checking GPU %d and GPU %d for UVA capabilities...\n", firstgpu, i);
         }
 				const bool has_uva = (dprop0.unifiedAddressing && dpropX.unifiedAddressing);
         if(verbose_flag){
-  				printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, 0, (dprop0.unifiedAddressing ? "Yes" : "No"));
+  				printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, firstgpu, (dprop0.unifiedAddressing ? "Yes" : "No"));
       		printf("> %s (GPU%d) supports UVA: %s\n", dpropX.name, i, (dpropX.unifiedAddressing ? "Yes" : "No"));
         }
 				if (has_uva){
@@ -199,6 +216,7 @@ __host__ int main(int argc, char **argv) {
       total_visibilities += fields[f].numVisibilitiesPerFreq[i];
   	}
   }
+
 
 
   if(verbose_flag){
@@ -250,7 +268,7 @@ __host__ int main(int argc, char **argv) {
 	}else{
     for(int f=0; f<nfields; f++){
   		for(int i=0; i<data.total_frequencies; i++){
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
@@ -300,10 +318,11 @@ __host__ int main(int argc, char **argv) {
     }
 	}else{
     for(int f=0; f<nfields; f++){
+      cudaSetDevice(firstgpu);
       gpuErrchk(cudaMalloc((void**)&fields[f].atten_image, sizeof(cufftComplex)*M*N));
       gpuErrchk(cudaMemset(fields[f].atten_image, 0, sizeof(cufftComplex)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].atten, sizeof(cufftComplex)*M*N));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].atten, 0, sizeof(cufftComplex)*M*N));
   			gpuErrchk(cudaMalloc(&fields[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
@@ -357,7 +376,9 @@ __host__ int main(int argc, char **argv) {
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
-  printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  if(verbose_flag){
+    printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+  }
   for(int f=0; f<nfields; f++){
   	double lobs, mobs;
 
@@ -392,7 +413,7 @@ __host__ int main(int argc, char **argv) {
 	}else{
     for(int f = 0; f<nfields; f++){
   		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].device_V, sizeof(cufftComplex)*M*N));
   		  gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].device_image, sizeof(cufftComplex)*M*N));
   		}
@@ -402,7 +423,7 @@ __host__ int main(int argc, char **argv) {
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-	   cudaSetDevice(0);
+	   cudaSetDevice(firstgpu);
   }
 	gpuErrchk(cudaMalloc((void**)&device_I, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_I, 0, sizeof(cufftComplex)*M*N));
@@ -440,7 +461,7 @@ __host__ int main(int argc, char **argv) {
 	}else{
     for(int f = 0; f < nfields; f++){
   		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].device_V, 0, sizeof(cufftComplex)*M*N));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].device_image, 0, sizeof(cufftComplex)*M*N));
 
@@ -460,7 +481,7 @@ __host__ int main(int argc, char **argv) {
 	}else{
     for(int f = 0; f < nfields; f++){
   		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			if ((cufftPlan2d(&fields[f].device_vars[i].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
   				printf("cufft plan error\n");
   				return -1;
@@ -489,7 +510,7 @@ __host__ int main(int argc, char **argv) {
   			//unsigned int num_cpu_threads = omp_get_num_threads();
   			// set and check the CUDA device for this CPU thread
   			int gpu_id = -1;
-  			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+  			cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
   			hermitianSymmetry<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].freq, fields[f].numVisibilitiesPerFreq[i]);
   			gpuErrchk(cudaDeviceSynchronize());
@@ -517,7 +538,7 @@ __host__ int main(int argc, char **argv) {
   			//unsigned int num_cpu_threads = omp_get_num_threads();
   			// set and check the CUDA device for this CPU thread
   			int gpu_id = -1;
-  			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+  			cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] > 0){
     			attenuation<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].atten, fields[f].visibilities[i].freq, N, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
@@ -547,7 +568,7 @@ __host__ int main(int argc, char **argv) {
   			//unsigned int num_cpu_threads = omp_get_num_threads();
   			// set and check the CUDA device for this CPU thread
   			int gpu_id = -1;
-  			cudaSetDevice(i % num_gpus);   // "% num_gpus" allows more CPU threads than GPU devices
+  			cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] > 0){
     			#pragma omp critical
@@ -566,7 +587,7 @@ __host__ int main(int argc, char **argv) {
     	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].atten_image, fields[f].valid_frequencies, N);
     	gpuErrchk(cudaDeviceSynchronize());
   	}else{
-      cudaSetDevice(0);
+      cudaSetDevice(firstgpu);
     	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].atten_image, fields[f].valid_frequencies, N);
     	gpuErrchk(cudaDeviceSynchronize());
   	}
@@ -576,7 +597,7 @@ __host__ int main(int argc, char **argv) {
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-	   cudaSetDevice(0);
+	   cudaSetDevice(firstgpu);
   }
 
   for(int f=0; f<nfields; f++){
@@ -646,7 +667,7 @@ __host__ int main(int argc, char **argv) {
   for(int f=0; f<nfields; f++){
   	for(int i=0; i<data.total_frequencies; i++){
       if(num_gpus > 1){
-  		    cudaSetDevice(i%num_gpus);
+  		    cudaSetDevice((i%num_gpus) + firstgpu);
       }
   		cudaFree(fields[f].device_visibilities[i].u);
   		cudaFree(fields[f].device_visibilities[i].v);
@@ -681,7 +702,7 @@ __host__ int main(int argc, char **argv) {
 	}else{
     for(int f=0; f<nfields;f++){
   		for(int i=0; i<data.total_frequencies; i++){
-  			cudaSetDevice(i%num_gpus);
+  			cudaSetDevice((i%num_gpus) + firstgpu);
   			cudaFree(fields[f].device_vars[i].device_V);
   			cudaFree(fields[f].device_vars[i].device_image);
   		}
@@ -690,7 +711,7 @@ __host__ int main(int argc, char **argv) {
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
-    cudaSetDevice(0);
+    cudaSetDevice(firstgpu);
   }
 
 	cudaFree(device_noise_image);
@@ -705,15 +726,15 @@ __host__ int main(int argc, char **argv) {
 
   //Disabling UVA
   if(num_gpus > 1){
-    for(int i=1; i<num_gpus; i++){
-          cudaSetDevice(0);
+    for(int i=firstgpu+1; i<num_gpus+firstgpu; i++){
+          cudaSetDevice(firstgpu);
           cudaDeviceDisablePeerAccess(i);
-          cudaSetDevice(i%num_gpus);
-          cudaDeviceDisablePeerAccess(0);
+          cudaSetDevice(i);
+          cudaDeviceDisablePeerAccess(firstgpu);
     }
 
     for(int i=0; i<num_gpus; i++ ){
-          cudaSetDevice(i%num_gpus);
+          cudaSetDevice((i%num_gpus) + firstgpu);
           cudaDeviceReset();
     }
   }
