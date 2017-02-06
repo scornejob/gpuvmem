@@ -1,3 +1,32 @@
+/* -------------------------------------------------------------------------
+  Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus,
+  Victor Moral, Fernando Rannou - miguel.carcamo@usach.cl
+
+  This program includes Numerical Recipes (NR) based routines whose
+  copyright is held by the NR authors. If NR routines are included,
+  you are required to comply with the licensing set forth there.
+
+	Part of the program also relies on an an ANSI C library for multi-stream
+	random number generation from the related Prentice-Hall textbook
+	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
+  for more information please contact leemis@math.wm.edu
+
+  For the original parts of this code, the following license applies:
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+* -------------------------------------------------------------------------
+*/
 #include "functions.cuh"
 
 
@@ -523,11 +552,46 @@ __host__ void print_help() {
   printf("    -p  --path             MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
-  printf("    -t  --iterations       Number of iterations for optimization (Default = 50)\n");
+  printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
+  printf("    -c  --copyright        Shows copyright conditions\n");
+  printf("    -w  --warranty         Shows no warranty details\n");
   printf("        --xcorr            Run gpuvmem with cross-correlation\n");
   printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --verbose          Shows information through all the execution\n");
+}
+
+__host__ void print_warranty() {
+  printf("THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY \\
+APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT \\
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM 'AS IS' WITHOUT WARRANTY \\
+OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, \\
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR \\
+PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM \\
+IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF \\
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.\n");
+}
+
+__host__ void print_copyright() {
+    FILE *fptr;
+    char *filename = "./../LICENSE.txt";
+    char c;
+
+    fptr = fopen(filename, "r");
+    if (fptr == NULL)
+    {
+        printf("Cannot open file\n");
+        exit(0);
+    }
+
+    c = fgetc(fptr);
+    while (c != EOF)
+    {
+        printf ("%c", c);
+        c = fgetc(fptr);
+    }
+
+    fclose(fptr);
 }
 
 __host__ char *strip(const char *string, const char *chars)
@@ -559,10 +623,12 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hi:o:O:I:m:n:l:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:n:l:M:s:p:X:Y:V:t:";
 
-	const struct option long_op[] = { //Flag for help
+	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
+                                    {"warranty", 0, NULL, 'w' },
+                                    {"copyright", 0, NULL, 'c' },
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
                                     {"xcorr", 0, &xcorr_flag, 1},
@@ -601,6 +667,12 @@ __host__ Vars getOptions(int argc, char **argv) {
 		case 'h':
 			print_help();
 			exit(EXIT_SUCCESS);
+    case 'w':
+  		print_warranty();
+  		exit(EXIT_SUCCESS);
+    case 'c':
+    	print_copyright();
+    	exit(EXIT_SUCCESS);
 		case 'i':
       variables.input = (char*) malloc((strlen(optarg)+1)*sizeof(char));
 			strcpy(variables.input, optarg);
