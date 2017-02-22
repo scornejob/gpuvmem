@@ -4,7 +4,7 @@
 
 To compile GPUVMEM you need:
 
-- casacore
+- casacore (https://github.com/casacore/casacore)
 - CUDA
 - OpenMP
 
@@ -57,7 +57,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 -t  --iterations      Number of iterations for optimization (Default = 50)
     --xcorr           Run gpuvmem with cross-correlation
-    --nopositivity    Run gpuvmem using chi2 with no posititivy restriction
+    --nopositivity    Run gpuvmem using chi2 with no positivity restriction
     --clipping        Clips the image to positive values
     --verbose         Shows information through all the execution
 ```
