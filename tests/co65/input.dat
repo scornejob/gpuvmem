@@ -1,6 +1,6 @@
 lambda_entropy  0.01
-noise_cut	10.2
-minpix_factor   1000.0
-ftol		1.0e-12
+noise_cut	      10.2
+minpix          0.001
+ftol		        1.0e-12
 t_telescope     2
 random_probability 0.0

@@ -40,7 +40,7 @@ cufftHandle plan1GPU;
 cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image, *device_weight_image;
 
 float *device_dphi, *device_dchi2_total, *device_dH, *device_chi2, *device_H, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix_factor, lambda, ftol, random_probability;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
 
 dim3 threadsPerBlockNN;
@@ -110,6 +110,10 @@ __host__ int main(int argc, char **argv) {
   int total_visibilities = 0;
   b_noise_aux = variables.noise;
   lambda = variables.lambda;
+  minpix = variables.minpix;
+  noise_cut = variables.noise_cut;
+  random_probability = variables.randoms;
+
   multigpu = 0;
   firstgpu = -1;
 
@@ -140,6 +144,9 @@ __host__ int main(int argc, char **argv) {
 
   readInputDat(inputdat);
   init_beam(t_telescope);
+  if(verbose_flag){
+	   printf("Couting data for memory allocation\n");
+  }
 	data = getFreqs(msinput);
   if(verbose_flag){
 	   printf("Number of frequencies file = %d\n", data.total_frequencies);
@@ -264,10 +271,12 @@ __host__ int main(int argc, char **argv) {
     if(beam_noise == -1){
       printf("Beam noise wasn't provided by the user... Calculating...\n");
     }
+    printf("Calculating weights sum\n");
   }
 
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
+  float sum_weights = 0.0;
   for(int f=0; f<nfields; f++){
   	for(int i=0; i< data.total_frequencies; i++){
       if(beam_noise == -1){
@@ -275,6 +284,9 @@ __host__ int main(int argc, char **argv) {
         for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
             sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
         }
+      }
+      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
+          sum_weights += fields[f].visibilities[i].weight[j];
       }
   		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
   		long UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
@@ -397,7 +409,7 @@ __host__ int main(int argc, char **argv) {
   if(lambda == 0.0){
     MINPIX = 0.0;
   }else{
-    MINPIX = 1.0 / minpix_factor;
+    MINPIX = minpix;
   }
 
 	float deltax = RPDEG*DELTAX; //radians
@@ -674,19 +686,21 @@ __host__ int main(int argc, char **argv) {
 	frprmn(device_I	, ftol, &fret, chiCuadrado, dchiCuadrado);
   t = clock() - t;
   end = omp_get_wtime();
+  chiCuadrado(device_I);
   printf("Minimization ended successfully\n\n");
   printf("Iterations: %d\n", iter);
   printf("chi2: %f\n", final_chi2);
   printf("0.5*chi2: %f\n", 0.5*final_chi2);
   printf("Total visibilities: %d\n", total_visibilities);
-  printf("Reduced-chi2: %f\n", (0.5*final_chi2)/total_visibilities);
+  printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
+  printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
   printf("S: %f\n", final_H);
+  printf("Normalized S: %f\n", final_H/(M*N));
   printf("lambda*S: %f\n\n", lambda*final_H);
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
   double wall_time = end-start;
   printf("Total CPU time: %lf\n", time_taken);
   printf("Wall time: %lf\n\n\n", wall_time);
-  chiCuadrado(device_I);
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);

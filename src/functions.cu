@@ -39,7 +39,7 @@ extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *devi
 
 extern float *device_dphi, *device_chi2, *device_H, *device_dchi2_total, *device_dH;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix_factor, lambda, ftol, random_probability, final_chi2, final_H;
+minpix, lambda, ftol, random_probability, final_chi2, final_H;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -239,15 +239,21 @@ __host__ void readInputDat(char *file)
             lambda = status;
           }
         }else if (strcmp(item,"noise_cut")==0){
-          noise_cut = status;
+          if(noise_cut == -1){
+            noise_cut = status;
+          }
         }else if (strcmp(item,"t_telescope")==0){
           t_telescope = status;
-        }else if(strcmp(item,"minpix_factor")==0){
-          minpix_factor = status;
+        }else if(strcmp(item,"minpix")==0){
+          if(minpix == -1){
+            minpix = status;
+          }
         } else if(strcmp(item,"ftol")==0){
           ftol = status;
         } else if(strcmp(item,"random_probability")==0){
-          random_probability = status;
+          if(random_probability == -1){
+            random_probability = status;
+          }
         }else{
           break;
         }
@@ -536,30 +542,6 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields) {
 
 }
 
-__host__ void print_help() {
-	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
-	printf("    -h  --help             Shows this\n");
-  printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
-  printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
-  printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"   -i  --input            The name of the input file of visibilities(MS)\n");
-  printf(	"   -o  --output           The name of the output file of residual visibilities(MS)\n");
-  printf(	"   -O  --output-image     The name of the output image FITS file\n");
-  printf("    -I  --inputdat         The name of the input file of parameters\n");
-  printf("    -m  --modin            mod_in_0 FITS file\n");
-  printf("    -n  --noise            Noise Parameter (Optional)\n");
-  printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
-  printf("    -p  --path             MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
-  printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
-  printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
-  printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
-  printf("    -c  --copyright        Shows copyright conditions\n");
-  printf("    -w  --warranty         Shows no warranty details\n");
-  printf("        --xcorr            Run gpuvmem with cross-correlation\n");
-  printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
-  printf("        --clipping         Clips the image to positive values\n");
-  printf("        --verbose          Shows information through all the execution\n");
-}
 
 __host__ void print_warranty() {
   printf("THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY \
@@ -1126,6 +1108,34 @@ __host__ void print_copyright() {
   " END OF TERMS AND CONDITIONS \n\n");
 }
 
+__host__ void print_help() {
+	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
+	printf("    -h  --help             Shows this\n");
+  printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
+  printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
+  printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
+  printf(	"   -i  --input            The name of the input file of visibilities(MS)\n");
+  printf(	"   -o  --output           The name of the output file of residual visibilities(MS)\n");
+  printf(	"   -O  --output-image     The name of the output image FITS file\n");
+  printf("    -I  --inputdat         The name of the input file of parameters\n");
+  printf("    -m  --modin            mod_in_0 FITS file\n");
+  printf("    -x  --minpix           Minimum positive value of a pixel (Optional)\n");
+  printf("    -n  --noise            Noise Parameter (Optional)\n");
+  printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
+  printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
+  printf("    -r  --randoms          Percentage of data when random sampling (Default = 0, optional)\n");
+  printf("    -p  --path             MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
+  printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
+  printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
+  printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
+  printf("    -c  --copyright        Shows copyright conditions\n");
+  printf("    -w  --warranty         Shows no warranty details\n");
+  printf("        --xcorr            Run gpuvmem with cross-correlation\n");
+  printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
+  printf("        --clipping         Clips the image to positive values\n");
+  printf("        --verbose          Shows information through all the execution\n");
+}
+
 __host__ char *strip(const char *string, const char *chars)
 {
   char * newstr = (char*)malloc(strlen(string) + 1);
@@ -1152,10 +1162,13 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.it_max = 500;
   variables.noise = -1;
   variables.lambda = -1;
+  variables.randoms = -1;
+  variables.noise_cut = -1;
+  variables.minpix = -1;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:n:l:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:M:s:p:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -1171,7 +1184,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                                     {"path", 1, NULL, 'p'}, {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'},
-                                    {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'}, { NULL, 0, NULL, 0 }};
+                                    {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' },
+                                    {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },{ NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -1225,8 +1239,14 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
     	strcpy(variables.modin, optarg);
     	break;
+    case 'x':
+      variables.minpix = atof(optarg);
+      break;
     case 'n':
       variables.noise = atof(optarg);
+      break;
+    case 'N':
+      variables.noise_cut = atof(optarg);
       break;
     case 'l':
       variables.lambda = atof(optarg);
@@ -1237,6 +1257,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'M':
       variables.multigpu = optarg;
+      break;
+    case 'r':
+      variables.randoms = atof(optarg);
       break;
     case 's':
       variables.select = atoi(optarg);
