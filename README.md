@@ -50,8 +50,11 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -O  --output-image    The name of the output image FITS file
 -I  --inputdat        The name of the input file of parameters
 -m  --modin           mod_in_0 FITS file
+-x  --minpix          Minimum positive value of a pixel (Optional)
 -n  --noise           Noise parameter (Optional)
+-N  --noise-cut       Noise-cut Parameter (Optional)
 -l  --lambda          Lambda Regularization Parameter (Optional)
+-r  --randoms         Percentage of data when random sampling (Default = 0, optional)
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
