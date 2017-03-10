@@ -2,7 +2,7 @@
 # by Miguel Cárcamo
 
 CUFFTFLAG = -lcufft
-CFLAGS = -c -w
+CFLAGS = -c -w -O3 -Xptxas -O3
 INC_DIRS = -Iinclude -I/usr/local/include/casacore/
 CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms
 LDFLAGS = -lcuda -lcudart
