@@ -255,7 +255,7 @@ __host__ void readInputDat(char *file)
             random_probability = status;
           }
         }else{
-          printf("Keyword not defined in input\n")
+          printf("Keyword not defined in input\n");
           goToError();
         }
       }
