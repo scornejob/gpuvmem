@@ -22,7 +22,7 @@ Create your input.dat file with the following data and change the parameters if 
 ```
 lambda_entropy  0.01
 noise_cut	100.5
-minpix_factor   1000.0
+minpix  0.001
 ftol		1.0e-12
 random_probability 0.0
 t_telescope        2
