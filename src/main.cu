@@ -145,7 +145,7 @@ __host__ int main(int argc, char **argv) {
   readInputDat(inputdat);
   init_beam(t_telescope);
   if(verbose_flag){
-	   printf("Couting data for memory allocation\n");
+	   printf("Counting data for memory allocation\n");
   }
 	data = getFreqs(msinput);
   if(verbose_flag){
