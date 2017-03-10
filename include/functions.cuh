@@ -109,6 +109,7 @@ typedef struct variables {
   char *output;
   char *inputdat;
   char *modin;
+  char *ofile;
   char *path;
   char *output_image;
   char *multigpu;

@@ -1124,7 +1124,8 @@ __host__ void print_help() {
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data when random sampling (Default = 0, optional)\n");
-  printf("    -p  --path             MEM folder path to save FITS images. With last / included. (Example ./../mem/)\n");
+  printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
+  printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
   printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
@@ -1155,6 +1156,7 @@ __host__ char *strip(const char *string, const char *chars)
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
   variables.multigpu = "NULL";
+  variables.ofile = "NULL";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
@@ -1168,7 +1170,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -1185,7 +1187,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                                     {"path", 1, NULL, 'p'}, {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'},
                                     {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' },
-                                    {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },{ NULL, 0, NULL, 0 }};
+                                    {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' },
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -1260,6 +1263,10 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'r':
       variables.randoms = atof(optarg);
+      break;
+    case 'f':
+      variables.ofile = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+      strcpy(variables.ofile, optarg);
       break;
     case 's':
       variables.select = atoi(optarg);

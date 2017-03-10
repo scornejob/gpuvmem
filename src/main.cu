@@ -701,6 +701,27 @@ __host__ int main(int argc, char **argv) {
   double wall_time = end-start;
   printf("Total CPU time: %lf\n", time_taken);
   printf("Wall time: %lf\n\n\n", wall_time);
+
+  if(strcmp(variables.ofile,"NULL") != 0){
+    FILE *outfile = fopen(variables.ofile, "w");
+    if (outfile == NULL)
+    {
+        printf("Error opening output file!\n");
+        goToError();
+    }
+
+    fprintf(outfile, "Iterations: %d\n", iter);
+    fprintf(outfile, "chi2: %f\n", final_chi2);
+    fprintf(outfile, "0.5*chi2: %f\n", 0.5*final_chi2);
+    fprintf(outfile, "Total visibilities: %d\n", total_visibilities);
+    fprintf(outfile, "Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
+    fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
+    fprintf(outfile, "S: %f\n", final_H);
+    fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
+    fprintf(outfile, "lambda*S: %f\n", lambda*final_H);
+    fprintf(outfile, "Wall time: %lf", wall_time);
+    fclose(outfile);
+  }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
 	toFitsFloat(device_I, iter, M, N, 0);
