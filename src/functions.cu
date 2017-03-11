@@ -345,7 +345,7 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
                 auxbool = flagCol[j][sto];
                 if(auxbool[0] == false){
                   u = Random();
-                  if(u<1-random_probability){
+                  if(u<random_probability){
                     fields[f].visibilities[g].stokes[h] = polarizations[sto];
                     fields[f].visibilities[g].u[h] = uvw[0];
                     fields[f].visibilities[g].v[h] = uvw[1];
@@ -360,12 +360,12 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
               }
             }else continue;
           }
-          fields[f].numVisibilitiesPerFreq[g] = (h+1);
-          realloc(fields[f].visibilities[g].stokes, (h+1)*sizeof(int));
-          realloc(fields[f].visibilities[g].u, (h+1)*sizeof(float));
-          realloc(fields[f].visibilities[g].v, (h+1)*sizeof(float));
-          realloc(fields[f].visibilities[g].Vo, (h+1)*sizeof(cufftComplex));
-          realloc(fields[f].visibilities[g].weight, (h+1)*sizeof(float));
+          fields[f].numVisibilitiesPerFreq[g] = h;
+          realloc(fields[f].visibilities[g].stokes, h*sizeof(int));
+          realloc(fields[f].visibilities[g].u, h*sizeof(float));
+          realloc(fields[f].visibilities[g].v, h*sizeof(float));
+          realloc(fields[f].visibilities[g].Vo, h*sizeof(cufftComplex));
+          realloc(fields[f].visibilities[g].weight, h*sizeof(float));
           h=0;
           g++;
         }
@@ -1124,7 +1124,7 @@ __host__ void print_help() {
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
-  printf("    -r  --randoms          Percentage of data when random sampling (Default = 0, optional)\n");
+  printf("    -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
