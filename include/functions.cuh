@@ -118,6 +118,7 @@ typedef struct variables {
   int blockSizeY;
   int blockSizeV;
   int it_max;
+  int reg_term;
   float noise;
   float noise_cut;
   float randoms;

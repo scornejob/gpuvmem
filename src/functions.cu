@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope, multigpu, firstgpu;
+status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image;
@@ -1124,7 +1124,8 @@ __host__ void print_help() {
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
-  printf("    -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)\n");
+  printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
+  printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
@@ -1168,10 +1169,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.randoms = -1;
   variables.noise_cut = -1;
   variables.minpix = -1;
+  variables.reg_term = 0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -1186,10 +1188,10 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                                    {"path", 1, NULL, 'p'}, {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'},
-                                    {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' },
-                                    {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' },
-                                    { NULL, 0, NULL, 0 }};
+                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
+                                    {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
+                                    {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
+                                    {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -1258,6 +1260,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'p':
       variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));
       strcpy(variables.path, optarg);
+      break;
+    case 'P':
+      variables.reg_term = atoi(optarg);;
       break;
     case 'M':
       variables.multigpu = optarg;
@@ -2169,8 +2174,20 @@ __host__ float chiCuadrado(cufftComplex *I)
 
 
   if(iter>0 && MINPIX!=0.0){
-    SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
-    gpuErrchk(cudaDeviceSynchronize());
+    switch(reg_term){
+      case 0:
+        SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 1:
+        QVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 2:
+        TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+    }
   }
 
   if(num_gpus == 1){
@@ -2344,8 +2361,20 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   toFitsFloat(I, iter, M, N, 1);
 
   if(iter>0 && MINPIX!=0.0){
-    DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
-    gpuErrchk(cudaDeviceSynchronize());
+    switch(reg_term){
+      case 0:
+        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 1:
+        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 2:
+        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+    }
   }
 
   if(num_gpus == 1){

@@ -47,7 +47,7 @@ dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, nsamples, nfields, nstokes, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
-int num_gpus, multigpu, firstgpu, selected, t_telescope;
+int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -113,6 +113,7 @@ __host__ int main(int argc, char **argv) {
   minpix = variables.minpix;
   noise_cut = variables.noise_cut;
   random_probability = variables.randoms;
+  reg_term = variables.reg_term;
 
   multigpu = 0;
   firstgpu = -1;
