@@ -56,6 +56,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -l  --lambda          Lambda Regularization Parameter (Optional)
 -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
+-P  --prior           Prior used to regularize the solution (Default = 0 = Entropy)
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 -t  --iterations      Number of iterations for optimization (Default = 50)
@@ -64,6 +65,12 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --clipping        Clips the image to positive values
     --verbose         Shows information through all the execution
 ```
+#PRIORS
+
+0. Entropy
+1. Quadratic differences
+2. Total Variation
+
 #IMPORTANT
 
 Remember to create the mem folder to save the FITS images
