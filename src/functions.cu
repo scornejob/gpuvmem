@@ -2187,6 +2187,10 @@ __host__ float chiCuadrado(cufftComplex *I)
         TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
+      default:
+        printf("Selected prior is not defined\n");
+        goToError();
+        break;
     }
   }
 
@@ -2373,6 +2377,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
       case 2:
         DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
+        break;
+      default:
+        printf("Selected prior is not defined\n");
+        goToError();
         break;
     }
   }
