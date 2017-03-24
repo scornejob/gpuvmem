@@ -8,13 +8,13 @@ To compile GPUVMEM you need:
 - CUDA
 - OpenMP
 
-#Compiling
+# Compiling
 ```
 cd gpuvmem
 ./configure
 make
 ```
-#Usage
+# Usage
 
 Create your mod_in_0.fits with difmap or CASA.
 Create your input.dat file with the following data and change the parameters if you want:
@@ -27,7 +27,7 @@ ftol		1.0e-12
 random_probability 0.0
 t_telescope        2
 ```
-#t_telescope references the following telescopes:
+# t_telescope references the following telescopes:
 
 1. CBI2
 2. ALMA
@@ -66,23 +66,25 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --clipping        Clips the image to positive values
     --verbose         Shows information through all the execution
 ```
-#PRIORS
+
+
+# PRIORS
 
 0. Entropy
 1. Quadratic variation
 2. Total Variation
 
-#IMPORTANT
+# IMPORTANT
 
 Remember to create the mem folder to save the FITS images
 
-#RESTORING YOUR IMAGE
+# RESTORING YOUR IMAGE
 
 Usage:
 
 `casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output`
 
-#Contributors
+# Contributors
 
 - Miguel Cárcamo
 - Fernando Rannou
