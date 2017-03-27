@@ -2016,12 +2016,12 @@ __global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float nois
       float num = -a-b+(2*y);
       float den = (a*a) - 2*y*(a+b) + (b*b) + 2*(y*y);
       if(den <= 0){
-        dtv = MINPIX;
+        dtv = 0;
       }else{
         dtv = num/sqrtf(den);
       }
     }else{
-      dtv = MINPIX;
+      dtv = 0;
     }
     dTV[N*i+j] = lambda * dtv;
   }
