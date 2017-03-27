@@ -696,7 +696,11 @@ __host__ int main(int argc, char **argv) {
   printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
   printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
   printf("S: %f\n", final_H);
-  printf("Normalized S: %f\n", final_H/(M*N));
+  if(reg_term != 2){
+    printf("Normalized S: %f\n", final_H/(M*N));
+  }else{
+    printf("Normalized S: %f\n", final_H/(M*M*N*N));
+  }
   printf("lambda*S: %f\n\n", lambda*final_H);
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
   double wall_time = end-start;
@@ -718,7 +722,11 @@ __host__ int main(int argc, char **argv) {
     fprintf(outfile, "Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
     fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
     fprintf(outfile, "S: %f\n", final_H);
-    fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
+    if(reg_term != 2){
+      fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
+    }else{
+      fprintf(outfile, "Normalized S: %f\n", final_H/(M*M*N*N));
+    }
     fprintf(outfile, "lambda*S: %f\n", lambda*final_H);
     fprintf(outfile, "Wall time: %lf", wall_time);
     fclose(outfile);
