@@ -696,7 +696,7 @@ __host__ int main(int argc, char **argv) {
   printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
   printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
   printf("S: %f\n", final_H);
-  if(reg_term != 2){
+  if(reg_term != 1){
     printf("Normalized S: %f\n", final_H/(M*N));
   }else{
     printf("Normalized S: %f\n", final_H/(M*M*N*N));
@@ -722,7 +722,7 @@ __host__ int main(int argc, char **argv) {
     fprintf(outfile, "Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
     fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
     fprintf(outfile, "S: %f\n", final_H);
-    if(reg_term != 2){
+    if(reg_term != 1){
       fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
     }else{
       fprintf(outfile, "Normalized S: %f\n", final_H/(M*M*N*N));
