@@ -685,9 +685,9 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
 	frprmn(device_I	, ftol, &fret, chiCuadrado, dchiCuadrado);
+  chiCuadrado(device_I);
   t = clock() - t;
   end = omp_get_wtime();
-  chiCuadrado(device_I);
   printf("Minimization ended successfully\n\n");
   printf("Iterations: %d\n", iter);
   printf("chi2: %f\n", final_chi2);
