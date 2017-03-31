@@ -59,6 +59,8 @@ const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
+const float CBOLTZMANN = 1.38064852E-23;
+const float CPLANCK = 6.62607004E-34;
 
 typedef struct observedVisibilities{
   float *u;
@@ -78,13 +80,11 @@ typedef struct observedVisibilities{
 typedef struct variablesPerFreq{
   cufftComplex *atten;
   float *chi2;
-  float *dchi2;
-  float alpha;
-  float *alpha_num;
-  float *alpha_den;
+  float3 *dchi2;
   cufftHandle plan;
-  cufftComplex *device_image;
+  cufftComplex *device_Inu;
   cufftComplex *device_V;
+  float *device_S;
 }VPF;
 
 typedef struct freqData{
@@ -141,9 +141,9 @@ __host__ Vars getOptions(int argc, char **argv);
 __host__ void Print2DFloatArray(int rows, int cols, float *array);
 __host__ void Print2DIntArray(int rows, int cols, int *array);
 __host__ void Print2DComplex(int rows, int cols, cufftComplex *data, bool cufft_symmetry);
-__host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option);
-__host__ float chiCuadrado(cufftComplex *I);
-__host__ void dchiCuadrado(cufftComplex *I, float *dxi2);
+__host__ void toFitsFloat(float3 *I, int iteration, long M, long N, int option);
+__host__ float chiCuadrado(float3 *I);
+__host__ void dchiCuadrado(float3 *I, float3 *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);
 __host__ float deviceReduce(float *in, long N);
 

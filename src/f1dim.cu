@@ -29,8 +29,8 @@
 */
 
 #include "f1dim.cuh"
-extern cufftComplex *device_pcom;
-extern float *device_xicom, (*nrfunc)(cufftComplex*);
+extern float3 *device_pcom;
+extern float3 *device_xicom, (*nrfunc)(float3*);
 extern long M;
 extern long N;
 extern float MINPIX;
@@ -40,13 +40,12 @@ extern int nopositivity;
 
 __host__ float f1dim(float x)
 {
-    cufftComplex *device_xt;
+    float3 *device_xt;
     float f;
 
-    gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(cufftComplex)*M*N));
-    gpuErrchk(cudaMemset(device_xt, 0, sizeof(cufftComplex)*M*N));
+    gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(float3)*M*N));
+    gpuErrchk(cudaMemset(device_xt, 0, sizeof(float3)*M*N));
 
-    //printf("Se evalua en f1dim %f\n", x);
     //xt = pcom+x*xicom;
     if(nopositivity == 0){
       evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);

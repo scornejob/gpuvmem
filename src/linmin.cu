@@ -31,8 +31,8 @@
 #include "linmin.cuh"
 #define TOL 1.0e-7
 
-cufftComplex *device_pcom;
-float *device_xicom, (*nrfunc)(cufftComplex*);
+float3 *device_pcom;
+float3 *device_xicom, (*nrfunc)(cufftComplex*);
 extern long M;
 extern long N;
 extern float MINPIX;
@@ -43,20 +43,20 @@ extern dim3 numBlocksNN;
 extern int verbose_flag;
 
 
-__host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*))//p and xi are in GPU
+__host__ void linmin(float3 *p, float3 *xi, float *fret, float (*func)(float3*))//p and xi are in GPU
 {
   float xx, xmin, fx, fb, fa, bx ,ax;
 
-  gpuErrchk(cudaMalloc((void**)&device_pcom, sizeof(cufftComplex)*M*N));
-  gpuErrchk(cudaMemset(device_pcom, 0, sizeof(cufftComplex)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_pcom, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(device_pcom, 0, sizeof(float3)*M*N));
 
-  gpuErrchk((cudaMalloc((void**)&device_xicom, sizeof(float)*M*N)));
-  gpuErrchk(cudaMemset(device_xicom, 0, sizeof(float)*M*N));
+  gpuErrchk((cudaMalloc((void**)&device_xicom, sizeof(float3)*M*N)));
+  gpuErrchk(cudaMemset(device_xicom, 0, sizeof(float3)*M*N));
   nrfunc = func;
   //device_pcom = p;
   //device_xicom = xi;
-  gpuErrchk(cudaMemcpy2D(device_pcom, sizeof(cufftComplex), p, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToDevice));
-  gpuErrchk(cudaMemcpy2D(device_xicom, sizeof(float), xi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
+  gpuErrchk(cudaMemcpy2D(device_pcom, sizeof(float3), p, sizeof(float3), sizeof(float3), M*N, cudaMemcpyDeviceToDevice));
+  gpuErrchk(cudaMemcpy2D(device_xicom, sizeof(float3), xi, sizeof(float3), sizeof(float3), M*N, cudaMemcpyDeviceToDevice));
 
   ax = 0.0;
 	xx = 1.0;

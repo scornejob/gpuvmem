@@ -53,149 +53,20 @@ extern int it_maximum;
 #define FREEALL cudaFree(device_gg_vector);cudaFree(device_dgg_vector);cudaFree(xi);cudaFree(device_h);cudaFree(device_g);
 
 
-
-__host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
-{
-  int i = 0;
-  double start, end;
-  int iarm;
-  float normPGC, normPL, fc, ft, fgoal;
-  float *device_normVector, *device_pgc, *device_x, *xi, *device_xt, *device_pl;
-
-  gpuErrchk(cudaMalloc((void**)&device_normVector, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_normVector, 0, sizeof(float)*M*N));
-
-  gpuErrchk(cudaMalloc((void**)&device_pgc, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_pgc, 0, sizeof(float)*M*N));
-
-  gpuErrchk(cudaMalloc((void**)&device_x, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_x, 0, sizeof(float)*M*N));
-
-  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N));
-
-  gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_xt, 0, sizeof(float)*M*N));
-
-  gpuErrchk(cudaMalloc((void**)&device_pl, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_pl, 0, sizeof(float)*M*N));
-
-
-  fc = (*func)(p);
-  printf("Function value = %f\n", fc);
-  //exit(0);
-  (*dfunc)(p,xi);
-
-  substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_x, p, xi, 1.0, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  projection<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_x, MINPIX, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_pgc, p, device_xt, 1.0, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pgc, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  normPGC = deviceReduce(device_normVector, M*N);
-  i=1;
-  while(normPGC > ARMIJOTOLERANCE && i <= it_maximum){
-    start = omp_get_wtime();
-    iter = i;
-    float lambda2 = 1.0;
-
-    substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_x, p, xi, lambda2, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    projection<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_x, MINPIX, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    ft = (*func)(p);
-
-    substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_pl, p, xi, 1.0, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pl, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    normPL = deviceReduce(device_normVector, M*N);
-
-    fgoal = fc * normPL *(ALPHA/lambda2);
-    iarm = 0;
-    while(ft<fgoal){
-      lambda2 = lambda2 * 0.1;
-      substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_x, p, xi, lambda2, N);
-      gpuErrchk(cudaDeviceSynchronize());
-
-      projection<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_x, MINPIX, N);
-      gpuErrchk(cudaDeviceSynchronize());
-
-      substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_pl, p, device_xt, lambda2, N);
-      gpuErrchk(cudaDeviceSynchronize());
-
-      ft = (*func)(p);
-
-      normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pl, N);
-      gpuErrchk(cudaDeviceSynchronize());
-
-      normPL = deviceReduce(device_normVector, M*N);
-      iarm++;
-      if(iarm>10){
-        break;
-      }
-      fgoal = fc * normPL * (ALPHA/lambda2);
-    }
-
-    //p.x = xt
-    copyImage<<<numBlocksNN, threadsPerBlockNN>>>(p, device_xt, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    fc = (*func)(p);
-    printf("Function value = %f\n", fc);
-    //exit(0);
-    (*dfunc)(p,xi);
-
-    substraction<<<numBlocksNN, threadsPerBlockNN>>>(device_x, p, xi, 1.0, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    projection<<<numBlocksNN, threadsPerBlockNN>>>(device_pgc, device_x, MINPIX, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pgc, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    normPGC = deviceReduce(device_normVector, M*N);
-    i++;
-    end = omp_get_wtime();
-    double wall_time = end-start;
-    printf("Time: %lf seconds\n", i, wall_time);
-  }
-
-  cudaFree(device_normVector);
-  cudaFree(device_pgc);
-  cudaFree(device_x);
-  cudaFree(xi);
-  cudaFree(device_xt);
-  cudaFree(device_pl);
-
-}
-
-
 __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
 {
   float gg, dgg, gam, fp;
-  float *device_g, *device_h, *xi;
+  float3 *device_g, *device_h, *xi;
   double start, end;
 
 
   //////////////////////MEMORY GPU//////////////////////////
-  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_g, 0, sizeof(float)*M*N));
-  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_h, 0, sizeof(float)*M*N));
-  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(device_g, 0, sizeof(float3)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(device_h, 0, sizeof(float3)*M*N));
+  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(xi, 0, sizeof(float3)*M*N));
 
   ///////////////////vectors for gg and dgg////////////////////
   float *device_gg_vector, *device_dgg_vector;
