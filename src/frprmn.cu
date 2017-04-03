@@ -46,14 +46,13 @@ extern int verbose_flag;
 #define EPS 1.0e-10
 extern int it_maximum;
 
-#define ARMIJOTOLERANCE 1.e-6
 #define ALPHA 1.e-4
 
 
 #define FREEALL cudaFree(device_gg_vector);cudaFree(device_dgg_vector);cudaFree(xi);cudaFree(device_h);cudaFree(device_g);
 
 
-__host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
+__host__ void frprmn(float3 *p, float ftol, float *fret, float (*func)(float3*), void (*dfunc)(float3*, float3*))
 {
   float gg, dgg, gam, fp;
   float3 *device_g, *device_h, *xi;

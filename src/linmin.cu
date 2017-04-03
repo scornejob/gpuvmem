@@ -32,7 +32,8 @@
 #define TOL 1.0e-7
 
 float3 *device_pcom;
-float3 *device_xicom, (*nrfunc)(cufftComplex*);
+float3 *device_xicom;
+float (*nrfunc)(float3*);
 extern long M;
 extern long N;
 extern float MINPIX;

@@ -6,5 +6,5 @@
 #include "f1dim.cuh"
 
 
-__host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cufftComplex*));
+__host__ void linmin(float3 *p, float3 *xi, float *fret, float (*func)(float3*));
 #endif

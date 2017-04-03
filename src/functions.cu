@@ -38,9 +38,9 @@ extern cufftHandle plan1GPU;
 extern cufftComplex *device_3I, *device_V, *device_Inu, *device_noise_image;
 
 extern float3 *device_dphi, *device_dchi2_total;
-extern float *device_chi2, *device_S, *device_dH;
+extern float *device_chi2, *device_S, *device_dS;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, final_H;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, freqavg;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -1113,14 +1113,15 @@ __host__ void print_copyright() {
 __host__ void print_help() {
 	printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
 	printf("    -h  --help             Shows this\n");
-  printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
-  printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
-  printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-  printf(	"   -i  --input            The name of the input file of visibilities(MS)\n");
-  printf(	"   -o  --output           The name of the output file of residual visibilities(MS)\n");
-  printf(	"   -O  --output-image     The name of the output image FITS file\n");
-  printf("    -I  --inputdat         The name of the input file of parameters\n");
-  printf("    -m  --modin            mod_in_0 FITS file\n");
+  printf(	"   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2) (Mandatory)\n");
+  printf(	"   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2) (Mandatory)\n");
+  printf(	"   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2) (Mandatory)\n");
+  printf(	"   -i  --input            The name of the input file of visibilities(MS) (Mandatory)\n");
+  printf(	"   -o  --output           The name of the output file of residual visibilities(MS) (Mandatory)\n");
+  printf(	"   -O  --output-image     The name of the output image FITS file (Mandatory)\n");
+  printf("    -I  --inputdat         The name of the input file of parameters (Mandatory)\n");
+  printf("    -m  --modin            mod_in_0 FITS file (Mandatory)\n");
+  printf("    -F  --nu_0             Frequency of reference (Mandatory)\n");
   printf("    -x  --minpix           Minimum positive value of a pixel (Optional)\n");
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
@@ -1163,6 +1164,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
   variables.blockSizeV = -1;
+  variables.nu_0 = -1;
   variables.it_max = 500;
   variables.noise = -1;
   variables.lambda = -1;
@@ -1173,7 +1175,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -1189,7 +1191,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
-                                    {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
+                                    {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' },
                                     {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
@@ -1247,6 +1249,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'x':
       variables.minpix = atof(optarg);
       break;
+    case 'F':
+      variables.nu_0 = atof(optarg);
+      break;
     case 'n':
       variables.noise = atof(optarg);
       break;
@@ -1301,7 +1306,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1) {
         print_help();
         exit(EXIT_FAILURE);
   }
@@ -1317,6 +1322,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 	return variables;
 }
+
 
 __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option)
 {
@@ -1336,15 +1342,9 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       sprintf(name, "!%sMEM_%d.fits", mempath, iteration);
       break;
     case 2:
-      sprintf(name, "!%sMEM_V_%d.fits", mempath, iteration);
-      break;
-    case 3:
-      sprintf(name, "!%sMEM_VB_%d.fits", mempath, iteration);
-      break;
-    case 4:
       sprintf(name, "!%satten_%d.fits", mempath, iteration);
       break;
-    case 5:
+    case 3:
       sprintf(name, "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
@@ -1379,15 +1379,12 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-      if(option == 0 || option == 1){
-			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-      }else if (option == 2 || option == 3){
-        image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
-        //image2D[N*x+y] = host_IFITS[N*i+j].y;
-      }else if(option == 4 || option == 5){
-        image2D[N*i+j] = host_IFITS[N*i+j].x;
-      }
-      x--;
+        if(option == 0 || option == 1){
+		        image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
+        }else if(option == 2 || option == 3){
+            image2D[N*i+j] = host_IFITS[N*i+j].x;
+        }
+        x--;
 		}
     x=M-1;
     y--;
@@ -2006,21 +2003,18 @@ __global__ void newXi(float3 *g, float3 *xi, float3 *h, float gam, long N)
   xi[N*i+j].z = h[N*i+j].z = g[N*i+j].z + gam * h[N*i+j].z;
 }
 
-__global__ void restartDPhi(float3 *dphi, float3 *dChi2, float *dH, long N)
+__global__ void restartDPhi(float3 *dChi2, float *dS, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
   //T
-  dphi[N*i+j].x = 0.0;
   dChi2[N*i+j].x = 0.0;
   //tau
-  dphi[N*i+j].y = 0.0;
   dChi2[N*i+j].y = 0.0;
   //beta
-  dphi[N*i+j].z = 0.0;
   dChi2[N*i+j].z = 0.0;
 
-  dH[N*i+j] = 0.0;
+  dS[N*i+j] = 0.0;
 
 }
 
@@ -2076,7 +2070,7 @@ __global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float nois
   }
 }
 
-__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)
+__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float3 *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2104,32 +2098,35 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
   	}
 
   dchi2 *= fg_scale * atten[N*i+j].x;
-  dChi2[N*i+j] = dchi2;
+  dChi2[N*i+j].x = dChi2[N*i+j].y = dChi2[N*i+j].z = dchi2;
   }
 }
 
-__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, long N)
+
+
+__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, long N)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  dchi2_total[N*i+j].x += dchi2[N*i+j].x;
-  dchi2_total[N*i+j].y += dchi2[N*i+j].y;
-  dchi2_total[N*i+j].z += dchi2[N*i+j].z;
+  float dT, dtau, dbeta;
+  float parexp = (CPLANCK * nu)/(CBOLTZMANN * I[N*i+j].x);
+  float nudiv = nu/nu_0;
+
+  dT = I_nu[N*i+j].x * ((CPLANCK * nu)/(CBOLTZMANN * I[N*i+j].x * I[N*i+j].x)) * (1/(1-expf(-parexp)));
+
+  dtau = I_nu[N*i+j].x * powf(nudiv, I[N*i+j].z) * (1/(expf(I[N*i+j].y * powf(nudiv, I[N*i+j].z))-1));
+
+  dbeta = dtau * I[N*i+j].y * logf(nudiv);
+
+  dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
+  dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
+  dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta;
 }
 
-__global__ void DPhi(float3 *dphi, float3 *dchi2, float *dH, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  dphi[N*i+j].x = dchi2[N*i+j].x + dH[N*i+j];
-  dphi[N*i+j].y = dchi2[N*i+j].y + dH[N*i+j];
-  dphi[N*i+j].z = dchi2[N*i+j].z + dH[N*i+j];
-}
-
-__global__ void calculateInu(float *I_nu, float *3I, float nu, float nu_0, long N)
+__global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float nu_0, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2138,13 +2135,165 @@ __global__ void calculateInu(float *I_nu, float *3I, float nu, float nu_0, long 
   nu3 = nu * nu * nu;
   num_p1 = 2*CPLANCK*nu3;
   nudiv = nu/nu_0;
-  num_p2 = 1 - expf(-3I[N*i+j].y * powf(nudiv,3I[N*i+j].z);
+  num_p2 = 1 - expf(-image3[N*i+j].y * powf(nudiv,image3[N*i+j].z));
 
   num_parexp = CPLANCK * nu;
-  den_parexp = CBOLTZMANN * 3I[N*i+j].x;
+  den_parexp = CBOLTZMANN * image3[N*i+j].x;
   den = LIGHTSPEED * LIGHTSPEED * (expf(num_parexp/den_parexp)-1);
 
-  I_nu[N*i+j] = (num_p1/den) * num_p2;
+  I_nu[N*i+j].x = (num_p1/den) * num_p2;
+  I_nu[N*i+j].y = 0;
+}
+
+__host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option)
+{
+  fitsfile *fpointerT, *fpointertau, *fpointerbeta, *fpointer;
+	int statusT = 0, statustau = 0, statusbeta = 0, status = 0;
+	long fpixel = 1;
+	long elements = M*N;
+	char Tname[64]="";
+  char tauname[64]="";
+  char betaname[64]="";
+  char I_nu_name[64]="";
+	long naxes[2]={M,N};
+	long naxis = 2;
+  char *Tunit = "K";
+  char *tauunit = "JY/PIXEL";
+  char *betaunit = "JY/PIXEL";
+  char *I_nu_unit = "JY/PIXEL";
+
+  cufftComplex *host_Iout = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+  float3 *host_3Iout = (float3*)malloc(M*N*sizeof(float3));
+
+  cufftComplex *I_out;
+  gpuErrchk(cudaMalloc((void**)&I_out, sizeof(cufftComplex)*M*N));
+  calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(I_out, I, nu, nu_0, N);
+  gpuErrchk(cudaDeviceSynchronize());
+
+  gpuErrchk(cudaMemcpy2D(host_Iout, sizeof(cufftComplex), I_out, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
+
+  gpuErrchk(cudaMemcpy2D(host_3Iout, sizeof(float3), I, sizeof(float3), sizeof(float3), M*N, cudaMemcpyDeviceToHost));
+
+  cudaFree(I_out);
+
+  float *host_T = (float*)malloc(M*N*sizeof(float));
+  float *host_tau = (float*)malloc(M*N*sizeof(float));
+  float *host_beta = (float*)malloc(M*N*sizeof(float));
+  float *host_Inu = (float*)malloc(M*N*sizeof(float));
+
+  switch(option){
+    case 0:
+      sprintf(Tname, "!%s_T.fits", out_image);
+      break;
+    case 1:
+      sprintf(Tname, "!%sT_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+  switch(option){
+    case 0:
+      sprintf(tauname, "!%s_tau.fits", out_image);
+      break;
+    case 1:
+      sprintf(tauname, "!%stau_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+  switch(option){
+    case 0:
+      sprintf(betaname, "!%s_beta.fits", out_image);
+      break;
+    case 1:
+      sprintf(betaname, "!%sbeta_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+  switch(option){
+    case 0:
+      sprintf(I_nu_name, "!%s.fits", out_image);
+      break;
+    case 1:
+      sprintf(I_nu_name, "!%sMEM_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+  fits_create_file(&fpointerT, Tname, &statusT);
+  fits_create_file(&fpointertau, tauname, &statustau);
+  fits_create_file(&fpointerbeta, betaname, &statusbeta);
+  fits_create_file(&fpointer, I_nu_name, &status);
+
+  if (statusT || statustau || statusbeta || status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+
+  fits_copy_header(mod_in, fpointerT, &statusT);
+  fits_copy_header(mod_in, fpointertau, &statustau);
+  fits_copy_header(mod_in, fpointerbeta, &statusbeta);
+  fits_copy_header(mod_in, fpointer, &status);
+
+  if (statusT || statustau || statusbeta || status) {
+    //fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+
+  fits_update_key(fpointerT, TSTRING, "BUNIT", Tunit, "Unit of measurement", &statusT);
+  fits_update_key(fpointertau, TSTRING, "BUNIT", tauunit, "Unit of measurement", &statustau);
+  fits_update_key(fpointerbeta, TSTRING, "BUNIT", betaunit, "Unit of measurement", &statusbeta);
+  fits_update_key(fpointer, TSTRING, "BUNIT", I_nu_unit, "Unit of measurement", &status);
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+		    host_Inu[N*y+x] = host_Iout[N*i+j].x * fg_scale;
+        host_T[N*y+x] = host_3Iout[N*i+j].x; //* fg_scale;
+        host_tau[N*y+x] = host_3Iout[N*i+j].y; //* fg_scale;
+        host_beta[N*y+x] = host_3Iout[N*i+j].z; //* fg_scale;
+        x--;
+		}
+    x=M-1;
+    y--;
+	}
+
+  fits_write_img(fpointerT, TFLOAT, fpixel, elements, host_T, &statusT);
+  fits_write_img(fpointertau, TFLOAT, fpixel, elements, host_tau, &statustau);
+  fits_write_img(fpointerbeta, TFLOAT, fpixel, elements, host_beta, &statusbeta);
+  fits_write_img(fpointer, TFLOAT, fpixel, elements, host_Inu, &status);
+  if (statusT || statustau || statusbeta || status) {
+    //fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+	fits_close_file(fpointerT, &status);
+  fits_close_file(fpointertau, &status);
+  fits_close_file(fpointerbeta, &status);
+  fits_close_file(fpointer, &status);
+  if (statusT || statustau || statusbeta || status) {
+    //fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+
+
 }
 
 __host__ float chiCuadrado(float3 *I)
@@ -2160,7 +2309,7 @@ __host__ float chiCuadrado(float3 *I)
   float resultS  = 0.0;
 
   if(clip_flag){
-    clip3I(I, N , MINPIX);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N , MINPIX);
   }
 
 
@@ -2171,7 +2320,7 @@ __host__ float chiCuadrado(float3 *I)
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          calculateInu<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
@@ -2205,7 +2354,7 @@ __host__ float chiCuadrado(float3 *I)
           }
 
 
-        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, device_Inu, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
+        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, device_Inu, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
 
         	//FFT 2D
@@ -2254,7 +2403,7 @@ __host__ float chiCuadrado(float3 *I)
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          calculateInu<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
@@ -2360,39 +2509,16 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
   }
 
   if(clip_flag){
-    clip3I(I, N , MINPIX);
-  }
-
-  if(clip_flag){
-    clip<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N , MINPIX);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
+  gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float3)*M*N));
+
+  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  toFitsFloat(I, iter, M, N, 1);
-
-  if(iter>0 && MINPIX!=0.0){
-    switch(reg_term){
-      case 0:
-        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 1:
-        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 2:
-        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      default:
-        printf("Selected prior is not defined\n");
-        goToError();
-        break;
-    }
-  }
+  float3toImage(I, freqavg, iter, M, N, 1);
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -2400,13 +2526,39 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-            calculateInu<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
+            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
             gpuErrchk(cudaDeviceSynchronize());
+
+            if(clip_flag){
+              clip<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, N, MINPIX);
+              gpuErrchk(cudaDeviceSynchronize());
+            }
+
+            if(iter>0 && MINPIX!=0.0){
+              switch(reg_term){
+                case 0:
+                  DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                  break;
+                case 1:
+                  DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                  break;
+                case 2:
+                  DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                  break;
+                default:
+                  printf("Selected prior is not defined\n");
+                  goToError();
+                  break;
+              }
+            }
 
             DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
             gpuErrchk(cudaDeviceSynchronize());
 
-            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, N);
+            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, N);
           	gpuErrchk(cudaDeviceSynchronize());
         }
       }
@@ -2422,14 +2574,46 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
         int gpu_id = -1;
         cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
         cudaGetDevice(&gpu_id);
+
+        gpuErrchk(cudaMemset(fields[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
+
+        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, N);
+        gpuErrchk(cudaDeviceSynchronize());
+
+        if(clip_flag){
+          clip<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, N, MINPIX);
+          gpuErrchk(cudaDeviceSynchronize());
+        }
+
+        if(iter>0 && MINPIX!=0.0){
+          switch(reg_term){
+            case 0:
+              DS<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              gpuErrchk(cudaDeviceSynchronize());
+              break;
+            case 1:
+              DQ<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              gpuErrchk(cudaDeviceSynchronize());
+              break;
+            case 2:
+              DTV<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              gpuErrchk(cudaDeviceSynchronize());
+              break;
+            default:
+              printf("Selected prior is not defined\n");
+              goToError();
+              break;
+          }
+        }
+
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
           DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
           gpuErrchk(cudaDeviceSynchronize());
 
           #pragma omp critical
           {
-            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, N);
-            gpuErrchk(cudaDeviceSynchronize());
+            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, N);
+          	gpuErrchk(cudaDeviceSynchronize());
           }
         }
       }
@@ -2442,9 +2626,9 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
     cudaSetDevice(firstgpu);
   }
 
-  DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
+  //DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float3), device_dphi, sizeof(float3), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
+  gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float3), device_dchi2_total, sizeof(float3), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
 
 }

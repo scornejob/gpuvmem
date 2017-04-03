@@ -37,12 +37,12 @@ int iter=0;
 
 cufftHandle plan1GPU;
 
-cufftComplex *device_3I, *device_V, *device_Inu, *device_noise_image, *device_weight_image;
+cufftComplex *device_V, *device_Inu, *device_noise_image, *device_weight_image;
 
-float3 *device_dphi, *device_dchi2_total;
-float *device_dH, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
+float3 *device_dphi, *device_dchi2_total, *device_3I;
+float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
-float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
+float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -115,6 +115,7 @@ __host__ int main(int argc, char **argv) {
   noise_cut = variables.noise_cut;
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
+  nu_0 = variables.nu_0;
 
   multigpu = 0;
   firstgpu = -1;
@@ -275,6 +276,8 @@ __host__ int main(int argc, char **argv) {
     }
     printf("Calculating weights sum\n");
   }
+
+  freqavg = (fields[0].visibilities[0].freq + fields[0].visibilities[data.total_frequencies -1].freq)/2;
 
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
@@ -482,8 +485,8 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float3)*M*N));
 
 
-	gpuErrchk(cudaMalloc((void**)&device_dH, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_dH, 0, sizeof(float)*M*N));
+	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
 
 	gpuErrchk(cudaMalloc((void**)&device_S, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
@@ -627,7 +630,7 @@ __host__ int main(int argc, char **argv) {
     	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].atten_image, fields[f].valid_frequencies, N);
     	gpuErrchk(cudaDeviceSynchronize());
   	}
-    toFitsFloat(fields[f].atten_image, f, M, N, 4);
+    toFitsFloat(fields[f].atten_image, f, M, N, 2);
   }
 
   if(num_gpus == 1){
@@ -642,7 +645,7 @@ __host__ int main(int argc, char **argv) {
   }
   noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, difmap_noise, N);
   gpuErrchk(cudaDeviceSynchronize());
-  toFitsFloat(device_noise_image, 0, M, N, 5);
+  toFitsFloat(device_noise_image, 0, M, N, 3);
 
 
 	cufftComplex *host_noise_image = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
@@ -721,7 +724,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	toFitsFloat(device_3I, iter, M, N, 0);
+	float3toImage(device_3I, freqavg, iter, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data);
   printf("Saving residuals to MS...\n");
@@ -781,7 +784,7 @@ __host__ int main(int argc, char **argv) {
 
 	cudaFree(device_dphi);
 	cudaFree(device_dchi2_total);
-	cudaFree(device_dH);
+	cudaFree(device_dS);
 
 	cudaFree(device_chi2);
 	cudaFree(device_S);
