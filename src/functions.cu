@@ -323,7 +323,7 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
   bool flag;
   int spw, field;
 
-  if(random_probability != 0.0){
+  if(random_probability != 1.0){
     float u;
     SelectStream(0);
     PutSeed(1);
@@ -361,11 +361,11 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
             }else continue;
           }
           fields[f].numVisibilitiesPerFreq[g] = h;
-          realloc(fields[f].visibilities[g].stokes, (h+1)*sizeof(int));
-          realloc(fields[f].visibilities[g].u, (h+1)*sizeof(float));
-          realloc(fields[f].visibilities[g].v, (h+1)*sizeof(float));
-          realloc(fields[f].visibilities[g].Vo, (h+1)*sizeof(cufftComplex));
-          realloc(fields[f].visibilities[g].weight, (h+1)*sizeof(float));
+          realloc(fields[f].visibilities[g].stokes, h*sizeof(int));
+          realloc(fields[f].visibilities[g].u, h*sizeof(float));
+          realloc(fields[f].visibilities[g].v, h*sizeof(float));
+          realloc(fields[f].visibilities[g].Vo, h*sizeof(cufftComplex));
+          realloc(fields[f].visibilities[g].weight, h*sizeof(float));
           h=0;
           g++;
         }

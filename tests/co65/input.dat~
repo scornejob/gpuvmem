@@ -3,4 +3,4 @@ noise_cut	      10.2
 minpix          0.001
 ftol		        1.0e-12
 t_telescope     2
-random_probability 1.0
+random_probability 0.0
