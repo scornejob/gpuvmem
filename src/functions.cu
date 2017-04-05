@@ -1333,33 +1333,33 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
   switch(option){
     case 0:
       needed = snprintf(NULL, 0, "!%s", out_image) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%s", out_image);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%s", out_image);
       break;
     case 1:
       needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%sMEM_%d.fits", mempath, iteration);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
       break;
     case 2:
       needed = snprintf(NULL, 0, "!%sMEM_V_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%sMEM_V_%d.fits", mempath, iteration);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%sMEM_V_%d.fits", mempath, iteration);
       break;
     case 3:
       needed = snprintf(NULL, 0, "!%sMEM_VB_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%sMEM_VB_%d.fits", mempath, iteration);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%sMEM_VB_%d.fits", mempath, iteration);
       break;
     case 4:
       needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%satten_%d.fits", mempath, iteration);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
       break;
     case 5:
       needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed);
-      snprintf(name, needed, "!%snoise_0.fits", mempath, iteration);
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
       break;
