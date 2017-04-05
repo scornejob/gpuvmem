@@ -1325,28 +1325,41 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 	int status = 0;
 	long fpixel = 1;
 	long elements = M*N;
-	char name[60]="";
+  size_t needed;
+  char *name;
 	long naxes[2]={M,N};
 	long naxis = 2;
   char *unit = "JY/PIXEL";
   switch(option){
     case 0:
-      sprintf(name, "!%s", out_image);
+      needed = snprintf(NULL, 0, "!%s", out_image) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%s", out_image);
       break;
     case 1:
-      sprintf(name, "!%sMEM_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%sMEM_%d.fits", mempath, iteration);
       break;
     case 2:
-      sprintf(name, "!%sMEM_V_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%sMEM_V_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%sMEM_V_%d.fits", mempath, iteration);
       break;
     case 3:
-      sprintf(name, "!%sMEM_VB_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%sMEM_VB_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%sMEM_VB_%d.fits", mempath, iteration);
       break;
     case 4:
-      sprintf(name, "!%satten_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%satten_%d.fits", mempath, iteration);
       break;
     case 5:
-      sprintf(name, "!%snoise_0.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed);
+      snprintf(name, needed, "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -1407,6 +1420,7 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 
   free(host_IFITS);
 	free(image2D);
+  free(name);
 }
 
 
