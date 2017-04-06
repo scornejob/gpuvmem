@@ -154,7 +154,7 @@ __host__ float deviceReduce(float *in, long N);
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
-__global__ void newP(float3 *p, float3 *xi, float xmin, float MINPIX, long N);
+__global__ void newP(float3 *p, float3 *xi, float xmin, long N);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
@@ -170,7 +170,7 @@ __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufft
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
-__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, float MINPIX, long N);
+__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N);
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N);
 __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, int numVisibilities);
 __global__ void SVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);

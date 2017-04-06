@@ -344,8 +344,8 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
-  			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
+  			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float3)*M*N));
+  			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float3)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -376,8 +376,8 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMemset(fields[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
-  			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
+  			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].dchi2, sizeof(float3)*M*N));
+  			gpuErrchk(cudaMemset(fields[f].device_vars[i].dchi2, 0, sizeof(float3)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -450,14 +450,14 @@ __host__ int main(int argc, char **argv) {
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
+    gpuErrchk(cudaMalloc((void**)&device_Inu, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMalloc((void**)&device_V, sizeof(cufftComplex)*M*N));
-	  gpuErrchk(cudaMalloc((void**)&device_Inu, sizeof(cufftComplex)*M*N));
 	}else{
     for(int f = 0; f<nfields; f++){
   		for (int i = 0;  i < data.total_frequencies; i++) {
   			cudaSetDevice((i%num_gpus) + firstgpu);
+        gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].device_Inu, sizeof(cufftComplex)*M*N));
   			gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].device_V, sizeof(cufftComplex)*M*N));
-  		  gpuErrchk(cudaMalloc((void**)&fields[f].device_vars[i].device_Inu, sizeof(cufftComplex)*M*N));
   		}
     }
 	}
@@ -495,8 +495,8 @@ __host__ int main(int argc, char **argv) {
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
+    gpuErrchk(cudaMemset(device_Inu, 0, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMemset(device_V, 0, sizeof(cufftComplex)*M*N));
-		gpuErrchk(cudaMemset(device_Inu, 0, sizeof(cufftComplex)*M*N));
 	}else{
     for(int f = 0; f < nfields; f++){
   		for (int i = 0;  i < data.total_frequencies; i++) {

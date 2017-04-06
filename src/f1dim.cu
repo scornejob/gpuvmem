@@ -49,7 +49,7 @@ __host__ float f1dim(float x)
 
     //xt = pcom+x*xicom;
     if(nopositivity == 0){
-      evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
+      evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);
       gpuErrchk(cudaDeviceSynchronize());
     }else{
       evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);
