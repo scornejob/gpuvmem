@@ -355,17 +355,29 @@ __host__ void readMS(char *file, char *file2, Field *fields) {
                     fields[f].visibilities[g].Vo[h].y = v[0];
                     fields[f].visibilities[g].weight[h] = weights[sto];
                     h++;
+                  }else{
+                    fields[f].visibilities[g].stokes[h] = polarizations[sto];
+                    fields[f].visibilities[g].u[h] = uvw[0];
+                    fields[f].visibilities[g].v[h] = uvw[1];
+                    v = casa::real(dataCol[j][sto]);
+                    fields[f].visibilities[g].Vo[h].x = v[0];
+                    //fields[f].visibilities[g].Vo[h].x = 0.0;
+                    v = casa::imag(dataCol[j][sto]);
+                    fields[f].visibilities[g].Vo[h].y = v[0];
+                    //fields[f].visibilities[g].Vo[h].y = 0.0;
+                    fields[f].visibilities[g].weight[h] = 0.0;
+                    h++;
                   }
                 }
               }
             }else continue;
           }
-          fields[f].numVisibilitiesPerFreq[g] = h;
+          /*fields[f].numVisibilitiesPerFreq[g] = h;
           realloc(fields[f].visibilities[g].stokes, h*sizeof(int));
           realloc(fields[f].visibilities[g].u, h*sizeof(float));
           realloc(fields[f].visibilities[g].v, h*sizeof(float));
           realloc(fields[f].visibilities[g].Vo, h*sizeof(cufftComplex));
-          realloc(fields[f].visibilities[g].weight, h*sizeof(float));
+          realloc(fields[f].visibilities[g].weight, h*sizeof(float));*/
           h=0;
           g++;
         }
@@ -505,9 +517,10 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields) {
      casa::tableCommand(query);
   }
 
-  casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,FLAG_ROW,DATA_DESC_ID"));
+  casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
   casa::Complex comp;
   casa::Vector<casa::Bool> auxbool;
+  casa::Vector<float> weights;
   bool flag;
   int spw, field, h = 0, g = 0;
   for(int f=0; f<nfields; f++){
@@ -521,6 +534,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields) {
           field = values.asInt("FIELD_ID");
           casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
           casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
+          weights=values.asArrayFloat("WEIGHT");
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto<nstokes; sto++){
               auxbool = flagCol[j][sto];
@@ -528,6 +542,9 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields) {
                 comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
                 comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
                 dataCol[j][sto] = comp;
+                if(random_probability != 1.0){
+                  weights[sto] = fields[f].visibilities[g].weight[h];
+                }
                 h++;
               }
             }
@@ -1166,7 +1183,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.it_max = 500;
   variables.noise = -1;
   variables.lambda = -1;
-  variables.randoms = -1;
+  variables.randoms = 1.0;
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
