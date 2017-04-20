@@ -1342,17 +1342,17 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       snprintf(name, needed*sizeof(char), "!%s", out_image);
       break;
     case 1:
-      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
       name = (char*)malloc(needed*sizeof(char));
       snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
       break;
     case 2:
-      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;;
       name = (char*)malloc(needed*sizeof(char));
       snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
       break;
     case 3:
-      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration);
+      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;;
       name = (char*)malloc(needed*sizeof(char));
       snprintf(name, needed*sizeof(char), "!%snoise_0.fits", mempath, iteration);
       break;
@@ -1787,8 +1787,8 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
     Vr[i].y = Vm[i].y - Vo[i].y;
   }
 }
-
 __global__ void clipWNoise(cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1816,16 +1816,16 @@ __global__ void clip3I(float3 *I, long N)
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   //T
-  if(I[N*i+j].x < 25.0){
-      I[N*i+j].x = 25.0;
+  if(I[N*i+j].x < 0.9E-1){
+      I[N*i+j].x = 0.9E-1;
   }
   //tau
-  if(I[N*i+j].y < 0.0){
-      I[N*i+j].y = 0.0;
+  if(I[N*i+j].y < 1.0E-5){
+      I[N*i+j].y = 1.0E-5;
   }
   //beta
-  if(I[N*i+j].z < 1.0){
-      I[N*i+j].z = 1.0;
+  if(I[N*i+j].z < 1.5E-4){
+      I[N*i+j].z = 1.5E-4;
   }
 }
 
@@ -1850,24 +1850,24 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N)
   xi[N*i+j].y *= xmin;
   xi[N*i+j].z *= xmin;
   //T
-  if(p[N*i+j].x + xi[N*i+j].x > 25.0){
+  if(p[N*i+j].x + xi[N*i+j].x > 0.9E-1){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = 25.0;
+    p[N*i+j].x = 0.9E-1;
     xi[N*i+j].x = 0.0;
   }
   //tau
-  if(p[N*i+j].y + xi[N*i+j].y > 0.0){
+  if(p[N*i+j].y + xi[N*i+j].y > 1.0E-5){
     p[N*i+j].y += xi[N*i+j].y;
   }else{
-    p[N*i+j].y = 0.0;
+    p[N*i+j].y = 1.0E-5;
     xi[N*i+j].y = 0.0;
   }
   //beta
-  if(p[N*i+j].z + xi[N*i+j].z > 1.0){
+  if(p[N*i+j].z + xi[N*i+j].z > 1.5E-4){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
-    p[N*i+j].z = 1.0;
+    p[N*i+j].z = 1.5E-4;
     xi[N*i+j].z = 0.0;
   }
 
@@ -1893,23 +1893,23 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //T
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > 25.0){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > 0.9E-1){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-      xt[N*i+j].x = 25.0;
+      xt[N*i+j].x = 0.9E-1;
   }
   //tau
-  if(pcom[N*i+j].y + x * xicom[N*i+j].y > 0.0){
+  if(pcom[N*i+j].y + x * xicom[N*i+j].y > 1.0E-5){
     xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
   }else{
-      xt[N*i+j].y = 0.0;
+      xt[N*i+j].y = 1.0E-5;
   }
 
   //beta
-  if(pcom[N*i+j].z + x * xicom[N*i+j].z > 1.0){
+  if(pcom[N*i+j].z + x * xicom[N*i+j].z > 1.5E-4){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
-      xt[N*i+j].z = 1.0;
+      xt[N*i+j].z = 1.5E-4;
   }
 }
 
@@ -2124,24 +2124,25 @@ __global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float dT, dtau, dbeta;
-  float parexp = (CPLANCK * nu)/(CBOLTZMANN * I[N*i+j].x);
+  float parexp = (CPLANCK * nu)/ (CBOLTZMANN * I[N*i+j].x);
   float nudiv = nu/nu_0;
 
-  dT = I_nu[N*i+j].x * ((CPLANCK * nu)/(CBOLTZMANN * I[N*i+j].x * I[N*i+j].x)) * (1/(1-expf(-parexp)));
+  dT = (I_nu[N*i+j].x * CPLANCK * nu) / (CBOLTZMANN * I[N*i+j].x * I[N*i+j].x * (1-expf(-parexp)));
 
-  dtau = I_nu[N*i+j].x * powf(nudiv, I[N*i+j].z) * (1/(expf(I[N*i+j].y * powf(nudiv, I[N*i+j].z))-1));
+  dtau = (I_nu[N*i+j].x * powf(nudiv, I[N*i+j].z))/(expf(I[N*i+j].y * powf(nudiv, I[N*i+j].z))-1);
 
   dbeta = dtau * I[N*i+j].y * logf(nudiv);
 
-  if(lambda != 0)
+  if(lambda != 0.0)
   {
-    dchi2_total[N*i+j].x += dchi2[N*i+j].x; //+ lambda * dS[N*i+j]) * dT;
-    dchi2_total[N*i+j].y += dchi2[N*i+j].y; //+ lambda * dS[N*i+j]) * dtau;
-    dchi2_total[N*i+j].z += dchi2[N*i+j].z; //+ lambda * dS[N*i+j]) * dbeta;
+    dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
+    dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
+    dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta;
   }else{
-    dchi2_total[N*i+j].x += dchi2[N*i+j].x;// * dT;
-    dchi2_total[N*i+j].y += dchi2[N*i+j].y;// * dtau;
-    dchi2_total[N*i+j].z += dchi2[N*i+j].z;// * dbeta;
+    dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
+    dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
+    dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta;
+    //printf("T:%f, tau: %f, beta: %f\n", dchi2_total[N*i+j].x, dchi2_total[N*i+j].y, dchi2_total[N*i+j].z);
   }
 }
 
@@ -2150,7 +2151,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
-  float nu3, num_p1, nudiv, num_p2, num_parexp, den_parexp, den;
+  float nu3, num_p1, nudiv, num_p2, num_p3, num_parexp, den_parexp, den;
 
   nu3 = nu * nu * nu;
   num_p1 = 2*CPLANCK*nu3;
@@ -2160,12 +2161,14 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 
   num_parexp = CPLANCK * nu;
   den_parexp = CBOLTZMANN * image3[N*i+j].x;
-  den = LIGHTSPEED * LIGHTSPEED * (expf(num_parexp/den_parexp)-1);
+  num_p3 = expf(-num_parexp/den_parexp);
+  den = LIGHTSPEED * LIGHTSPEED * (1-expf(-num_parexp/den_parexp));
   //den = expf(num_parexp/den_parexp)-1;
 
-  I_nu[N*i+j].x = num_p1 * num_p2 / den;
-  I_nu[N*i+j].x = I_nu[N*i+j].x * 1E-26 / fg_scale;
+  I_nu[N*i+j].x = num_p1 * num_p2 * num_p3/ den;
+  I_nu[N*i+j].x = I_nu[N*i+j].x * 1E26 / fg_scale;
   I_nu[N*i+j].y = 0;
+  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);
 }
 
 __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option)
@@ -2309,7 +2312,7 @@ __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, 
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-		    host_Inu[N*y+x] = host_Iout[N*i+j].x * fg_scale; //* fg_scale;
+		    host_Inu[N*y+x] = host_Iout[N*i+j].x * fg_scale;
         host_T[N*y+x] = host_3Iout[N*i+j].x; //* fg_scale;
         host_tau[N*y+x] = host_3Iout[N*i+j].y; //* fg_scale;
         host_beta[N*y+x] = host_3Iout[N*i+j].z; //* fg_scale;
