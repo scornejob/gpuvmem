@@ -2204,7 +2204,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   gpuErrchk(cudaDeviceSynchronize());
 
 
-  if(iter>0 && MINPIX!=0.0){
+  if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
         SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
@@ -2395,7 +2395,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
 
   toFitsFloat(I, iter, M, N, 1);
 
-  if(iter>0 && MINPIX!=0.0){
+  if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
         DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
