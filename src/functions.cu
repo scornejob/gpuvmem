@@ -2125,8 +2125,8 @@ __global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_
   float dT, dtau, dbeta;
   float parexp = (CPLANCK * nu)/ (CBOLTZMANN * I[N*i+j].x);
   float nudiv = nu/nu_0;
-  float Im_nu = I_nu[N*i+j].x * 1E-26 * fg_scale;
-  //float Im_nu = I_nu[N*i+j].x;
+  //float Im_nu = I_nu[N*i+j].x * 1E-26 * fg_scale;
+  float Im_nu = I_nu[N*i+j].x * fg_scale;
 
   dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * I[N*i+j].x * I[N*i+j].x * (1-expf(-parexp)));
 

@@ -753,10 +753,13 @@ __host__ int main(int argc, char **argv) {
 
   for(int f=0; f<nfields; f++){
   	for(int i=0; i<data.total_frequencies; i++){
-  		free(fields[f].visibilities[i].u);
-  		free(fields[f].visibilities[i].v);
-  		free(fields[f].visibilities[i].weight);
-  		free(fields[f].visibilities[i].Vo);
+      if(fields[f].numVisibilitiesPerFreq[i] != 0){
+    		free(fields[f].visibilities[i].u);
+    		free(fields[f].visibilities[i].v);
+    		free(fields[f].visibilities[i].weight);
+    		free(fields[f].visibilities[i].Vo);
+        free(fields[f].visibilities[i].Vm);
+      }
   	}
   }
 
