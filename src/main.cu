@@ -442,8 +442,8 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
 			host_3I[N*i+j].x = 1.0;      // T
-			host_3I[N*i+j].y = 0.1 * 1E-4;      // tau
-      host_3I[N*i+j].z = 1.5 * 1E-4;      // beta
+			host_3I[N*i+j].y = 0.1;      // tau
+      host_3I[N*i+j].z = 1.0;      // beta
 		}
 	}
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
