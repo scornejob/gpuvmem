@@ -277,7 +277,7 @@ __host__ int main(int argc, char **argv) {
     printf("Calculating weights sum\n");
   }
 
-  freqavg = (fields[0].visibilities[0].freq + fields[0].visibilities[data.total_frequencies -1].freq)/2;
+  freqavg = 2.7749e+11;
 
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
