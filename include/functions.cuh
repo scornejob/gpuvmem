@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <cuda.h>
 #include <math.h>
 #include <string.h>
@@ -14,7 +15,6 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <omp.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
@@ -61,6 +61,10 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
+const float minpix_T = 20;
+const float minpix_tau = 0.001;
+const float minpix_beta = 1.5;
+
 
 typedef struct observedVisibilities{
   float *u;
@@ -157,6 +161,7 @@ __global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N)
 __global__ void newP(float3 *p, float3 *xi, float xmin, long N);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
+__global__ void clip3IWNoise(cufftComplex *noise, float3 *I, long N, float noise_cut);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __global__ void attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N);
@@ -177,13 +182,14 @@ __global__ void SVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
 __global__ void searchDirection(float3 *g, float3 *xi, float3 *h, long N);
 __global__ void newXi(float3 *g, float3 *xi, float3 *h, float gam, long N);
 __global__ void clip(cufftComplex *I, float *grad, float RMS, long N);
-__global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N);
+__global__ void restartDPhi(float3 *dChi2, float *dS, long N);
 __global__ void DS(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N);
-__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
+__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float3 *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY);
-__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float fg_scale, long N);
+__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, long N);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
 __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
+__global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, float minpix, long N);

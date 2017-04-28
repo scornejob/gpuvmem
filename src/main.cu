@@ -277,7 +277,7 @@ __host__ int main(int argc, char **argv) {
     printf("Calculating weights sum\n");
   }
 
-  freqavg = 2.7749e+11;
+  freqavg = 1.37995e+11;
 
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
@@ -438,13 +438,34 @@ __host__ int main(int argc, char **argv) {
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 
-
+  int statustau = 0;
+  int anynull;
+  float peak;
+  long fpixel = 1;
+  long elementsImage = M*N;
+  float null = 0.;
+  float *clean = (float*)malloc(M*N*sizeof(float));
+  //fits_open_file(&statustau, modinput, 0, &status_mod_in);
+  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, clean, &anynull, &statustau);
+  peak = *std::max_element(clean,clean+(M*N));
+  //fits_report_error(stderr, statustau); /* print error message */
+  //printf("status: %d\n", statustau);
+  int x = M-1;
+  int y = N-1;
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
-			host_3I[N*i+j].x = 1.0;      // T
-			host_3I[N*i+j].y = 0.1;      // tau
-      host_3I[N*i+j].z = 1.0;      // beta
+      host_3I[N*i+j].x = minpix_T;
+			//host_3I[N*i+j].x = peak/(1E26 * 2.0 * CBOLTZMANN * nu_0 * nu_0 / LIGHTSPEED * LIGHTSPEED); // T
+			if(clean[N*y+x]/peak > minpix_tau){
+			     host_3I[N*i+j].y = clean[N*y+x]/peak;  // tau
+      }else{
+        host_3I[N*i+j].y = minpix_tau;
+      }
+      host_3I[N*i+j].z = minpix_beta; // beta
+      x--;
 		}
+    x=M-1;
+    y--;
 	}
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
