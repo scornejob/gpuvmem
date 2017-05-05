@@ -61,9 +61,9 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
-const float minpix_T = 20;
-const float minpix_tau = 0.001;
-const float minpix_beta = 1.5;
+const float minpix_T = 20.0;
+const float minpix_tau = 1E-4;
+const float minpix_beta = 1.0;
 
 
 typedef struct observedVisibilities{

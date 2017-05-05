@@ -26,7 +26,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o cfits build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
+main:	build/main.o cfitsio build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)

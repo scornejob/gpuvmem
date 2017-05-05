@@ -2135,18 +2135,24 @@ __global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  //float pix2 = -DELTAX * RPDEG * -DELTAX * RPDEG;
-  float dT, dtau, dbeta;
-  float parexp = (CPLANCK * nu)/ (CBOLTZMANN * I[N*i+j].x);
+  float Im_nu, T, tau, beta, dT, dtau, dbeta;
   float nudiv = nu/nu_0;
-  float Im_nu = I_nu[N*i+j].x;
+
+  T = I[N*i+j].x;
+  tau = I[N*i+j].y;
+  beta = I[N*i+j].z;
+
+  Im_nu = I_nu[N*i+j].x;
+
+  float nudiv_pow_beta = powf(nudiv, beta);
+
+  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
+
+  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
+  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
+  dbeta = dtau * tau * logf(nudiv);
+
   //float Im_nu = (I_nu[N*i+j].x * 1E-26 / pix2) * fg_scale;
-
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * I[N*i+j].x * I[N*i+j].x * (1-expf(-parexp)));
-
-  dtau = (Im_nu * powf(nudiv, I[N*i+j].z))/(expf(I[N*i+j].y * powf(nudiv, I[N*i+j].z))-1);
-
-  dbeta = dtau * I[N*i+j].y * logf(nudiv);
 
   if(lambda != 0.0)
   {
@@ -2165,26 +2171,36 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
-  float nu3, num_p1, nudiv, num_p2, num_p3, num_parexp, den_parexp, den;
+
+  float I_num, I_den, T, tau, beta, nudiv, nudiv_pow_beta, local_I_nu;
+
   float pix2 = -DELTAX * RPDEG * -DELTAX * RPDEG;
 
-  nu3 = nu * nu * nu;
-  num_p1 = 2*CPLANCK*nu3;
+  float nu3 = nu * nu * nu;
+
   nudiv = nu/nu_0;
-  num_p2 = 1 - expf(-image3[N*i+j].y * powf(nudiv,image3[N*i+j].z));
 
-  num_parexp = CPLANCK * nu;
-  den_parexp = CBOLTZMANN * image3[N*i+j].x;
-  num_p3 = expf(-num_parexp/den_parexp);
-  den = LIGHTSPEED * LIGHTSPEED * (1-num_p3);
+  T = image3[N*i+j].x;
+  tau = image3[N*i+j].y;
+  beta = image3[N*i+j].z;
 
-  I_nu[N*i+j].x = num_p1 * num_p2 * num_p3 / den;
-  I_nu[N*i+j].x = I_nu[N*i+j].x * 1E26 * pix2 / fg_scale;
+  nudiv_pow_beta = powf(nudiv, beta);
+
+  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
+  float exp_value = expf(exp_parameter);
+
+  I_num = 2 * CPLANCK * nu3 * (1-expf(-tau * nudiv_pow_beta));
+  I_den = LIGHTSPEED * LIGHTSPEED * (exp_value - 1);
+
+  local_I_nu = I_num / I_den;
+
+  I_nu[N*i+j].x = local_I_nu * 1E26 * pix2 / fg_scale;
+
   if(I_nu[N*i+j].x < minpix){
     I_nu[N*i+j].x = minpix;
   }
   I_nu[N*i+j].y = 0.f;
-  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);
+  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);*/
 }
 
 __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option)
