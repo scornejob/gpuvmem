@@ -1813,16 +1813,6 @@ __global__ void clip3IWNoise(cufftComplex *noise, float3 *I, long N, float noise
 
 }
 
-
-__global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  gg[N*i+j] = (g[N*i+j].x * g[N*i+j].x) + (g[N*i+j].y * g[N*i+j].y) + (g[N*i+j].z * g[N*i+j].z);
-  dgg[N*i+j] = ((xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x) + ((xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y) + ((xi[N*i+j].z + g[N*i+j].z) * xi[N*i+j].z);
-}
-
 __global__ void clip3I(float3 *I, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1924,6 +1914,7 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
   }else{
       xt[N*i+j].z = minpix_beta;
   }
+
 }
 
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N)
@@ -2024,6 +2015,26 @@ __global__ void newXi(float3 *g, float3 *xi, float3 *h, float gam, long N)
   xi[N*i+j].x = h[N*i+j].x = g[N*i+j].x + gam * h[N*i+j].x;
   xi[N*i+j].y = h[N*i+j].y = g[N*i+j].y + gam * h[N*i+j].y;
   xi[N*i+j].z = h[N*i+j].z = g[N*i+j].z + gam * h[N*i+j].z;
+}
+
+__global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float gg_T, gg_tau, gg_beta;
+  float dgg_T, dgg_tau, dgg_beta;
+
+  gg_T = g[N*i+j].x * g[N*i+j].x;
+  gg_tau = g[N*i+j].y * g[N*i+j].y;
+  gg_beta = g[N*i+j].z * g[N*i+j].z;
+
+  dgg_T = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
+  dgg_tau = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
+  dgg_beta = (xi[N*i+j].z + g[N*i+j].z) * xi[N*i+j].z;
+
+  gg[N*i+j] = gg_T + gg_tau + gg_beta;
+  dgg[N*i+j] = dgg_T + dgg_tau + dgg_beta;
 }
 
 __global__ void restartDPhi(float3 *dChi2, float *dS, long N)
@@ -2200,7 +2211,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
     I_nu[N*i+j].x = minpix;
   }
   I_nu[N*i+j].y = 0.f;
-  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);*/
+
 }
 
 __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option)
@@ -2263,14 +2274,14 @@ __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, 
 
   switch(option){
     case 0:
-      needed_tau = snprintf(NULL, 0, "!%s_tau.fits", out_image) + 1;
+      needed_tau = snprintf(NULL, 0, "!%s_tau_0.fits", out_image) + 1;
       tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%s_tau.fits", out_image);
+      snprintf(tauname, needed_tau*sizeof(char), "!%s_tau_0.fits", out_image);
       break;
     case 1:
-      needed_tau = snprintf(NULL, 0, "!%stau_%d.fits" , mempath, iteration) + 1;
+      needed_tau = snprintf(NULL, 0, "!%stau_0_%d.fits" , mempath, iteration) + 1;
       tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%stau_%d.fits", mempath, iteration);
+      snprintf(tauname, needed_tau*sizeof(char), "!%stau_0_%d.fits", mempath, iteration);
       break;
     case -1:
       break;

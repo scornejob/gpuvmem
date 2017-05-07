@@ -62,7 +62,7 @@ const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
 const float minpix_T = 20.0;
-const float minpix_tau = 1E-4;
+const float minpix_tau = 1E-5;
 const float minpix_beta = 1.0;
 
 
@@ -157,7 +157,7 @@ __host__ float deviceReduce(float *in, long N);
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
-__global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
+__global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void newP(float3 *p, float3 *xi, float xmin, long N);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
