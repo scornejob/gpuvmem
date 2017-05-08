@@ -2158,11 +2158,11 @@ __global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_
   {
     dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
     dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
-    dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta;
+    dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * 0.f;
   }else{
     dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
     dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
-    dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta;
+    dchi2_total[N*i+j].z += dchi2[N*i+j].z * 0.f;
   }
 }
 
@@ -2200,7 +2200,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
     I_nu[N*i+j].x = minpix;
   }
   I_nu[N*i+j].y = 0.f;
-  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);*/
+  //printf("Image [%d,%d] = %e\n", i, j, I_nu[N*i+j].x);
 }
 
 __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option)
@@ -2577,9 +2577,9 @@ __host__ float chiCuadrado(float3 *I)
   final_chi2 = resultchi2;
   final_H = resultS;
   /*printf("chi2 value = %.5f\n", resultchi2);
-  printf("H value = %.5f\n", resultH);
+  printf("H value = %.5f\n", resultS);
   printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
-  printf("lambda * H value = %.5f\n", lambda*resultH);
+  printf("lambda * H value = %.5f\n", lambda*resultS);
   printf("Phi value = %.5f\n\n", resultPhi);*/
 
   return resultPhi;
