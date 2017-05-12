@@ -110,7 +110,7 @@ __host__ void frprmn(float3 *p, float ftol, float *fret, float (*func)(float3*),
     dgg = gg = 0.0;
     ////gg = g*g
     ////dgg = (xi+g)*xi
-    getGandDGG<<<numBlocksNN, threadsPerBlockNN>>>(device_gg_vector, device_dgg_vector, xi, device_g, N);
+    getGGandDGG<<<numBlocksNN, threadsPerBlockNN>>>(device_gg_vector, device_dgg_vector, xi, device_g, N);
   	gpuErrchk(cudaDeviceSynchronize());
     ////getSums (Reductions) of gg dgg
     gg = deviceReduce(device_gg_vector, M*N);
@@ -121,7 +121,6 @@ __host__ void frprmn(float3 *p, float ftol, float *fret, float (*func)(float3*),
       return;
     }
     gam = dgg/gg;
-    //printf("Gamma = %f\n", gam);
     //g=-xi
     //xi=h=g+gam*h;
     newXi<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, gam, N);
