@@ -61,9 +61,9 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
-const float minpix_T = 20.0;
+const float minpix_T = 1.0;
 const float minpix_tau = 1E-5;
-const float minpix_beta = 1.0;
+const float minpix_beta = 1.5;
 
 
 typedef struct observedVisibilities{
@@ -160,6 +160,7 @@ __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftCom
 __global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void newP(float3 *p, float3 *xi, float xmin, long N);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
+__global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void clip3IWNoise(cufftComplex *noise, float3 *I, long N, float noise_cut);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
@@ -185,8 +186,7 @@ __global__ void clip(cufftComplex *I, float *grad, float RMS, long N);
 __global__ void restartDPhi(float3 *dChi2, float *dS, long N);
 __global__ void DS(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N);
 __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float3 *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
-__global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY);
-__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, long N);
+__global__ void DChi2_total(cufftComplex *noise, float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);

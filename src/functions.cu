@@ -2139,7 +2139,7 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float3 *dChi2, c
 
 
 
-__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, long N)
+__global__ void DChi2_total(cufftComplex *noise, float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2162,17 +2162,21 @@ __global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_
   dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
-  //float Im_nu = (I_nu[N*i+j].x * 1E-26 / pix2) * fg_scale;
-
-  if(lambda != 0.0)
-  {
-    dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
-    dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
-    dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta;
+  if(noise[N*i+j].x <= noise_cut){
+    if(lambda != 0.0)
+    {
+      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta * 0.f;
+    }else{
+      dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
+      dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
+      dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta * 0.f;
+    }
   }else{
-    dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
-    dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
-    dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta;
+    dchi2_total[N*i+j].x += 0.f;
+    dchi2_total[N*i+j].y += 0.f;
+    dchi2_total[N*i+j].z += 0.f;
   }
 }
 
@@ -2656,7 +2660,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
             DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
             gpuErrchk(cudaDeviceSynchronize());
 
-            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, N);
+            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
           	gpuErrchk(cudaDeviceSynchronize());
         }
       }
@@ -2710,7 +2714,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
           #pragma omp critical
           {
-            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, N);
+            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
           	gpuErrchk(cudaDeviceSynchronize());
           }
         }
