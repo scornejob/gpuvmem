@@ -201,16 +201,15 @@ __host__ freqData getFreqs(char * file)
   return freqsAndVisibilities;
 }
 
-__host__ long NearestPowerOf2(long n)
+__host__ long NearestPowerOf2(long x)
 {
-  if (!n) return n;  //(0 == 2^0)
-
-  int x = 1;
-  while(x < n)
-  {
-      x <<= 1;
-  }
-  return x;
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return ++x;
 }
 
 
@@ -2615,7 +2614,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  //gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float3)*M*N));
 
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
