@@ -128,7 +128,7 @@ typedef struct variables {
 
 __host__ void goToError();
 __host__ freqData getFreqs(char * file);
-__host__ long NearestPowerOf2(long N);
+__host__ long NearestPowerOf2(long x);
 __host__ void readInputDat(char *file);
 __host__ void init_beam(int telescope);
 __host__ void residualsToHost(Field *fields, freqData data);

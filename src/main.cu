@@ -39,9 +39,9 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image, *device_weight_image;
 
-float *device_dphi, *device_dchi2_total, *device_dH, *device_chi2, *device_H, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
+float *device_dphi, *device_dchi2_total, *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
-float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
+float difmap_noise, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -272,7 +272,6 @@ __host__ int main(int argc, char **argv) {
     if(beam_noise == -1){
       printf("Beam noise wasn't provided by the user... Calculating...\n");
     }
-    printf("Calculating weights sum\n");
   }
 
   //Declaring block size and number of blocks for visibilities
@@ -280,15 +279,12 @@ __host__ int main(int argc, char **argv) {
   float sum_weights = 0.0;
   for(int f=0; f<nfields; f++){
   	for(int i=0; i< data.total_frequencies; i++){
-      if(beam_noise == -1){
-        //Calculating beam noise
-        for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-            sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
-        }
-      }
+      //Calculating beam noise
       for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-          sum_weights += fields[f].visibilities[i].weight[j];
+        sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+        sum_weights += fields[f].visibilities[i].weight[j];
       }
+
   		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
   		long UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
       fields[f].visibilities[i].threadsPerBlockUV = variables.blockSizeV;
@@ -296,9 +292,19 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
+  if(verbose_flag){
+      float aux_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      printf("Calculated NOISE %e\n", aux_noise);
+      printf("Using canvas NOISE anyway...\n");
+      printf("Canvas NOISE = %e\n", beam_noise);
+  }
+
   if(beam_noise == -1){
       beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
-      printf("Noise: %e\n", beam_noise);
+      if(verbose_flag){
+        printf("No NOISE value detected in canvas...\n");
+        printf("Using NOISE: %e ...\n", beam_noise);
+      }
   }
 
 	if(num_gpus == 1){
@@ -410,7 +416,12 @@ __host__ int main(int argc, char **argv) {
   if(lambda == 0.0){
     MINPIX = 0.0;
   }else{
-    MINPIX = minpix;
+    if(reg_term == 0 && minpix == 0.0){
+      printf("Cannot use entropy with a minimum value of pixel 0\n");
+      goToError();
+    }else{
+      MINPIX = minpix;
+    }
   }
 
 	float deltax = RPDEG*DELTAX; //radians
@@ -494,11 +505,11 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float)*M*N));
 
 
-	gpuErrchk(cudaMalloc((void**)&device_dH, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_dH, 0, sizeof(float)*M*N));
+	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
 
-	gpuErrchk(cudaMalloc((void**)&device_H, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(device_H, 0, sizeof(float)*M*N));
+	gpuErrchk(cudaMalloc((void**)&device_S, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
 
 
 
@@ -695,13 +706,13 @@ __host__ int main(int argc, char **argv) {
   printf("Total visibilities: %d\n", total_visibilities);
   printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
   printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
-  printf("S: %f\n", final_H);
+  printf("S: %f\n", final_S);
   if(reg_term != 1){
-    printf("Normalized S: %f\n", final_H/(M*N));
+    printf("Normalized S: %f\n", final_S/(M*N));
   }else{
-    printf("Normalized S: %f\n", final_H/(M*M*N*N));
+    printf("Normalized S: %f\n", final_S/(M*M*N*N));
   }
-  printf("lambda*S: %f\n\n", lambda*final_H);
+  printf("lambda*S: %f\n\n", lambda*final_S);
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
   double wall_time = end-start;
   printf("Total CPU time: %lf\n", time_taken);
@@ -721,13 +732,13 @@ __host__ int main(int argc, char **argv) {
     fprintf(outfile, "Total visibilities: %d\n", total_visibilities);
     fprintf(outfile, "Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
     fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
-    fprintf(outfile, "S: %f\n", final_H);
+    fprintf(outfile, "S: %f\n", final_S);
     if(reg_term != 1){
-      fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
+      fprintf(outfile, "Normalized S: %f\n", final_S/(M*N));
     }else{
-      fprintf(outfile, "Normalized S: %f\n", final_H/(M*M*N*N));
+      fprintf(outfile, "Normalized S: %f\n", final_S/(M*M*N*N));
     }
-    fprintf(outfile, "lambda*S: %f\n", lambda*final_H);
+    fprintf(outfile, "lambda*S: %f\n", lambda*final_S);
     fprintf(outfile, "Wall time: %lf", wall_time);
     fclose(outfile);
   }
@@ -801,10 +812,10 @@ __host__ int main(int argc, char **argv) {
 
 	cudaFree(device_dphi);
 	cudaFree(device_dchi2_total);
-	cudaFree(device_dH);
+	cudaFree(device_dS);
 
 	cudaFree(device_chi2);
-	cudaFree(device_H);
+	cudaFree(device_S);
 
   //Disabling UVA
   if(num_gpus > 1){

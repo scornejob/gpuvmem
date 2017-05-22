@@ -37,9 +37,9 @@ status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image;
 
-extern float *device_dphi, *device_chi2, *device_H, *device_dchi2_total, *device_dH;
+extern float *device_dphi, *device_chi2, *device_S, *device_dchi2_total, *device_dS;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, final_H;
+minpix, lambda, ftol, random_probability, final_chi2, final_S;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -200,16 +200,15 @@ __host__ freqData getFreqs(char * file)
   return freqsAndVisibilities;
 }
 
-__host__ long NearestPowerOf2(long n)
+__host__ long NearestPowerOf2(long x)
 {
-  if (!n) return n;  //(0 == 2^0)
-
-  int x = 1;
-  while(x < n)
-  {
-      x <<= 1;
-  }
-  return x;
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return ++x;
 }
 
 
@@ -1928,7 +1927,7 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void SVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *S, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1938,10 +1937,10 @@ __global__ void SVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
     entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
   }
 
-  H[N*i+j] = entropy;
+  S[N*i+j] = entropy;
 }
 
-__global__ void QVector(float *H, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void QVector(float *S, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1956,7 +1955,7 @@ __global__ void QVector(float *H, cufftComplex *noise, cufftComplex *I, long N, 
     }
   }
 
-  H[N*i+j] = entropy;
+  S[N*i+j] = entropy;
 }
 
 __global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
@@ -2193,7 +2192,7 @@ __host__ float chiCuadrado(cufftComplex *I)
 
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
-  float resultH  = 0.0;
+  float resultS  = 0.0;
 
   if(clip_flag){
     clip<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX);
@@ -2207,15 +2206,15 @@ __host__ float chiCuadrado(cufftComplex *I)
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
-        SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
-        QVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        QVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 2:
-        TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_H, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -2360,15 +2359,15 @@ __host__ float chiCuadrado(cufftComplex *I)
   }else{
     cudaSetDevice(firstgpu);
   }
-  resultH  = deviceReduce(device_H, M*N);
-  resultPhi = (0.5 * resultchi2) + (lambda * resultH);
+  resultS  = deviceReduce(device_S, M*N);
+  resultPhi = (0.5 * resultchi2) + (lambda * resultS);
 
   final_chi2 = resultchi2;
-  final_H = resultH;
+  final_S = resultS;
   /*printf("chi2 value = %.5f\n", resultchi2);
-  printf("H value = %.5f\n", resultH);
+  printf("S value = %.5f\n", resultS);
   printf("(1/2) * chi2 value = %.5f\n", 0.5*resultchi2);
-  printf("lambda * H value = %.5f\n", lambda*resultH);
+  printf("lambda * S value = %.5f\n", lambda*resultS);
   printf("Phi value = %.5f\n\n", resultPhi);*/
 
   return resultPhi;
@@ -2390,7 +2389,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
+  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   toFitsFloat(I, iter, M, N, 1);
@@ -2398,15 +2397,15 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
-        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
-        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 2:
-        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dH, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -2469,7 +2468,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     cudaSetDevice(firstgpu);
   }
 
-  DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dH, N);
+  DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float), device_dphi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));

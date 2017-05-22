@@ -30,6 +30,7 @@ exportfits(imagename=residual_image+".image", fitsimage=residual_image+".image.f
 ia.open(infile=residual_image+".image")
 rbeam=ia.restoringbeam()
 ia.done()
+ia.close()
 
 bmaj = imhead(imagename=residual_image+".image", mode="get", hdkey="beammajor")
 bmin = imhead(imagename=residual_image+".image", mode="get", hdkey="beamminor")
@@ -54,11 +55,13 @@ pa    = qa.convert(v=bpa ,outunit="deg")
 ia.open(infile="mod_out")
 ia.convolve2d(outfile="convolved_mod_out", axes=[0,1], type='gauss', major=bmaj, minor=bmin, pa=bpa)
 ia.done()
+ia.close()
 
 exportfits(imagename="convolved_mod_out", fitsimage="convolved_mod_out.fits")
 ia.open(infile="convolved_mod_out.fits")
 ia.setrestoringbeam(beam=rbeam)
 ia.done()
+ia.close()
 
 imagearr=["convolved_mod_out.fits",residual_image+".image.fits"]
 

@@ -26,7 +26,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main: build/main.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
+main:	build/main.o cfits build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -39,8 +39,6 @@ build/main.o: src/main.cu
 
 build/functions.o: src/functions.cu
 	@ echo "Building Functions"
-	@ mkdir -p lib
-	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/functions.cu -o build/functions.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/directioncosines.o: src/directioncosines.cu
@@ -74,6 +72,10 @@ build/linmin.o: src/linmin.cu
 build/frprmn.o: src/frprmn.cu
 	@ echo "Building frprmn"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
+
+cfits:
+	@ mkdir -p lib
+	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
 
 clean:
 	@ clear
