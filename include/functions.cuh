@@ -133,7 +133,7 @@ typedef struct variables {
 
 __host__ void goToError();
 __host__ freqData getFreqs(char * file);
-__host__ long NearestPowerOf2(long N);
+__host__ long NearestPowerOf2(long x);
 __host__ void readInputDat(char *file);
 __host__ void init_beam(int telescope);
 __host__ void residualsToHost(Field *fields, freqData data);
@@ -157,9 +157,10 @@ __host__ float deviceReduce(float *in, long N);
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
-__global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
+__global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void newP(float3 *p, float3 *xi, float xmin, long N);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
+__global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void clip3IWNoise(cufftComplex *noise, float3 *I, long N, float noise_cut);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
@@ -185,8 +186,7 @@ __global__ void clip(cufftComplex *I, float *grad, float RMS, long N);
 __global__ void restartDPhi(float3 *dChi2, float *dS, long N);
 __global__ void DS(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N);
 __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float3 *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
-__global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY);
-__global__ void DChi2_total(float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, long N);
+__global__ void DChi2_total(cufftComplex *noise, float3 *dchi2_total, float3 *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
