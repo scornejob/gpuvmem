@@ -2383,6 +2383,13 @@ __host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, 
     //fits_report_error(stderr, status); /* print error message */
     goToError();
   }
+  free(host_Inu);
+  free(host_T);
+  free(host_tau);
+  free(host_beta);
+  free(host_Iout);
+  free(host_3Iout);
+
   free(I_nu_name);
   free(betaname);
   free(tauname);
