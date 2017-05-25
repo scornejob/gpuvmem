@@ -2166,11 +2166,11 @@ __global__ void DChi2_total(cufftComplex *noise, float3 *dchi2_total, float3 *dc
     {
       dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
       dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta * 0.f;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
       dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
-      dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta * 0.f;
+      dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;
