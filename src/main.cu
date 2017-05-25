@@ -449,10 +449,10 @@ __host__ int main(int argc, char **argv) {
   long fpixel = 1;
   long elementsImage = M*N;
   float null = 0.;
-  float *clean = (float*)malloc(M*N*sizeof(float));
+  float *input_tau= (float*)malloc(M*N*sizeof(float));
   //fits_open_file(&statustau, modinput, 0, &status_mod_in);
-  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, clean, &anynull, &statustau);
-  peak = *std::max_element(clean,clean+(M*N));
+  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_tau, &anynull, &statustau);
+  peak = *std::max_element(input_tau,input_tau+(M*N));
   //fits_report_error(stderr, statustau); /* print error message */
   //printf("status: %d\n", statustau);
   int x = M-1;
@@ -461,8 +461,8 @@ __host__ int main(int argc, char **argv) {
 		for(int j=0;j<N;j++){
       host_3I[N*i+j].x = minpix_T;
 			//host_3I[N*i+j].x = peak/(1E26 * 2.0 * CBOLTZMANN * nu_0 * nu_0 / LIGHTSPEED * LIGHTSPEED); // T
-			if(clean[N*y+x]/peak > minpix_tau){
-			     host_3I[N*i+j].y = clean[N*y+x]/peak;  // tau
+			if(input_tau[N*y+x]/peak > minpix_tau){
+			     host_3I[N*i+j].y = input_tau[N*y+x]/peak;  // tau
       }else{
         host_3I[N*i+j].y = minpix_tau;
       }
@@ -472,6 +472,7 @@ __host__ int main(int argc, char **argv) {
     x=M-1;
     y--;
 	}
+  free(input_tau);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){
