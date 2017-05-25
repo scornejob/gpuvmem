@@ -63,7 +63,7 @@ const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
 const float minpix_T = 1.0;
 const float minpix_tau = 1E-5;
-const float minpix_beta = 1.0;
+const float minpix_beta = 1.5;
 
 
 typedef struct observedVisibilities{
