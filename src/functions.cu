@@ -2018,7 +2018,7 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void SVector(float *H, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2028,10 +2028,10 @@ __global__ void SVector(float *H, float *noise, cufftComplex *I, long N, float n
     entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
   }
 
-  H[N*i+j] = entropy;
+  S[N*i+j] = entropy;
 }
 
-__global__ void QVector(float *H, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void QVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2046,7 +2046,7 @@ __global__ void QVector(float *H, float *noise, cufftComplex *I, long N, float n
     }
   }
 
-  H[N*i+j] = entropy;
+  Q[N*i+j] = entropy;
 }
 
 __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
