@@ -2006,7 +2006,7 @@ __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float n
   S[N*i+j] = entropy;
 }
 
-__global__ void QVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void QVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2021,7 +2021,7 @@ __global__ void QVector(float *S, float *noise, cufftComplex *I, long N, float n
     }
   }
 
-  S[N*i+j] = entropy;
+  Q[N*i+j] = entropy;
 }
 
 __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
