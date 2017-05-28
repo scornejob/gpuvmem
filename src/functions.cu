@@ -35,9 +35,9 @@ extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nop
 status_mod_in, verbose_flag, xcorr_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
 
 extern cufftHandle plan1GPU;
-extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image, *device_noise_image;
+extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
 
-extern float *device_dphi, *device_chi2, *device_S, *device_dchi2_total, *device_dS;
+extern float *device_dphi, *device_chi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
 minpix, lambda, ftol, random_probability, final_chi2, final_S;
 
@@ -1335,7 +1335,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 	return variables;
 }
 
-__host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int option)
+__host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int option)
 {
 	fitsfile *fpointer;
 	int status = 0;
@@ -1366,16 +1366,6 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
       needed = snprintf(NULL, 0, "!%sMEM_VB_%d.fits", mempath, iteration) + 1;
       name = (char*)malloc(needed*sizeof(char));
       snprintf(name, needed*sizeof(char), "!%sMEM_VB_%d.fits", mempath, iteration);
-      break;
-    case 4:
-      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
-      break;
-    case 5:
-      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%snoise_0.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -1411,12 +1401,87 @@ __host__ void toFitsFloat(cufftComplex *I, int iteration, long M, long N, int op
 		for(int j=0; j < N; j++){
       if(option == 0 || option == 1){
 			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-      }else if (option == 2 || option == 3){
+      }else{
         image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
         //image2D[N*x+y] = host_IFITS[N*i+j].y;
-      }else if(option == 4 || option == 5){
-        image2D[N*i+j] = host_IFITS[N*i+j].x;
       }
+      x--;
+		}
+    x=M-1;
+    y--;
+	}
+
+	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+	fits_close_file(fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+
+  free(host_IFITS);
+	free(image2D);
+  free(name);
+}
+
+__host__ void toFitsFloat(float *I, int iteration, long M, long N, int option)
+{
+	fitsfile *fpointer;
+	int status = 0;
+	long fpixel = 1;
+	long elements = M*N;
+  size_t needed;
+  char *name;
+	long naxes[2]={M,N};
+	long naxis = 2;
+  char *unit = "JY/PIXEL";
+  switch(option){
+    case 0:
+      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
+      break;
+    case 1:
+      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%snoise_0.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      goToError();
+  }
+
+
+	fits_create_file(&fpointer, name, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+  fits_copy_header(mod_in, fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    goToError();
+  }
+  if(option==0 || option==1){
+    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  }
+  float *host_IFITS;
+  host_IFITS = (float*)malloc(M*N*sizeof(float));
+  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(float), I, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
+
+	float* image2D;
+	image2D = (float*) malloc(M*N*sizeof(float));
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+        image2D[N*i+j] = host_IFITS[N*i+j];
       x--;
 		}
     x=M-1;
@@ -1606,11 +1671,13 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
   }
 }
 
-__global__ void attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *attenMatrix, float freq, long N, float xobs, float yobs, float DELTAX, float DELTAY)
+__device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
 		int j = threadIdx.x + blockDim.x * blockIdx.x;
 		int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+    float atten_result;
 
     int x0 = xobs;
     int y0 = yobs;
@@ -1623,53 +1690,52 @@ __global__ void attenuation(float beam_fwhm, float beam_freq, float beam_cutoff,
     float r = arc/a;
     float atten = expf(-c*r*r);
     if(arc <= beam_cutoff){
-      attenMatrix[N*i+j].x = atten;
-      attenMatrix[N*i+j].y = 0.0;
+      atten_result = atten;
     }else{
-      attenMatrix[N*i+j].x = 0.0;
-      attenMatrix[N*i+j].y = 0.0;
+      atten_result = 0.0;
     }
+
+    return atten_result;
 }
 
 
 
-__global__ void total_attenuation(cufftComplex *total_atten, cufftComplex *attenperFreq, long N)
+__global__ void total_attenuation(float *total_atten, float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  total_atten[N*i+j].x += attenperFreq[N*i+j].x;
-  total_atten[N*i+j].y = 0;
+  float attenPerFreq = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
+
+  total_atten[N*i+j] += attenPerFreq;
 }
 
-__global__ void mean_attenuation(cufftComplex *total_atten, int channels, long N)
+__global__ void mean_attenuation(float *total_atten, int channels, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  total_atten[N*i+j].x /= channels;
-  total_atten[N*i+j].y = 0;
+  total_atten[N*i+j] /= channels;
 }
 
-__global__ void noise_image(cufftComplex *noise_image, cufftComplex *weight_image, float difmap_noise, long N)
+
+__global__ void weight_image(float *weight_image, float *total_atten, float difmap_noise, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float atten = total_atten[N*i+j];
+  weight_image[N*i+j] += (atten / difmap_noise) * (atten / difmap_noise);
+}
+
+__global__ void noise_image(float *noise_image, float *weight_image, float difmap_noise, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float noiseval;
-  noiseval = sqrtf(1.0/weight_image[N*i+j].x);
-  noise_image[N*i+j].x = noiseval;
-  noise_image[N*i+j].y = 0;
-}
-
-__global__ void weight_image(cufftComplex *weight_image, cufftComplex *total_atten, float difmap_noise, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-  int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float atten = total_atten[N*i+j].x;
-  weight_image[N*i+j].x += (atten / difmap_noise) * (atten / difmap_noise);
-  weight_image[N*i+j].y = 0;
+  noiseval = sqrtf(1.0/weight_image[N*i+j]);
+  noise_image[N*i+j] = noiseval;
 }
 
 __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
@@ -1834,13 +1900,13 @@ __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex 
   }
 }
 
-__global__ void clipWNoise(cufftComplex *fg_image, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
-  if(noise[N*i+j].x > noise_cut){
+  if(noise[N*i+j] > noise_cut){
     I[N*i+j].x = MINPIX;
   }
 
@@ -1927,26 +1993,26 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void SVector(float *S, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float entropy = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
   }
 
   S[N*i+j] = entropy;
 }
 
-__global__ void QVector(float *S, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void QVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float entropy = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
       entropy = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x) + (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
       entropy /= 2;
@@ -1958,13 +2024,13 @@ __global__ void QVector(float *S, cufftComplex *noise, cufftComplex *I, long N, 
   S[N*i+j] = entropy;
 }
 
-__global__ void TVVector(float *TV, cufftComplex *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float tv = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     if(i!= N-1 || j!=N-1){
       float dx = I[N*i+(j+1)].x - I[N*i+j].x;
       float dy = I[N*(i+1)+j].x - I[N*i+j].x;
@@ -2005,22 +2071,22 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 }
 
-__global__ void DS(float *dH, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     dH[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
   }
 }
 
-__global__ void DQ(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
     dQ[N*i+j] = (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x)  + (I[N*i+j].x - I[N*(i+1)+j].x);
   }else{
@@ -2030,7 +2096,7 @@ __global__ void DQ(float *dQ, cufftComplex *I, cufftComplex *noise, float noise_
   }
 }
 
-__global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2038,7 +2104,7 @@ __global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float nois
   float dtv = 0.0;
   float num = 0.0;
   float den = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
     if(i!= N-1 || j!=N-1){
       float a = I[N*i+(j+1)].x;
       float b = I[N*(i+1)+j].x;
@@ -2057,7 +2123,7 @@ __global__ void DTV(float *dTV, cufftComplex *I, cufftComplex *noise, float nois
   }
 }
 
-__global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY)
+__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2068,10 +2134,12 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
   float x = (j - x0) * DELTAX * RPDEG;
   float y = (i - y0) * DELTAY * RPDEG;
 
-	float Ukv, Vkv, cosk, sink;
+	float Ukv, Vkv, cosk, sink, atten;
+
+  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
   float dchi2 = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
   	for(int v=0; v<numVisibilities; v++){
       Ukv = x * U[v];
   		Vkv = y * V[v];
@@ -2084,13 +2152,13 @@ __global__ void DChi2(cufftComplex *noise, cufftComplex *atten, float *dChi2, cu
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= fg_scale * atten[N*i+j].x;
+  dchi2 *= fg_scale * atten;
   dChi2[N*i+j] = dchi2;
   }
 }
 
 
-__global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY)
+__global__ void DChi2_XCORR(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2101,10 +2169,12 @@ __global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dCh
   float x = (j - x0) * DELTAX * RPDEG;
   float y = (i - y0) * DELTAY * RPDEG;
 
-	float Ukv, Vkv, cosk, sink;
+	float Ukv, Vkv, cosk, sink, atten;
+
+  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
   float dchi2 = 0.0;
-  if(noise[N*i+j].x <= noise_cut){
+  if(noise[N*i+j] <= noise_cut){
   	for(int v=0; v<numVisibilities; v++){
       Ukv = x * U[v];
   		Vkv = y * V[v];
@@ -2117,7 +2187,7 @@ __global__ void DChi2_XCORR(cufftComplex *noise, cufftComplex *atten, float *dCh
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= alpha * fg_scale * atten[N*i+j].x;
+  dchi2 *= alpha * fg_scale * atten;
   dChi2[N*i+j] = dchi2;
   }
 }
@@ -2392,7 +2462,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  toFitsFloat(I, iter, M, N, 1);
+  toFitsComplex(I, iter, M, N, 1);
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
@@ -2421,10 +2491,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
             if(xcorr_flag){
-              DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, fields[f].device_vars[i].alpha, DELTAX, DELTAY);
+              DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, fields[f].device_vars[i].alpha, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
             	gpuErrchk(cudaDeviceSynchronize());
             }else{
-              DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
+              DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
             	gpuErrchk(cudaDeviceSynchronize());
             }
             DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, fields[f].device_vars[i].dchi2, N);
@@ -2445,10 +2515,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
           if(xcorr_flag){
-            DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, fields[f].device_vars[i].alpha, DELTAX, DELTAY);
+            DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, fields[f].device_vars[i].alpha, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
             gpuErrchk(cudaDeviceSynchronize());
           }else{
-            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].atten, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY);
+            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
             gpuErrchk(cudaDeviceSynchronize());
           }
 
