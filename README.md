@@ -4,7 +4,7 @@
 
 To compile GPUVMEM you need:
 
-- casacore (https://github.com/casacore/casacore)
+- casacore (https://github.com/casacore/casacore, please make sure you are downloading the github version, Ubuntu package doesn't work well since doesn't have the 'put()' function)
 - CUDA
 - OpenMP
 
