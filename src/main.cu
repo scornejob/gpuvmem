@@ -507,8 +507,8 @@ __host__ int main(int argc, char **argv) {
 
   gpuErrchk(cudaMemcpy2D(device_3I, sizeof(float3), host_3I, sizeof(float3), sizeof(float3), M*N, cudaMemcpyHostToDevice));
 
-  gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(cufftComplex)*M*N));
-  gpuErrchk(cudaMemset(device_noise_image, 0, sizeof(cufftComplex)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_noise_image, 0, sizeof(float)*M*N));
 
   gpuErrchk(cudaMalloc((void**)&device_weight_image, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_weight_image, 0, sizeof(cufftComplex)*M*N));
@@ -653,12 +653,12 @@ __host__ int main(int argc, char **argv) {
   toFitsFloat(device_noise_image, 0, M, N, 1);
 
 
-	cufftComplex *host_noise_image = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(cufftComplex), device_noise_image, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
+	float *host_noise_image = (float*)malloc(M*N*sizeof(float));
+	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
 	for(int i=0; i<M; i++){
 		for(int j=0; j<N; j++){
-			if(host_noise_image[N*i+j].x < noise_min){
-				noise_min = host_noise_image[N*i+j].x;
+			if(host_noise_image[N*i+j] < noise_min){
+				noise_min = host_noise_image[N*i+j];
 			}
 		}
 	}
