@@ -1157,7 +1157,10 @@ __host__ char *strip(const char *string, const char *chars)
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
   variables.multigpu = "NULL";
+  variables.Tin = "NULL";
   variables.ofile = "NULL";
+  variables.path = "mem/";
+  variables.output_image = "mod_out.fits";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
@@ -1173,7 +1176,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:T:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -1189,8 +1192,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
-                                    {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' },
-                                    {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
+                                    {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
+                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"temperature", 0, NULL, 'T'},
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -1244,6 +1248,10 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
     	strcpy(variables.modin, optarg);
     	break;
+    case 'T':
+      variables.Tin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+      strcpy(variables.Tin, optarg);
+      break;
     case 'x':
       variables.minpix = atof(optarg);
       break;

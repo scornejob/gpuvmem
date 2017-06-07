@@ -104,6 +104,7 @@ __host__ int main(int argc, char **argv) {
 	char *msoutput = variables.output;
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
+  char *Tinput = variables.Tin;
   out_image = variables.output_image;
   selected = variables.select;
   mempath = variables.path;
@@ -437,15 +438,22 @@ __host__ int main(int argc, char **argv) {
     }
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
+	float *input_T = (float*)malloc(M*N*sizeof(float));
+  int anynull;
+  long fpixel = 1;
+  float null = 0.;
+  long elementsImage = M*N;
+
+  if(strcmp(Tinput, "NULL")!=0){
+    fitsfile *Tfile;
+    int statusT = 0;
+    fits_open_file(&Tfile, Tinput, 0, &statusT);
+    fits_read_img(Tfile, TFLOAT, fpixel, elementsImage, &null, input_T, &anynull, &statusT);
+  }
 
   int statustau = 0;
-  int anynull;
   float peak;
-  long fpixel = 1;
-  long elementsImage = M*N;
-  float null = 0.;
   float *input_tau= (float*)malloc(M*N*sizeof(float));
-  //fits_open_file(&statustau, modinput, 0, &status_mod_in);
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_tau, &anynull, &statustau);
   peak = *std::max_element(input_tau,input_tau+(M*N));
   //fits_report_error(stderr, statustau); /* print error message */
@@ -454,10 +462,14 @@ __host__ int main(int argc, char **argv) {
   int y = N-1;
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
-      host_3I[N*i+j].x = minpix_T;
+      if(strcmp(Tinput, "NULL")==0){
+        host_3I[N*i+j].x = minpix_T;
+      }else{
+        host_3I[N*i+j].x = input_T[N*y+x];
+      }
 			//host_3I[N*i+j].x = peak/(1E26 * 2.0 * CBOLTZMANN * nu_0 * nu_0 / LIGHTSPEED * LIGHTSPEED); // T
-			if(input_tau[N*y+x]/peak > minpix_tau){
-			     host_3I[N*i+j].y = input_tau[N*y+x]/peak;  // tau
+			if(2.0*(input_tau[N*y+x]/peak) > minpix_tau){
+			     host_3I[N*i+j].y = 2.0*(input_tau[N*y+x]/peak);  // tau
       }else{
         host_3I[N*i+j].y = minpix_tau;
       }
@@ -468,6 +480,7 @@ __host__ int main(int argc, char **argv) {
     y--;
 	}
   free(input_tau);
+  free(input_T);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){

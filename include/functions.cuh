@@ -112,6 +112,7 @@ typedef struct variables {
   char *output;
   char *inputdat;
   char *modin;
+  char *Tin;
   char *ofile;
   char *path;
   char *output_image;
