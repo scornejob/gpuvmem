@@ -29,9 +29,9 @@
 */
 
 #include "f1dim.cuh"
-extern float3 *device_pcom;
-extern float3 *device_xicom;
-extern float (*nrfunc)(float3*);
+extern float2 *device_pcom;
+extern float2 *device_xicom;
+extern float (*nrfunc)(float2*);
 extern long M;
 extern long N;
 extern float MINPIX;
@@ -41,11 +41,11 @@ extern int nopositivity;
 
 __host__ float f1dim(float x)
 {
-    float3 *device_xt;
+    float2 *device_xt;
     float f;
 
-    gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(float3)*M*N));
-    gpuErrchk(cudaMemset(device_xt, 0, sizeof(float3)*M*N));
+    gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(float2)*M*N));
+    gpuErrchk(cudaMemset(device_xt, 0, sizeof(float2)*M*N));
 
     //xt = pcom+x*xicom;
     if(nopositivity == 0){

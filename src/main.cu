@@ -39,7 +39,7 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_V, *device_Inu;
 
-float3 *device_dphi, *device_dchi2_total, *device_3I;
+float2 *device_dphi, *device_dchi2_total, *device_2I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
@@ -104,7 +104,6 @@ __host__ int main(int argc, char **argv) {
 	char *msoutput = variables.output;
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
-  char *Tinput = variables.Tin;
   out_image = variables.output_image;
   selected = variables.select;
   mempath = variables.path;
@@ -414,7 +413,7 @@ __host__ int main(int argc, char **argv) {
 
 
 
-	float3 *host_3I = (float3*)malloc(M*N*sizeof(float3));
+	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
@@ -438,49 +437,29 @@ __host__ int main(int argc, char **argv) {
     }
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
-	float *input_T = (float*)malloc(M*N*sizeof(float));
   int anynull;
   long fpixel = 1;
   float null = 0.;
   long elementsImage = M*N;
 
-  if(strcmp(Tinput, "NULL")!=0){
-    fitsfile *Tfile;
-    int statusT = 0;
-    fits_open_file(&Tfile, Tinput, 0, &statusT);
-    fits_read_img(Tfile, TFLOAT, fpixel, elementsImage, &null, input_T, &anynull, &statusT);
-  }
-
   int statustau = 0;
   float peak;
-  float *input_tau= (float*)malloc(M*N*sizeof(float));
-  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_tau, &anynull, &statustau);
-  peak = *std::max_element(input_tau,input_tau+(M*N));
+  float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
+  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
   //fits_report_error(stderr, statustau); /* print error message */
   //printf("status: %d\n", statustau);
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
-      if(strcmp(Tinput, "NULL")==0){
-        host_3I[N*i+j].x = minpix_T;
-      }else{
-        host_3I[N*i+j].x = input_T[N*y+x];
-      }
-			//host_3I[N*i+j].x = peak/(1E26 * 2.0 * CBOLTZMANN * nu_0 * nu_0 / LIGHTSPEED * LIGHTSPEED); // T
-			if(2.0*(input_tau[N*y+x]/peak) > minpix_tau){
-			     host_3I[N*i+j].y = 2.0*(input_tau[N*y+x]/peak);  // tau
-      }else{
-        host_3I[N*i+j].y = minpix_tau;
-      }
-      host_3I[N*i+j].z = minpix_beta; // beta
-      x--;
+		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
+        host_2I[N*i+j].y = 0;
+        x--;
 		}
     x=M-1;
     y--;
 	}
-  free(input_tau);
-  free(input_T);
+  free(input_Inu_0);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){
@@ -502,10 +481,10 @@ __host__ int main(int argc, char **argv) {
   }else{
 	   cudaSetDevice(firstgpu);
   }
-	gpuErrchk(cudaMalloc((void**)&device_3I, sizeof(float3)*M*N));
-  gpuErrchk(cudaMemset(device_3I, 0, sizeof(float3)*M*N));
+	gpuErrchk(cudaMalloc((void**)&device_2I, sizeof(float3)*M*N));
+  gpuErrchk(cudaMemset(device_2I, 0, sizeof(float3)*M*N));
 
-  gpuErrchk(cudaMemcpy2D(device_3I, sizeof(float3), host_3I, sizeof(float3), sizeof(float3), M*N, cudaMemcpyHostToDevice));
+  gpuErrchk(cudaMemcpy2D(device_2I, sizeof(float2), host_2I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
   gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_noise_image, 0, sizeof(float)*M*N));
@@ -680,8 +659,8 @@ __host__ int main(int argc, char **argv) {
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
-	frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado);
-  chiCuadrado(device_3I);
+	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado);
+  chiCuadrado(device_2I);
   t = clock() - t;
   end = omp_get_wtime();
   printf("Minimization ended successfully\n\n");
@@ -729,7 +708,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	float3toImage(device_3I, freqavg, iter, M, N, 0);
+	float2toImage(device_2I, freqavg, iter, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data);
   printf("Saving residuals to MS...\n");
@@ -767,7 +746,7 @@ __host__ int main(int argc, char **argv) {
   	}
   }
 
-	cudaFree(device_3I);
+	cudaFree(device_2I);
 	if(num_gpus == 1){
 		cudaFree(device_V);
 		cudaFree(device_Inu);
@@ -810,7 +789,7 @@ __host__ int main(int argc, char **argv) {
           cudaDeviceReset();
     }
   }
-	free(host_3I);
+	free(host_2I);
 	free(msinput);
 	free(msoutput);
 	free(modinput);

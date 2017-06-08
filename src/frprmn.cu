@@ -52,20 +52,20 @@ extern int it_maximum;
 #define FREEALL cudaFree(device_gg_vector);cudaFree(device_dgg_vector);cudaFree(xi);cudaFree(device_h);cudaFree(device_g);
 
 
-__host__ void frprmn(float3 *p, float ftol, float *fret, float (*func)(float3*), void (*dfunc)(float3*, float3*))
+__host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*), void (*dfunc)(float2*, float2*))
 {
   float gg, dgg, gam, fp;
-  float3 *device_g, *device_h, *xi;
+  float2 *device_g, *device_h, *xi;
   double start, end;
 
 
   //////////////////////MEMORY GPU//////////////////////////
-  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float3)*M*N));
-  gpuErrchk(cudaMemset(device_g, 0, sizeof(float3)*M*N));
-  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float3)*M*N));
-  gpuErrchk(cudaMemset(device_h, 0, sizeof(float3)*M*N));
-  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float3)*M*N));
-  gpuErrchk(cudaMemset(xi, 0, sizeof(float3)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(device_g, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(device_h, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(xi, 0, sizeof(float2)*M*N));
 
   ///////////////////vectors for gg and dgg////////////////////
   float *device_gg_vector, *device_dgg_vector;
