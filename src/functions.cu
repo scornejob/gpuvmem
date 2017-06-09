@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float2 *device_dphi, *device_dchi2_total, *device_3I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, freqavg;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, freqavg, minInu_0;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -1881,36 +1881,31 @@ __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cu
   I[N*i+j].y = 0;
 }
 
-__global__ void clip3IWNoise(float *noise, float2 *I, long N, float noise_cut)
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
   if(noise[N*i+j] > noise_cut){
-    I[N*i+j].x = minpix_T;
-    I[N*i+j].y = minpix_tau;
-    I[N*i+j].z = minpix_beta;
+    I[N*i+j].x = minpix;
+    I[N*i+j].y = minpix_alpha;
   }
 
 }
 
-__global__ void clip3I(float2 *I, long N)
+__global__ void clip2I(float2 *I, long N, float minpix)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  //T
-  if(I[N*i+j].x < minpix_T){
-      I[N*i+j].x = minpix_T;
+  //I_nu_0
+  if(I[N*i+j].x < minpix){
+      I[N*i+j].x = minpix;
   }
-  //tau
-  if(I[N*i+j].y < minpix_tau){
-      I[N*i+j].y = minpix_tau;
-  }
-  //beta
-  if(I[N*i+j].z < minpix_T){
-      I[N*i+j].z = minpix_T;
+  //alpha
+  if(I[N*i+j].y < minpix_alpha){
+      I[N*i+j].y = minpix_alpha;
   }
 }
 
@@ -1926,36 +1921,27 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(float2 *p, float2 *xi, float xmin, long N)
+__global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   xi[N*i+j].x *= xmin;
   xi[N*i+j].y *= xmin;
-  xi[N*i+j].z *= xmin;
-  //T
-  if(p[N*i+j].x + xi[N*i+j].x > minpix_T){
+  //I_nu_0
+  if(p[N*i+j].x + xi[N*i+j].x > minpix){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = minpix_T;
+    p[N*i+j].x = minpix;
     xi[N*i+j].x = 0.0;
   }
-  //tau
-  if(p[N*i+j].y + xi[N*i+j].y > minpix_tau){
+  //alpha
+  if(p[N*i+j].y + xi[N*i+j].y > minpix_alpha){
     p[N*i+j].y += xi[N*i+j].y;
   }else{
-    p[N*i+j].y = minpix_tau;
+    p[N*i+j].y = minpix_alpha;
     xi[N*i+j].y = 0.0;
   }
-  //beta
-  if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
-    p[N*i+j].z += xi[N*i+j].z;
-  }else{
-    p[N*i+j].z = minpix_beta;
-    xi[N*i+j].z = 0.0;
-  }
-
 
 }
 
@@ -1966,35 +1952,26 @@ __global__ void newPNoPositivity(float2 *p, float2 *xi, float xmin, long N)
 
   xi[N*i+j].x *= xmin;
   xi[N*i+j].y *= xmin;
-  xi[N*i+j].z *= xmin;
 
   p[N*i+j].x += xi[N*i+j].x;
   p[N*i+j].y += xi[N*i+j].y;
-  p[N*i+j].z += xi[N*i+j].z;
 }
 
-__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N)
+__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
-  //T
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > minpix_T){
+  //I_nu_0
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > minpix){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-      xt[N*i+j].x = minpix_T;
+      xt[N*i+j].x = minpix;
   }
-  //tau
-  if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_tau){
+  //alpha
+  if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_alpha){
     xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
   }else{
-      xt[N*i+j].y = minpix_tau;
-  }
-
-  //beta
-  if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
-    xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
-  }else{
-      xt[N*i+j].z = minpix_beta;
+      xt[N*i+j].y = minpix_alpha;
   }
 }
 
@@ -2002,12 +1979,10 @@ __global__ void evaluateXtNoPositivity(float2 *xt, float2 *pcom, float2 *xicom, 
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
-  //T
+  //I_nu_0
   xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
-  //tau
+  //alpha
   xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
-  //beta
-  xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
 }
 
 
@@ -2077,11 +2052,9 @@ __global__ void searchDirection(float2 *g, float2 *xi, float2 *h, long N)
 
   g[N*i+j].x = -xi[N*i+j].x;
   g[N*i+j].y = -xi[N*i+j].y;
-  g[N*i+j].z = -xi[N*i+j].z;
 
   xi[N*i+j].x = h[N*i+j].x = g[N*i+j].x;
   xi[N*i+j].y = h[N*i+j].y = g[N*i+j].y;
-  xi[N*i+j].z = h[N*i+j].z = g[N*i+j].z;
 }
 
 __global__ void newXi(float2 *g, float2 *xi, float2 *h, float gam, long N)
@@ -2091,11 +2064,9 @@ __global__ void newXi(float2 *g, float2 *xi, float2 *h, float gam, long N)
 
   g[N*i+j].x = -xi[N*i+j].x;
   g[N*i+j].y = -xi[N*i+j].y;
-  g[N*i+j].z = -xi[N*i+j].z;
 
   xi[N*i+j].x = h[N*i+j].x = g[N*i+j].x + gam * h[N*i+j].x;
   xi[N*i+j].y = h[N*i+j].y = g[N*i+j].y + gam * h[N*i+j].y;
-  xi[N*i+j].z = h[N*i+j].z = g[N*i+j].z + gam * h[N*i+j].z;
 }
 
 __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N)
@@ -2103,31 +2074,27 @@ __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float gg_T, gg_tau, gg_beta;
-  float dgg_T, dgg_tau, dgg_beta;
+  float gg_Inu_0, gg_alpha;
+  float dgg_Inu_0, dgg_alpha;
 
-  gg_T = g[N*i+j].x * g[N*i+j].x;
-  gg_tau = g[N*i+j].y * g[N*i+j].y;
-  gg_beta = g[N*i+j].z * g[N*i+j].z;
+  gg_Inu_0 = g[N*i+j].x * g[N*i+j].x;
+  gg_alpha = g[N*i+j].y * g[N*i+j].y;
 
-  dgg_T = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
-  dgg_tau = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
-  dgg_beta = (xi[N*i+j].z + g[N*i+j].z) * xi[N*i+j].z;
+  dgg_Inu_0 = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
+  dgg_alpha = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
 
-  gg[N*i+j] = gg_T + gg_tau + gg_beta;
-  dgg[N*i+j] = dgg_T + dgg_tau + dgg_beta;
+  gg[N*i+j] = gg_Inu_0 + gg_alpha;
+  dgg[N*i+j] = dgg_Inu_0 + dgg_alpha;
 }
 
 __global__ void restartDPhi(float2 *dChi2, float *dS, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
-  //T
+  //I_nu_0
   dChi2[N*i+j].x = 0.0;
-  //tau
+  //alpha
   dChi2[N*i+j].y = 0.0;
-  //beta
-  dChi2[N*i+j].z = 0.0;
 
   dS[N*i+j] = 0.0;
 
@@ -2217,7 +2184,6 @@ __global__ void DChi2(float *noise, float2 *dChi2, cufftComplex *Vr, float *U, f
   dchi2 *= fg_scale * atten;
   dChi2[N*i+j].x = dchi2;
   dChi2[N*i+j].y = dchi2;
-  dChi2[N*i+j].z = dchi2;
   }
 }
 
@@ -2234,7 +2200,6 @@ __global__ void DChi2_total_0(float *noise, float2 *dchi2_total, float2 *dchi2, 
 
   T = I[N*i+j].x;
   tau = I[N*i+j].y;
-  beta = I[N*i+j].z;
 
   Im_nu = I_nu[N*i+j].x;
 
@@ -2251,16 +2216,13 @@ __global__ void DChi2_total_0(float *noise, float2 *dchi2_total, float2 *dchi2, 
     {
       dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
       dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j].z + lambda * dS[N*i+j]) * dbeta * 0.f;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
       dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
-      dchi2_total[N*i+j].z += dchi2[N*i+j].z * dbeta * 0.f;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;
     dchi2_total[N*i+j].y += 0.f;
-    dchi2_total[N*i+j].z += 0.f;
   }
 }
 
@@ -2275,7 +2237,6 @@ __global__ void DChi2_total(float *noise, float2 *dchi2_total, float2 *dchi2, cu
 
   T = I[N*i+j].x;
   tau = I[N*i+j].y;
-  beta = I[N*i+j].z;
 
   Im_nu = I_nu[N*i+j].x;
 
@@ -2303,33 +2264,23 @@ __global__ void DChi2_total(float *noise, float2 *dchi2_total, float2 *dchi2, cu
 }
 
 
-__global__ void calculateInu(cufftComplex *I_nu, float2 *image3, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, float minpix, long N)
+__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, float minpix, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_num, I_den, T, tau, beta, nudiv, nudiv_pow_beta, local_I_nu;
+  float I_nu_0, alpha, nudiv_pow_alpha, nudiv;
 
   float pix2 = -DELTAX * RPDEG * -DELTAX * RPDEG;
 
-  float nu3 = nu * nu * nu;
-
   nudiv = nu/nu_0;
 
-  T = image3[N*i+j].x;
-  tau = image3[N*i+j].y;
+  I_nu_0 = image2[N*i+j].x;
+  alpha = image2[N*i+j].y;
 
-  nudiv_pow_beta = powf(nudiv, beta);
+  nudiv_pow_alpha = powf(nudiv, alpha);
 
-  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
-  float exp_value = expf(exp_parameter);
-
-  I_num = 2 * CPLANCK * nu3 * (1-expf(-tau * nudiv_pow_beta));
-  I_den = LIGHTSPEED * LIGHTSPEED * (exp_value - 1);
-
-  local_I_nu = I_num / I_den;
-
-  I_nu[N*i+j].x = local_I_nu * 1E26 * pix2 / fg_scale;
+  I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha / fg_scale;
 
   if(I_nu[N*i+j].x < minpix){
     I_nu[N*i+j].x = minpix;
@@ -2340,8 +2291,8 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image3, float nu, float
 
 __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, int option)
 {
-  fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointerI_nu, *fpointer;
-	int statusI_nu_0 = 0, statusalpha = 0, statusI_nu = 0, status = 0;
+  fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
+	int statusI_nu_0 = 0, statusalpha = 0, status = 0;
 	long fpixel = 1;
 	long elements = M*N;
 	char *Inu_0_name;
@@ -2376,7 +2327,7 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
   switch(option){
     case 0:
       needed_alpha = snprintf(NULL, 0, "!%s_alpha.fits", out_image) + 1;
-      alphaname = (char*)malloc(needed_T*sizeof(char));
+      alphaname = (char*)malloc(needed_alpha*sizeof(char));
       snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha.fits", out_image);
       break;
     case 1:
@@ -2393,14 +2344,14 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
 
   switch(option){
     case 0:
-      needed_tau = snprintf(NULL, 0, "!%s_tau_0.fits", out_image) + 1;
-      tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%s_tau_0.fits", out_image);
+      needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0.fits", out_image) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);
       break;
     case 1:
-      needed_tau = snprintf(NULL, 0, "!%stau_0_%d.fits" , mempath, iteration) + 1;
-      tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%stau_0_%d.fits", mempath, iteration);
+      needed_I_nu_0 = snprintf(NULL, 0, "!%stau_0_%d.fits" , mempath, iteration) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_name_0_%d.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -2427,71 +2378,60 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
       goToError();
   }
 
-  fits_create_file(&fpointerT, Tname, &statusT);
-  fits_create_file(&fpointertau, tauname, &statustau);
-  fits_create_file(&fpointerbeta, betaname, &statusbeta);
+  fits_create_file(&fpointerI_nu_0, Inu_0_name, &statusI_nu_0);
+  fits_create_file(&fpointeralpha, alphaname, &statusalpha);
   fits_create_file(&fpointer, I_nu_name, &status);
 
-  if (statusT || statustau || statusbeta || status) {
+  if (statusI_nu_0 || statusalpha || status) {
     fits_report_error(stderr, status); /* print error message */
-    goToError();
   }
 
-  fits_copy_header(mod_in, fpointerT, &statusT);
-  fits_copy_header(mod_in, fpointertau, &statustau);
-  fits_copy_header(mod_in, fpointerbeta, &statusbeta);
+  fits_copy_header(mod_in, fpointerI_nu_0, &statusI_nu_0);
+  fits_copy_header(mod_in, fpointeralpha, &statusalpha);
   fits_copy_header(mod_in, fpointer, &status);
 
-  if (statusT || statustau || statusbeta || status) {
-    //fits_report_error(stderr, status); /* print error message */
-    goToError();
+  if (statusI_nu_0 || statusalpha || status) {
+    fits_report_error(stderr, status); /* print error message */
   }
 
-  fits_update_key(fpointerT, TSTRING, "BUNIT", Tunit, "Unit of measurement", &statusT);
-  fits_update_key(fpointertau, TSTRING, "BUNIT", tauunit, "Unit of measurement", &statustau);
-  fits_update_key(fpointerbeta, TSTRING, "BUNIT", betaunit, "Unit of measurement", &statusbeta);
-  fits_update_key(fpointer, TSTRING, "BUNIT", I_nu_unit, "Unit of measurement", &status);
+  fits_update_key(fpointerI_nu_0, TSTRING, "BUNIT", I_unit, "Unit of measurement", &statusI_nu_0);
+  fits_update_key(fpointeralpha, TSTRING, "BUNIT", alphaunit, "Unit of measurement", &statusalpha);
+  fits_update_key(fpointer, TSTRING, "BUNIT", I_unit, "Unit of measurement", &status);
 
   int x = M-1;
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
 		    host_Inu[N*y+x] = host_Iout[N*i+j].x * fg_scale;
-        host_T[N*y+x] = host_3Iout[N*i+j].x; //* fg_scale;
-        host_tau[N*y+x] = host_3Iout[N*i+j].y; //* fg_scale;
+        host_I_nu_0[N*y+x] = host_2Iout[N*i+j].x; //* fg_scale;
+        host_alpha[N*y+x] = host_2Iout[N*i+j].y; //* fg_scale;
         x--;
 		}
     x=M-1;
     y--;
 	}
 
-  fits_write_img(fpointerT, TFLOAT, fpixel, elements, host_T, &statusT);
-  fits_write_img(fpointertau, TFLOAT, fpixel, elements, host_tau, &statustau);
-  fits_write_img(fpointerbeta, TFLOAT, fpixel, elements, host_beta, &statusbeta);
+  fits_write_img(fpointerI_nu_0, TFLOAT, fpixel, elements, host_Inu, &statusI_nu_0);
+  fits_write_img(fpointeralpha, TFLOAT, fpixel, elements, host_I_nu_0, &statusalpha);
   fits_write_img(fpointer, TFLOAT, fpixel, elements, host_Inu, &status);
-  if (statusT || statustau || statusbeta || status) {
-    //fits_report_error(stderr, status); /* print error message */
-    goToError();
+  if (statusI_nu_0 || statusalpha || status) {
+    fits_report_error(stderr, status); /* print error message */
   }
-	fits_close_file(fpointerT, &status);
-  fits_close_file(fpointertau, &status);
-  fits_close_file(fpointerbeta, &status);
+	fits_close_file(fpointerI_nu_0, &status);
+  fits_close_file(fpointeralpha, &status);
   fits_close_file(fpointer, &status);
-  if (statusT || statustau || statusbeta || status) {
-    //fits_report_error(stderr, status); /* print error message */
-    goToError();
+  if (statusI_nu_0 || statusalpha || status) {
+    fits_report_error(stderr, status); /* print error message */
   }
   free(host_Inu);
-  free(host_T);
-  free(host_tau);
-  free(host_beta);
+  free(host_I_nu_0);
+  free(host_alpha);
   free(host_Iout);
-  free(host_3Iout);
+  free(host_2Iout);
 
   free(I_nu_name);
-  free(betaname);
-  free(tauname);
-  free(Tname);
+  free(alphaname);
+  free(Inu_0_name);
 
 
 }
@@ -2509,11 +2449,11 @@ __host__ float chiCuadrado(float2 *I)
   float resultS  = 0.0;
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N);
+    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, minInu_0);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut);
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, minInu_0);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
@@ -2715,7 +2655,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   }
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N);
+    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, minInu_0);
     gpuErrchk(cudaDeviceSynchronize());
   }
 

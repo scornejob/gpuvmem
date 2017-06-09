@@ -41,7 +41,7 @@ cufftComplex *device_V, *device_Inu;
 
 float2 *device_dphi, *device_dchi2_total, *device_2I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, minInu_0;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
 
 dim3 threadsPerBlockNN;
@@ -412,8 +412,6 @@ __host__ int main(int argc, char **argv) {
 	deltav = 1.0 / (N * deltay);
 
 
-
-	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
@@ -437,6 +435,7 @@ __host__ int main(int argc, char **argv) {
     }
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
+	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
   int anynull;
   long fpixel = 1;
   float null = 0.;
@@ -446,8 +445,7 @@ __host__ int main(int argc, char **argv) {
   float peak;
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
-  //fits_report_error(stderr, statustau); /* print error message */
-  //printf("status: %d\n", statustau);
+  minInu_0 = *std::min_element(input_Inu_0,input_Inu_0+(M*N));
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
@@ -459,6 +457,7 @@ __host__ int main(int argc, char **argv) {
     x=M-1;
     y--;
 	}
+  
   free(input_Inu_0);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
