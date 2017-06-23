@@ -45,6 +45,7 @@ extern int verbose_flag;
 
 #define EPS 1.0e-10
 extern int it_maximum;
+int flag_opt;
 
 #define ALPHA 1.e-4
 
@@ -52,12 +53,12 @@ extern int it_maximum;
 #define FREEALL cudaFree(device_gg_vector);cudaFree(device_dgg_vector);cudaFree(xi);cudaFree(device_h);cudaFree(device_g);
 
 
-__host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*), void (*dfunc)(float2*, float2*))
+__host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*), void (*dfunc)(float2*, float2*), int flag)
 {
   float gg, dgg, gam, fp;
   float2 *device_g, *device_h, *xi;
   double start, end;
-
+  flag_opt = flag;
 
   //////////////////////MEMORY GPU//////////////////////////
   gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float2)*M*N));

@@ -451,7 +451,7 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
-        host_2I[N*i+j].y = 0.1;
+        host_2I[N*i+j].y = 3.5;
         x--;
 		}
     x=M-1;
@@ -658,7 +658,18 @@ __host__ int main(int argc, char **argv) {
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
-	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado);
+  int alpha_opt = 1;
+
+	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, alpha_opt);
+  chiCuadrado(device_2I);
+  alpha_opt = 0;
+  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, alpha_opt);
+  chiCuadrado(device_2I);
+  alpha_opt = 1;
+  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, alpha_opt);
+  chiCuadrado(device_2I);
+  alpha_opt = 0;
+  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, alpha_opt);
   chiCuadrado(device_2I);
   t = clock() - t;
   end = omp_get_wtime();
