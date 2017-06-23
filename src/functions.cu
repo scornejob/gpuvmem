@@ -1889,7 +1889,7 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
 
   if(noise[N*i+j] > noise_cut){
     I[N*i+j].x = minpix;
-    I[N*i+j].y = minpix_alpha;
+    //I[N*i+j].y = minpix_alpha;
   }
 
 }
@@ -1903,10 +1903,10 @@ __global__ void clip2I(float2 *I, long N, float minpix)
   if(I[N*i+j].x < minpix){
       I[N*i+j].x = minpix;
   }
-  //alpha
+  /*//alpha
   if(I[N*i+j].y < minpix_alpha){
       I[N*i+j].y = minpix_alpha;
-  }
+  }*/
 }
 
 __global__ void clip(cufftComplex *I, long N, float MINPIX)
@@ -1935,13 +1935,15 @@ __global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix)
     p[N*i+j].x = minpix;
     xi[N*i+j].x = 0.0;
   }
-  //alpha
+
+  p[N*i+j].y += xi[N*i+j].y;
+  /*//alpha
   if(p[N*i+j].y + xi[N*i+j].y > minpix_alpha){
     p[N*i+j].y += xi[N*i+j].y;
   }else{
     p[N*i+j].y = minpix_alpha;
     xi[N*i+j].y = 0.0;
-  }
+  }*/
 
 }
 
@@ -1967,12 +1969,14 @@ __global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, lon
   }else{
       xt[N*i+j].x = minpix;
   }
+
+  xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
   //alpha
-  if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_alpha){
+  /*if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_alpha){
     xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
   }else{
       xt[N*i+j].y = minpix_alpha;
-  }
+  }*/
 }
 
 __global__ void evaluateXtNoPositivity(float2 *xt, float2 *pcom, float2 *xicom, float x, long N)
@@ -2191,34 +2195,27 @@ __global__ void DChi2(float *noise, float2 *dChi2, cufftComplex *Vr, float *U, f
 
 __global__ void DChi2_total_0(float *noise, float2 *dchi2_total, float2 *dchi2, cufftComplex *I_nu, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float Im_nu, T, tau, beta, dT, dtau, dbeta;
+  float I_nu_0, alpha, dalpha, dI_nu_0;
   float nudiv = nu/nu_0;
 
-  T = I[N*i+j].x;
-  tau = I[N*i+j].y;
+  I_nu_0 = I[N*i+j].x;
+  alpha = I[N*i+j].y;
 
-  Im_nu = I_nu[N*i+j].x;
+  dI_nu_0 = powf(nudiv, alpha);
+  dalpha = dI_nu_0 * I_nu_0 * alpha / nudiv;
 
-  float nudiv_pow_beta = powf(nudiv, beta);
-
-  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
-
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
-  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
-  dbeta = dtau * tau * logf(nudiv);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dI_nu_0;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dalpha;
     }else{
-      dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
-      dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
+      dchi2_total[N*i+j].x += dchi2[N*i+j].x * dI_nu_0;
+      dchi2_total[N*i+j].y += dchi2[N*i+j].y * dalpha;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;
@@ -2232,30 +2229,24 @@ __global__ void DChi2_total(float *noise, float2 *dchi2_total, float2 *dchi2, cu
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau, beta, dT, dtau, dbeta;
+  float I_nu_0, alpha, dalpha, dI_nu_0;
   float nudiv = nu/nu_0;
 
-  T = I[N*i+j].x;
-  tau = I[N*i+j].y;
+  I_nu_0 = I[N*i+j].x;
+  alpha = I[N*i+j].y;
 
-  Im_nu = I_nu[N*i+j].x;
+  dI_nu_0 = powf(nudiv, alpha);
+  dalpha = dI_nu_0 * I_nu_0 * alpha / nudiv;
 
-  float nudiv_pow_beta = powf(nudiv, beta);
-
-  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
-
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
-  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
-  dbeta = dtau * tau * logf(nudiv);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dT;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dtau;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dI_nu_0;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dalpha;
     }else{
-      dchi2_total[N*i+j].x += dchi2[N*i+j].x * dT;
-      dchi2_total[N*i+j].y += dchi2[N*i+j].y * dtau;
+      dchi2_total[N*i+j].x += dchi2[N*i+j].x * dI_nu_0;
+      dchi2_total[N*i+j].y += dchi2[N*i+j].y * dalpha;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;
@@ -2349,9 +2340,9 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
       snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);
       break;
     case 1:
-      needed_I_nu_0 = snprintf(NULL, 0, "!%stau_0_%d.fits" , mempath, iteration) + 1;
+      needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits" , mempath, iteration) + 1;
       Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_name_0_%d.fits", mempath, iteration);
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
       break;
     case -1:
       break;
@@ -2411,8 +2402,8 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
     y--;
 	}
 
-  fits_write_img(fpointerI_nu_0, TFLOAT, fpixel, elements, host_Inu, &statusI_nu_0);
-  fits_write_img(fpointeralpha, TFLOAT, fpixel, elements, host_I_nu_0, &statusalpha);
+  fits_write_img(fpointerI_nu_0, TFLOAT, fpixel, elements, host_I_nu_0, &statusI_nu_0);
+  fits_write_img(fpointeralpha, TFLOAT, fpixel, elements, host_alpha, &statusalpha);
   fits_write_img(fpointer, TFLOAT, fpixel, elements, host_Inu, &status);
   if (statusI_nu_0 || statusalpha || status) {
     fits_report_error(stderr, status); /* print error message */
