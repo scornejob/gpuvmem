@@ -680,7 +680,15 @@ __host__ int main(int argc, char **argv) {
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
-	frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado);
+	frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  chiCuadrado(device_3I);
+  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  chiCuadrado(device_3I);
+  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  chiCuadrado(device_3I);
+  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  chiCuadrado(device_3I);
+  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
   t = clock() - t;
   end = omp_get_wtime();
