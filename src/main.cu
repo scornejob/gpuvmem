@@ -682,14 +682,14 @@ __host__ int main(int argc, char **argv) {
 	float fret = 0.0;
 	frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
-  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
   frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
-  frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_3I);
   frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
+  /*frprmn(device_3I	, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
+  chiCuadrado(device_3I);*/
   t = clock() - t;
   end = omp_get_wtime();
   printf("Minimization ended successfully\n\n");
