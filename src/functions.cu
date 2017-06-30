@@ -2195,7 +2195,7 @@ __global__ void DChi2(float *noise, float2 *dChi2, cufftComplex *Vr, float *U, f
 
 
 
-__global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float2 *dchi2, cufftComplex *I_nu, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N)
+__global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float2 *dchi2, cufftComplex *I_nu, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2213,8 +2213,8 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float2 *dch
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dI_nu_0 * 0.f;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dalpha;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + dS[N*i+j]) * dI_nu_0 * 0.f;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + dS[N*i+j]) * dalpha;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j].x * dI_nu_0 * 0.f;
       dchi2_total[N*i+j].y += dchi2[N*i+j].y * dalpha;
@@ -2225,7 +2225,7 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float2 *dch
   }
 }
 
-__global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float2 *dchi2, cufftComplex *I_nu, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float RPDEG, long N)
+__global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float2 *dchi2, cufftComplex *I_nu, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, long N)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2244,8 +2244,8 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float2 *dc
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + lambda * dS[N*i+j]) * dI_nu_0;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + lambda * dS[N*i+j]) * dalpha * 0.f;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j].x + dS[N*i+j]) * dI_nu_0;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j].y + dS[N*i+j]) * dalpha * 0.f;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j].x * dI_nu_0;
       dchi2_total[N*i+j].y += dchi2[N*i+j].y * dalpha * 0.f;
@@ -2257,14 +2257,12 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float2 *dc
 }
 
 
-__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float DELTAX, float RPDEG, float minpix, long N)
+__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float I_nu_0, alpha, nudiv_pow_alpha, nudiv;
-
-  float pix2 = -DELTAX * RPDEG * -DELTAX * RPDEG;
 
   nudiv = nu/nu_0;
 
@@ -2304,7 +2302,7 @@ __host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, 
 
   cufftComplex *I_out;
   gpuErrchk(cudaMalloc((void**)&I_out, sizeof(cufftComplex)*M*N));
-  calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(I_out, I, nu, nu_0, fg_scale, DELTAX, RPDEG, MINPIX, N);
+  calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(I_out, I, nu, nu_0, fg_scale, MINPIX, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemcpy2D(host_Iout, sizeof(cufftComplex), I_out, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
@@ -2459,7 +2457,7 @@ __host__ float chiCuadrado(float2 *I)
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, MINPIX, N);
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
@@ -2542,7 +2540,7 @@ __host__ float chiCuadrado(float2 *I)
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, MINPIX, N);
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
@@ -2665,7 +2663,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, MINPIX, N);
+            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
             gpuErrchk(cudaDeviceSynchronize());
 
             if(clip_flag){
@@ -2698,10 +2696,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
             gpuErrchk(cudaDeviceSynchronize());
 
             if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
+              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
+              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }
 
@@ -2722,7 +2720,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
 
         gpuErrchk(cudaMemset(fields[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
 
-        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, RPDEG, MINPIX, N);
+        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
 
         if(clip_flag){
@@ -2758,10 +2756,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
           #pragma omp critical
           {
             if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
+              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, RPDEG, N);
+              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }
 
