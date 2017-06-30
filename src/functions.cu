@@ -1916,9 +1916,9 @@ __global__ void clip3I(float3 *I, long N)
       I[N*i+j].y = minpix_tau;
   }
   //beta
-  if(I[N*i+j].z < minpix_beta){
+  /*if(I[N*i+j].z < minpix_beta){
       I[N*i+j].z = minpix_beta;
-  }
+  }*/
 }
 
 __global__ void clip(cufftComplex *I, long N, float MINPIX)
@@ -1956,12 +1956,13 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N)
     xi[N*i+j].y = 0.0;
   }
   //beta
-  if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
+  p[N*i+j].z += xi[N*i+j].z;
+  /*if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
     p[N*i+j].z = minpix_beta;
     xi[N*i+j].z = 0.0;
-  }
+  }*/
 
 
 }
@@ -1997,12 +1998,13 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
       xt[N*i+j].y = minpix_tau;
   }
 
+  xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   //beta
-  if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
+  /*if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
       xt[N*i+j].z = minpix_beta;
-  }
+  }*/
 }
 
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N)
@@ -2245,9 +2247,9 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float3 *dchi
 
   float nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
+  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
+  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
@@ -2286,9 +2288,9 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float3 *dchi2
 
   float nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
+  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
+  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
@@ -2327,9 +2329,9 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float3 *dchi2, 
 
   float nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (-CPLANCK * nu)/ (CBOLTZMANN * T);
+  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(exp_parameter)));
+  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
