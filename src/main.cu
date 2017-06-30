@@ -473,7 +473,7 @@ __host__ int main(int argc, char **argv) {
       }else{
         host_3I[N*i+j].y = minpix_tau;
       }
-      host_3I[N*i+j].z = minpix_beta; // beta
+      host_3I[N*i+j].z = 1.5; // beta
       x--;
 		}
     x=M-1;
