@@ -1897,7 +1897,7 @@ __global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut)
   if(noise[N*i+j] > noise_cut){
     I[N*i+j].x = minpix_T;
     I[N*i+j].y = minpix_tau;
-    I[N*i+j].z = minpix_beta;
+    /*I[N*i+j].z = minpix_beta;*/
   }
 
 }
@@ -1916,9 +1916,9 @@ __global__ void clip3I(float3 *I, long N)
       I[N*i+j].y = minpix_tau;
   }
   //beta
-  if(I[N*i+j].z < minpix_T){
+  /*if(I[N*i+j].z < minpix_T){
       I[N*i+j].z = minpix_T;
-  }
+  }*/
 }
 
 __global__ void clip(cufftComplex *I, long N, float MINPIX)
@@ -1956,12 +1956,13 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N)
     xi[N*i+j].y = 0.0;
   }
   //beta
-  if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
+  p[N*i+j].z += xi[N*i+j].z;
+  /*if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
     p[N*i+j].z = minpix_beta;
     xi[N*i+j].z = 0.0;
-  }
+  }*/
 
 
 }
@@ -1998,11 +1999,12 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
   }
 
   //beta
-  if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
+  xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
+  /*if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
       xt[N*i+j].z = minpix_beta;
-  }
+  }*/
 }
 
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N)
