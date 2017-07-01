@@ -81,7 +81,7 @@ typedef struct observedVisibilities{
 
 typedef struct variablesPerFreq{
   float *chi2;
-  float2 *dchi2;
+  float *dchi2;
   cufftHandle plan;
   cufftComplex *device_Inu;
   cufftComplex *device_V;
