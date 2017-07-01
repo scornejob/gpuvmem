@@ -37,7 +37,7 @@ status_mod_in, verbose_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, se
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
 
-extern float3 *device_dphi, *device_dchi2_total, *device_3I;
+extern float3 *device_dchi2_total, *device_3I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
 minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, freqavg;
@@ -2298,11 +2298,11 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
     {
       dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT * 0.f;
       dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * 0.f;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta * 0.f;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j] * dT * 0.f;
       dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau;
-      dchi2_total[N*i+j].z += dchi2[N*i+j] * 0.f;
+      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta * 0.f;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;

@@ -39,7 +39,7 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_V, *device_Inu;
 
-float3 *device_dphi, *device_dchi2_total, *device_3I;
+float3 *device_dchi2_total, *device_3I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
@@ -513,9 +513,6 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMalloc((void**)&device_weight_image, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_weight_image, 0, sizeof(cufftComplex)*M*N));
 
-	gpuErrchk(cudaMalloc((void**)&device_dphi, sizeof(float3)*M*N));
-  gpuErrchk(cudaMemset(device_dphi, 0, sizeof(float3)*M*N));
-
 	gpuErrchk(cudaMalloc((void**)&device_dchi2_total, sizeof(float3)*M*N));
   gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float3)*M*N));
 
@@ -797,7 +794,6 @@ __host__ int main(int argc, char **argv) {
 
 	cudaFree(device_noise_image);
 
-	cudaFree(device_dphi);
 	cudaFree(device_dchi2_total);
 	cudaFree(device_dS);
 
