@@ -63,7 +63,7 @@ const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.626070040E-34;
 const float minpix_T = 1.0;
 const float minpix_tau = 1E-6;
-const float minpix_beta = 1.5;
+const float minpix_beta = 0.5;
 
 
 typedef struct observedVisibilities{
@@ -83,7 +83,7 @@ typedef struct observedVisibilities{
 
 typedef struct variablesPerFreq{
   float *chi2;
-  float3 *dchi2;
+  float *dchi2;
   cufftHandle plan;
   cufftComplex *device_Inu;
   cufftComplex *device_V;
