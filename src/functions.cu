@@ -2235,8 +2235,8 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau, beta, dT, dtau, dbeta;
-  float nudiv = nu/nu_0;
+  float Im_nu, T, tau, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter;
+  nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
   tau = I[N*i+j].y;
@@ -2244,12 +2244,12 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
 
   Im_nu = I_nu[N*i+j].x;
 
-  float nudiv_pow_beta = powf(nudiv, beta);
+  nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
+  exp_parameter = CPLANCK * nu / (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
-  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
+  dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
+  dtau = Im_nu * nudiv_pow_beta / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
   if(noise[N*i+j] <= noise_cut){
@@ -2276,8 +2276,8 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau, beta, dT, dtau, dbeta;
-  float nudiv = nu/nu_0;
+  float Im_nu, T, tau, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter;
+  nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
   tau = I[N*i+j].y;
@@ -2285,12 +2285,12 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
 
   Im_nu = I_nu[N*i+j].x;
 
-  float nudiv_pow_beta = powf(nudiv, beta);
+  nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
+  exp_parameter = CPLANCK * nu / (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
-  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
+  dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
+  dtau = Im_nu * nudiv_pow_beta / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
   if(noise[N*i+j] <= noise_cut){
@@ -2317,8 +2317,8 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau, beta, dT, dtau, dbeta;
-  float nudiv = nu/nu_0;
+  float Im_nu, T, tau, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter;
+  nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
   tau = I[N*i+j].y;
@@ -2326,12 +2326,12 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
 
   Im_nu = I_nu[N*i+j].x;
 
-  float nudiv_pow_beta = powf(nudiv, beta);
+  nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
+  exp_parameter = CPLANCK * nu / (CBOLTZMANN * T);
 
-  dT = (Im_nu * CPLANCK * nu) / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
-  dtau = (Im_nu * nudiv_pow_beta) / (expf(tau * nudiv_pow_beta) - 1);
+  dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
+  dtau = Im_nu * nudiv_pow_beta / (expf(tau * nudiv_pow_beta) - 1);
   dbeta = dtau * tau * logf(nudiv);
 
   if(noise[N*i+j] <= noise_cut){
@@ -2359,10 +2359,11 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float I_num, I_den, T, tau, beta, nudiv, nudiv_pow_beta, local_I_nu;
+  float pix2, nu3, exp_parameter, exp_value;
 
-  float pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
+  pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
 
-  float nu3 = nu * nu * nu;
+  nu3 = nu * nu * nu;
 
   nudiv = nu/nu_0;
 
@@ -2372,8 +2373,8 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 
   nudiv_pow_beta = powf(nudiv, beta);
 
-  float exp_parameter = (CPLANCK * nu)/ (CBOLTZMANN * T);
-  float exp_value = expf(exp_parameter);
+  exp_parameter = CPLANCK * nu / (CBOLTZMANN * T);
+  exp_value = expf(exp_parameter);
 
   I_num = 2 * CPLANCK * nu3 * (1-expf(-tau * nudiv_pow_beta));
   I_den = LIGHTSPEED * LIGHTSPEED * (exp_value - 1);
