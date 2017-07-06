@@ -2119,7 +2119,6 @@ __global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N
   gg_tau = g[N*i+j].y * g[N*i+j].y;
   gg_beta = g[N*i+j].z * g[N*i+j].z;
 
-  if (i==242 & j==277) printf("beta :%e\n", xi[N*i+j].z);
 
   dgg_T = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
   dgg_tau = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
@@ -2257,7 +2256,8 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
-    printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+    printf("nu : %e, dbeta : %e\n", nu, dbeta);
+    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2302,7 +2302,8 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
-    printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+    printf("nu : %e, dbeta : %e\n", nu, dbeta);
+    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2347,7 +2348,8 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
   //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
-    printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+    printf("nu : %e, dbeta : %e\n", nu, dbeta);
+    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
