@@ -2195,12 +2195,12 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
 
 
 
-__global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, long N)
+__global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float fg_scale, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_nu_0, alpha, dalpha, dI_nu_0;
+  float I_nu_0, alpha, dalpha, dI_nu_0, dalpha_test;
   float nudiv = nu/nu_0;
 
   I_nu_0 = I[N*i+j].x;
@@ -2208,7 +2208,8 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
 
   dI_nu_0 = powf(nudiv, alpha);
   dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
-
+  dalpha_test = dI_nu_0 * (I_nu_0/fg_scale) * logf(nudiv);
+  if (i==242 & j==277) printf("nu: %e, alpha :%e\n", nu, dalpha_test);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
@@ -2225,13 +2226,13 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
   }
 }
 
-__global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, long N)
+__global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float fg_scale, long N)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_nu_0, alpha, dalpha, dI_nu_0;
+  float I_nu_0, alpha, dalpha, dI_nu_0, dalpha_test;
   float nudiv = nu/nu_0;
 
   I_nu_0 = I[N*i+j].x;
@@ -2239,8 +2240,8 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
 
   dI_nu_0 = powf(nudiv, alpha);
   dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
-
-  if (i==242 & j==277) printf("nu: %e, alpha :%e\n", nu, dalpha);
+  dalpha_test = dI_nu_0 * (I_nu_0/fg_scale) * logf(nudiv);
+  if (i==242 & j==277) printf("nu: %e, alpha :%e\n", nu, dalpha_test);
 
 
   if(noise[N*i+j] <= noise_cut){
@@ -2698,10 +2699,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
             gpuErrchk(cudaDeviceSynchronize());
 
             if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
+              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, fg_scale, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
+              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, fg_scale, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }
 
@@ -2758,10 +2759,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
           #pragma omp critical
           {
             if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
+              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, fg_scale, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
+              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, fg_scale, N);
             	gpuErrchk(cudaDeviceSynchronize());
             }
 
