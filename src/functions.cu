@@ -2119,6 +2119,10 @@ __global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N
   gg_tau = g[N*i+j].y * g[N*i+j].y;
   gg_beta = g[N*i+j].z * g[N*i+j].z;
 
+  if(i==255, j=257){
+    printf("beta :%e\n", xi[N*i+j].z);
+  }
+
   dgg_T = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
   dgg_tau = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
   dgg_beta = (xi[N*i+j].z + g[N*i+j].z) * xi[N*i+j].z;
