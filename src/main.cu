@@ -451,7 +451,7 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
-        host_2I[N*i+j].y = 3.5;
+        host_2I[N*i+j].y = -2.0;
         x--;
 		}
     x=M-1;
