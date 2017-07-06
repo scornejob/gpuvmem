@@ -2089,9 +2089,7 @@ __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N
   dgg_Inu_0 = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
   dgg_alpha = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
 
-  if(i==255 && j==257){
-    printf("alpha: %e\n", xi[N*i+j].y);
-  }
+  //if (i==242 & j==277) printf("beta :%e\n", xi[N*i+j].y);
   gg[N*i+j] = gg_Inu_0 + gg_alpha;
   dgg[N*i+j] = dgg_Inu_0 + dgg_alpha;
 }
@@ -2241,6 +2239,8 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
 
   dI_nu_0 = powf(nudiv, alpha);
   dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
+
+  if (i==242 & j==277) printf("nu: %e, alpha :%e\n", nu, dalpha);
 
 
   if(noise[N*i+j] <= noise_cut){
