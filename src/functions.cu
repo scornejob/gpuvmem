@@ -2089,6 +2089,9 @@ __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N
   dgg_Inu_0 = (xi[N*i+j].x + g[N*i+j].x) * xi[N*i+j].x;
   dgg_alpha = (xi[N*i+j].y + g[N*i+j].y) * xi[N*i+j].y;
 
+  if(i==255 && j==257){
+    printf("alpha: %e\n", xi[N*i+j].y);
+  }
   gg[N*i+j] = gg_Inu_0 + gg_alpha;
   dgg[N*i+j] = dgg_Inu_0 + dgg_alpha;
 }
