@@ -2230,7 +2230,7 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
   }
 }
 
-__global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, long N)
+__global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float fg_scale, long N)
 {
 
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2243,7 +2243,7 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   tau_0 = I[N*i+j].y;
   beta = I[N*i+j].z;
 
-  Im_nu = I_nu[N*i+j].x;
+  Im_nu = I_nu[N*i+j].x * fg_scale;
 
   nudiv_pow_beta = powf(nudiv, beta);
 
@@ -2253,11 +2253,10 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
 
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
-  //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
     printf("nu : %e, dbeta : %e\n", nu, dbeta);
-    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2276,7 +2275,7 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   }
 }
 
-__global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, long N)
+__global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float fg_scale, long N)
 {
 
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2289,7 +2288,7 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   tau_0 = I[N*i+j].y;
   beta = I[N*i+j].z;
 
-  Im_nu = I_nu[N*i+j].x;
+  Im_nu = I_nu[N*i+j].x * fg_scale;
 
   nudiv_pow_beta = powf(nudiv, beta);
 
@@ -2299,11 +2298,10 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
 
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
-  //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
     printf("nu : %e, dbeta : %e\n", nu, dbeta);
-    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2322,7 +2320,7 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   }
 }
 
-__global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, long N)
+__global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float fg_scale, long N)
 {
 
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2335,7 +2333,7 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
   tau_0 = I[N*i+j].y;
   beta = I[N*i+j].z;
 
-  Im_nu = I_nu[N*i+j].x;
+  Im_nu = I_nu[N*i+j].x * fg_scale;
 
   nudiv_pow_beta = powf(nudiv, beta);
 
@@ -2345,11 +2343,10 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
 
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
-  //dbeta = dtau * tau * logf(nudiv);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
   if (i==242 & j==277)
     printf("nu : %e, dbeta : %e\n", nu, dbeta);
-    //printf("I_nu :%e, tau_nu: %e, log: %e, exp: %e\n", Im_nu, tau_nu, logf(nudiv), (expf(tau_nu)-1));
+
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2374,8 +2371,9 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_num, I_den, T, tau, beta, nudiv, nudiv_pow_beta, local_I_nu;
-  float pix2, nu3, exp_parameter, exp_value;
+  float T, tau_0, tau_nu, beta, nudiv, nudiv_pow_beta, local_I_nu;
+  float pix2, nu3, B_nu;
+  float exp_parameter, exp_value;
 
   pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
 
@@ -2384,22 +2382,21 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
   nudiv = nu/nu_0;
 
   T = image3[N*i+j].x;
-  tau = image3[N*i+j].y;
+  tau_0 = image3[N*i+j].y;
   beta = image3[N*i+j].z;
 
   nudiv_pow_beta = powf(nudiv, beta);
 
+  tau_nu = tau_0 * nudiv_pow_beta;
+
   exp_parameter = CPLANCK * nu / (CBOLTZMANN * T);
   exp_value = expf(exp_parameter);
 
-  I_num = 2 * CPLANCK * nu3 * (1-expf(-tau * nudiv_pow_beta));
-  I_den = LIGHTSPEED * LIGHTSPEED * (exp_value - 1);
+  B_nu = 2 * CPLANCK * nu3 / (LIGHTSPEED * LIGHTSPEED * (exp_value - 1));
 
-  local_I_nu = I_num / I_den;
+  local_I_nu = B_nu * (1-expf(-tau_nu));
 
   I_nu[N*i+j].x = local_I_nu * 1E26 * pix2 / fg_scale;
-
-  //if(i==0 && j==0) printf("%e\n", fg_scale);
 
   if(I_nu[N*i+j].x < minpix){
     I_nu[N*i+j].x = minpix;
@@ -2860,15 +2857,15 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
-                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
             }
@@ -2927,15 +2924,15 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
-                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, N);
+                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
 
