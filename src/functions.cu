@@ -2207,7 +2207,8 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
 
   dI_nu_0 = powf(nudiv, alpha);
   dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
-
+  if (i==242 & j==277)
+    printf("nu : %e, dalpha : %e\n", nu, dalpha);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
@@ -2238,6 +2239,9 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
 
   dI_nu_0 = powf(nudiv, alpha);
   dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
+
+  if (i==242 & j==277)
+    printf("nu : %e, dalpha : %e\n", nu, dalpha);
 
 
   if(noise[N*i+j] <= noise_cut){
