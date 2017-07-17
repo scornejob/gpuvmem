@@ -450,15 +450,7 @@ __host__ int main(int argc, char **argv) {
       goToError();
     }
   }
-	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 
-
-	for(int i=0;i<M;i++){
-		for(int j=0;j<N;j++){
-			host_I[N*i+j].x = MINPIX;
-			host_I[N*i+j].y = 0;
-		}
-	}
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){
@@ -646,6 +638,7 @@ __host__ int main(int argc, char **argv) {
 
 	fg_scale = noise_min;
 	noise_cut = noise_cut * noise_min;
+  MINPIX = MINPIX * fg_scale;
   if(verbose_flag){
 	   printf("fg_scale = %e\n", fg_scale);
      printf("difmap_noise = %e\n", difmap_noise);
@@ -657,6 +650,25 @@ __host__ int main(int argc, char **argv) {
   }
 
 
+  ////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
+
+
+  for(int i=0;i<M;i++){
+    for(int j=0;j<N;j++){
+      host_I[N*i+j].x = MINPIX;
+      host_I[N*i+j].y = 0;
+    }
+  }
+
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+	   cudaSetDevice(firstgpu);
+  }
+	gpuErrchk(cudaMalloc((void**)&device_I, sizeof(cufftComplex)*M*N));
+  gpuErrchk(cudaMemset(device_I, 0, sizeof(cufftComplex)*M*N));
+
+  gpuErrchk(cudaMemcpy2D(device_I, sizeof(cufftComplex), host_I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyHostToDevice));
 
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");

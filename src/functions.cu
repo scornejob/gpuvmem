@@ -1400,7 +1400,7 @@ __host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int 
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
       if(option == 0 || option == 1){
-			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
+			  image2D[N*y+x] = host_IFITS[N*i+j].x;
       }else{
         image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
         //image2D[N*x+y] = host_IFITS[N*i+j].y;
@@ -1755,7 +1755,7 @@ __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, 
     float atten = expf(-c*r*r);
 
     if(arc <= beam_cutoff){
-      image[N*i+j].x = fg_image[N*i+j].x * fg_scale * atten;
+      image[N*i+j].x = fg_image[N*i+j].x * atten;
       image[N*i+j].y = 0.0;
     }else{
       image[N*i+j].x = 0.0;
@@ -2152,7 +2152,7 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= fg_scale * atten;
+  dchi2 *= atten;
   dChi2[N*i+j] = dchi2;
   }
 }
@@ -2187,7 +2187,7 @@ __global__ void DChi2_XCORR(float *noise, float *dChi2, cufftComplex *Vr, float 
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= alpha * fg_scale * atten;
+  dchi2 *= alpha * atten;
   dChi2[N*i+j] = dchi2;
   }
 }
