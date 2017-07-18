@@ -2254,8 +2254,6 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
-  if (i==242 & j==277)
-    printf("nu : %e, dbeta : %e\n", nu, dbeta);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
@@ -2299,8 +2297,6 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
-  if (i==242 & j==277)
-    printf("nu : %e, dbeta : %e\n", nu, dbeta);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
@@ -2344,8 +2340,6 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / (expf(tau_nu) - 1);
   dbeta = Im_nu * tau_nu * logf(nudiv) / (expf(tau_nu)-1);
-  if (i==242 & j==277)
-    printf("nu : %e, dbeta : %e\n", nu, dbeta);
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
