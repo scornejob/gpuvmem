@@ -467,12 +467,13 @@ __host__ int main(int argc, char **argv) {
       }else{
         host_3I[N*i+j].x = input_T[N*y+x];
       }
-			//host_3I[N*i+j].x = peak/(1E26 * 2.0 * CBOLTZMANN * nu_0 * nu_0 / LIGHTSPEED * LIGHTSPEED); // T
-			if(2.0*(input_tau[N*y+x]/peak) > minpix_tau){
-			     host_3I[N*i+j].y = 2.0*(input_tau[N*y+x]/peak);  // tau
+
+      if(input_tau[N*y+x] > minpix_tau){
+	host_3I[N*i+j].y = input_tau[N*y+x];  // tau
       }else{
-        host_3I[N*i+j].y = minpix_tau;
+      	host_3I[N*i+j].y = minpix_tau;
       }
+
       host_3I[N*i+j].z = minpix_beta; // beta
       x--;
 		}
@@ -679,6 +680,8 @@ __host__ int main(int argc, char **argv) {
 	float fret = 0.0;
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
+  //changeBeta<<<numBlocksNN, threadsPerBlockNN>>>(device_3I, N);
+ // gpuErrchk(cudaDeviceSynchronize());
 	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
