@@ -1902,6 +1902,15 @@ __global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut)
 
 }
 
+__global__ void changeBeta(float3 *I, long N)
+{
+
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+	I[N*i+j].z = 2.0;
+}
+
 __global__ void clip3I(float3 *I, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2236,7 +2245,7 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
+  float Im_nu, pix2, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
   nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
@@ -2245,6 +2254,8 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
 
   Im_nu = I_nu[N*i+j].x * fg_scale;
 
+  pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
+  
   nudiv_pow_beta = powf(nudiv, beta);
 
   tau_nu = tau_0 * nudiv_pow_beta;
@@ -2256,6 +2267,8 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / dtau_dbeta_den;
   dbeta = Im_nu * tau_nu * logf(nudiv) / dtau_dbeta_den;
+
+  //dbeta /= pix2;
 
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
@@ -2281,7 +2294,7 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
+  float Im_nu, pix2, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
   nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
@@ -2290,6 +2303,8 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
 
   Im_nu = I_nu[N*i+j].x * fg_scale;
 
+  pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
+  
   nudiv_pow_beta = powf(nudiv, beta);
 
   tau_nu = tau_0 * nudiv_pow_beta;
@@ -2301,7 +2316,7 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / dtau_dbeta_den;
   dbeta = Im_nu * tau_nu * logf(nudiv) / dtau_dbeta_den;
-
+  //dbeta /= pix2;
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
@@ -2326,7 +2341,7 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Im_nu, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
+  float Im_nu, pix2, T, tau_0, tau_nu, beta, dT, dtau, dbeta, nudiv, nudiv_pow_beta, exp_parameter, dtau_dbeta_den;
   nudiv = nu/nu_0;
 
   T = I[N*i+j].x;
@@ -2334,6 +2349,8 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
   beta = I[N*i+j].z;
 
   Im_nu = I_nu[N*i+j].x * fg_scale;
+  
+  pix2 = DELTAX * RPDEG * DELTAX * RPDEG;
 
   nudiv_pow_beta = powf(nudiv, beta);
 
@@ -2346,7 +2363,7 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
   dT = Im_nu * CPLANCK * nu / (CBOLTZMANN * T * T * (1-expf(-exp_parameter)));
   dtau = Im_nu * nudiv_pow_beta / dtau_dbeta_den;
   dbeta = Im_nu * tau_nu * logf(nudiv) / dtau_dbeta_den;
-
+  //dbeta /= pix2;
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {

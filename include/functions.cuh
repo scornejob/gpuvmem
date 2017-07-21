@@ -156,6 +156,7 @@ __host__ float deviceReduce(float *in, long N);
 
 
 
+__global__ void changeBeta(float3 *I, long N);
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
