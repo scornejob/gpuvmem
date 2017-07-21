@@ -681,7 +681,7 @@ __host__ int main(int argc, char **argv) {
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
   //changeBeta<<<numBlocksNN, threadsPerBlockNN>>>(device_3I, N);
- // gpuErrchk(cudaDeviceSynchronize());
+  //gpuErrchk(cudaDeviceSynchronize());
 	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
