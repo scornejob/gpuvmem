@@ -63,8 +63,6 @@ const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.626070040E-34;
 const float minpix_T = 1.0;
 const float minpix_tau = 1E-6;
-const float minpix_beta = 1.5;
-
 
 typedef struct observedVisibilities{
   float *u;
@@ -129,6 +127,7 @@ typedef struct variables {
   float lambda;
   float minpix;
   float nu_0;
+  float beta_start;
 } Vars;
 
 __host__ void goToError();
@@ -148,7 +147,7 @@ __host__ void Print2DIntArray(int rows, int cols, int *array);
 __host__ void Print2DComplex(int rows, int cols, cufftComplex *data, bool cufft_symmetry);
 __host__ void toFitsFloat(float *I, int iteration, long M, long N, int option);
 __host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int option);
-__host__ void float3toImage(float3 *I, float nu, int iteration, long M, long N, int option);
+__host__ void float3toImage(float3 *I, int iteration, long M, long N, int option);
 __host__ float chiCuadrado(float3 *I);
 __host__ void dchiCuadrado(float3 *I, float3 *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);

@@ -41,8 +41,8 @@ cufftComplex *device_V, *device_Inu;
 
 float3 *device_dchi2_total, *device_3I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
-float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start;
+float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -117,6 +117,7 @@ __host__ int main(int argc, char **argv) {
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
+  beta_start = variables.beta_start;
 
   multigpu = 0;
   firstgpu = -1;
@@ -277,8 +278,6 @@ __host__ int main(int argc, char **argv) {
     }
     printf("Calculating weights sum\n");
   }
-
-  freqavg = 1.37995e+11;
 
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
@@ -452,12 +451,9 @@ __host__ int main(int argc, char **argv) {
   }
 
   int statustau = 0;
-  float peak;
   float *input_tau= (float*)malloc(M*N*sizeof(float));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_tau, &anynull, &statustau);
-  peak = *std::max_element(input_tau,input_tau+(M*N));
-  //fits_report_error(stderr, statustau); /* print error message */
-  //printf("status: %d\n", statustau);
+
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
@@ -469,12 +465,12 @@ __host__ int main(int argc, char **argv) {
       }
 
       if(input_tau[N*y+x] > minpix_tau){
-	host_3I[N*i+j].y = input_tau[N*y+x];  // tau
+	       host_3I[N*i+j].y = input_tau[N*y+x];  // tau
       }else{
-      	host_3I[N*i+j].y = minpix_tau;
+      	 host_3I[N*i+j].y = minpix_tau;
       }
 
-      host_3I[N*i+j].z = minpix_beta; // beta
+      host_3I[N*i+j].z = beta_start; // beta
       x--;
 		}
     x=M-1;
@@ -737,7 +733,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	float3toImage(device_3I, freqavg, iter, M, N, 0);
+	float3toImage(device_3I, iter, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data);
   printf("Saving residuals to MS...\n");
