@@ -1163,7 +1163,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.Tin = "NULL";
   variables.ofile = "NULL";
   variables.path = "mem/";
-  variables.output_image = "mod_out.fits";
+  variables.output_image = "mod_out";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
