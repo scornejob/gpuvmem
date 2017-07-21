@@ -1175,6 +1175,8 @@ __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
   variables.multigpu = "NULL";
   variables.ofile = "NULL";
+  variables.path = "mem/";
+  variables.output_image = "mod_out.fits";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
