@@ -61,7 +61,6 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
-const float minpix_alpha = 0;
 
 
 typedef struct observedVisibilities{
@@ -127,6 +126,7 @@ typedef struct variables {
   float lambda;
   float minpix;
   float nu_0;
+  float alpha_start;
 } Vars;
 
 __host__ void goToError();
@@ -146,7 +146,7 @@ __host__ void Print2DIntArray(int rows, int cols, int *array);
 __host__ void Print2DComplex(int rows, int cols, cufftComplex *data, bool cufft_symmetry);
 __host__ void toFitsFloat(float *I, int iteration, long M, long N, int option);
 __host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int option);
-__host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, int option);
+__host__ void float2toImage(float2 *I, int iteration, long M, long N, int option);
 __host__ float chiCuadrado(float2 *I);
 __host__ void dchiCuadrado(float2 *I, float2 *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);
