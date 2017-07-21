@@ -2446,8 +2446,9 @@ __host__ void float3toImage(float3 *I, int iteration, long M, long N, int option
   char *tauunit = "";
   char *betaunit = "";
 
-  cufftComplex *host_Iout = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
   float3 *host_3Iout = (float3*)malloc(M*N*sizeof(float3));
+
+  gpuErrchk(cudaMemcpy2D(host_3Iout, sizeof(float3), I, sizeof(float3), sizeof(float3), M*N, cudaMemcpyDeviceToHost));
 
   float *host_T = (float*)malloc(M*N*sizeof(float));
   float *host_tau = (float*)malloc(M*N*sizeof(float));
