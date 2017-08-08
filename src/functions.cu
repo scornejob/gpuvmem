@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, clip_flag, nsamples, nfields, nstokes, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
+status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -56,6 +56,8 @@ extern fitsfile *mod_in;
 extern Field *fields;
 
 extern int flag_opt;
+
+extern VariablesPerField *vars_per_field;
 
 __host__ void goToError()
 {
@@ -119,90 +121,6 @@ __host__ void init_beam(int telescope)
   }
 }
 
-__host__ freqData getFreqs(char * file)
-{
-   freqData freqsAndVisibilities;
-   string dir = file;
-   string query;
-   casa::Vector<double> pointing;
-   casa::Table main_tab(dir);
-   casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
-   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-   casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-   nfields = field_tab.nrow();
-   casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
-   fields = (Field*)malloc(nfields*sizeof(Field));
-   for(int f=0; f<nfields; f++){
-     const casa::TableRecord &values = field_row.get(f);
-     pointing = values.asArrayDouble("REFERENCE_DIR");
-     fields[f].obsra = pointing[0];
-     fields[f].obsdec = pointing[1];
-   }
-
-   nsamples = main_tab.nrow();
-   if (nsamples == 0) {
-      printf("ERROR : nsamples is zero... exiting....\n");
-      exit(-1);
-   }
-
-  casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");  //NUMBER OF SPW
-  freqsAndVisibilities.n_internal_frequencies = spectral_window_tab.nrow();
-
-  freqsAndVisibilities.channels = (int*)malloc(freqsAndVisibilities.n_internal_frequencies*sizeof(int));
-  casa::ROScalarColumn<casa::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
-  for(int i = 0; i < freqsAndVisibilities.n_internal_frequencies; i++){
-    freqsAndVisibilities.channels[i] = n_chan_freq(i);
-  }
-
-  int total_frequencies = 0;
-  for(int i=0; i <freqsAndVisibilities.n_internal_frequencies; i++){
-    for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-      total_frequencies++;
-    }
-  }
-
-  freqsAndVisibilities.total_frequencies = total_frequencies;
-  for(int f=0; f<nfields; f++){
-    fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
-    for(int i=0;i<freqsAndVisibilities.total_frequencies;i++){
-      fields[f].numVisibilitiesPerFreq[i] = 0;
-    }
-  }
-
-  casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
-  nstokes=n_corr(0);
-
-  casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
-  casa::Vector<casa::Bool> auxbool;
-  bool flag;
-  int spw, field, counter;
-  for(int f=0; f<nfields; f++){
-    counter = 0;
-    for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
-      for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-        for (int k=0; k < nsamples; k++){
-          const casa::TableRecord &values = row.get(k);
-          flag = values.asBool("FLAG_ROW");
-          field = values.asInt("FIELD_ID");
-          spw = values.asInt("DATA_DESC_ID");
-          casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto<nstokes; sto++){
-              auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
-                fields[f].numVisibilitiesPerFreq[counter]++;
-              }
-            }
-          }else continue;
-        }
-        counter++;
-      }
-    }
-  }
-
-  return freqsAndVisibilities;
-}
-
 __host__ long NearestPowerOf2(long x)
 {
     --x;
@@ -263,285 +181,6 @@ __host__ void readInputDat(char *file)
       }
     }
   }
-}
-__host__ void readMS(char *file, char *file2, Field *fields) {
-  ///////////////////////////////////////////////////FITS READING///////////////////////////////////////////////////////////
-  status_mod_in = 0;
-  int status_noise = 0;
-  fits_open_file(&mod_in, file2, 0, &status_mod_in);
-  if (status_mod_in) {
-    fits_report_error(stderr, status_mod_in); /* print error message */
-    goToError();
-  }
-
-
-  fits_read_key(mod_in, TFLOAT, "CDELT1", &DELTAX, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "CDELT2", &DELTAY, NULL, &status_mod_in);
-  fits_read_key(mod_in, TDOUBLE, "CRVAL1", &ra, NULL, &status_mod_in);
-  fits_read_key(mod_in, TDOUBLE, "CRVAL2", &dec, NULL, &status_mod_in);
-  fits_read_key(mod_in, TINT, "CRPIX1", &crpix1, NULL, &status_mod_in);
-  fits_read_key(mod_in, TINT, "CRPIX2", &crpix2, NULL, &status_mod_in);
-  fits_read_key(mod_in, TLONG, "NAXIS1", &M, NULL, &status_mod_in);
-  fits_read_key(mod_in, TLONG, "NAXIS2", &N, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "BMAJ", &beam_bmaj, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "BMIN", &beam_bmin, NULL, &status_mod_in);
-  fits_read_key(mod_in, TFLOAT, "NOISE", &beam_noise, NULL, &status_noise);
-  if (status_mod_in) {
-    fits_report_error(stderr, status_mod_in); /* print error message */
-    goToError();
-  }
-
-  if(status_noise){
-    beam_noise = b_noise_aux;
-  }
-
-  beam_bmaj = beam_bmaj/-DELTAX;
-  beam_bmin = beam_bmin/-DELTAX;
-
-  if(verbose_flag){
-    printf("FITS Files READ\n");
-  }
-
-  char *error = 0;
-  int g = 0, h = 0;
-  string query;
-  string dir = file;
-  casa::Table main_tab(dir);
-  casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
-  casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-
-  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-  casa::Vector<int> polarizations;
-  polarizations=correlation_col(0);
-
-  casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
-
-  casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
-  casa::Vector<casa::Bool> auxbool;
-  casa::Vector<float> v;
-  casa::Vector<float> weights;
-  casa::Vector<double> uvw;
-  bool flag;
-  int spw, field;
-
-  if(random_probability != 0.0){
-    float u;
-    SelectStream(0);
-    PutSeed(1);
-    for(int f=0; f<nfields; f++){
-      g=0;
-      for(int i=0; i < data.n_internal_frequencies; i++){
-        for(int j=0; j < data.channels[i]; j++){
-          for (int k=0; k < nsamples; k++){
-            const casa::TableRecord &values = row.get(k);
-            uvw = values.asArrayDouble("UVW");
-            flag = values.asBool("FLAG_ROW");
-            spw = values.asInt("DATA_DESC_ID");
-            field = values.asInt("FIELD_ID");
-            casa::Array<casa::Complex> dataCol = values.asArrayComplex ("DATA");
-            casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-            weights=values.asArrayFloat ("WEIGHT");
-            if(field == f && spw == i && flag == false){
-              for (int sto=0; sto<nstokes; sto++){
-                auxbool = flagCol[j][sto];
-                if(auxbool[0] == false){
-                  u = Random();
-                  if(u<random_probability){
-                    fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                    fields[f].visibilities[g].u[h] = uvw[0];
-                    fields[f].visibilities[g].v[h] = uvw[1];
-                    v = casa::real(dataCol[j][sto]);
-                    fields[f].visibilities[g].Vo[h].x = v[0];
-                    v = casa::imag(dataCol[j][sto]);
-                    fields[f].visibilities[g].Vo[h].y = v[0];
-                    fields[f].visibilities[g].weight[h] = weights[sto];
-                    h++;
-                  }
-                }
-              }
-            }else continue;
-          }
-          fields[f].numVisibilitiesPerFreq[g] = h;
-          realloc(fields[f].visibilities[g].stokes, h*sizeof(int));
-          realloc(fields[f].visibilities[g].u, h*sizeof(float));
-          realloc(fields[f].visibilities[g].v, h*sizeof(float));
-          realloc(fields[f].visibilities[g].Vo, h*sizeof(cufftComplex));
-          realloc(fields[f].visibilities[g].weight, h*sizeof(float));
-          h=0;
-          g++;
-        }
-      }
-    }
-  }else{
-    for(int f=0; f<nfields; f++){
-      g=0;
-      for(int i=0; i < data.n_internal_frequencies; i++){
-        for(int j=0; j < data.channels[i]; j++){
-          for (int k=0; k < nsamples; k++){
-            const casa::TableRecord &values = row.get(k);
-            uvw = values.asArrayDouble("UVW");
-            flag = values.asBool("FLAG_ROW");
-            spw = values.asInt("DATA_DESC_ID");
-            field = values.asInt("FIELD_ID");
-            casa::Array<casa::Complex> dataCol = values.asArrayComplex("DATA");
-            casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-            weights=values.asArrayFloat("WEIGHT");
-            if(field == f && spw == i && flag == false){
-              for (int sto=0; sto<nstokes; sto++) {
-                auxbool = flagCol[j][sto];
-                if(auxbool[0] == false){
-                  fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g].u[h] = uvw[0];
-                  fields[f].visibilities[g].v[h] = uvw[1];
-                  v = casa::real(dataCol[j][sto]);
-                  fields[f].visibilities[g].Vo[h].x = v[0];
-                  v = casa::imag(dataCol[j][sto]);
-                  fields[f].visibilities[g].Vo[h].y = v[0];
-                  fields[f].visibilities[g].weight[h] = weights[sto];
-                  h++;
-                }
-              }
-            }else continue;
-          }
-          h=0;
-          g++;
-        }
-      }
-    }
-  }
-
-  for(int f=0;f<nfields;f++){
-    h = 0;
-    for(int i = 0; i < data.n_internal_frequencies; i++){
-      casa::Vector<double> chan_freq_vector;
-      chan_freq_vector=chan_freq_col(i);
-      for(int j = 0; j < data.channels[i]; j++){
-        fields[f].visibilities[h].freq = chan_freq_vector[j];
-        h++;
-      }
-    }
-  }
-
-  for(int f=0;f<nfields;f++){
-    h = 0;
-    fields[f].valid_frequencies = 0;
-    for(int i = 0; i < data.n_internal_frequencies; i++){
-      for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
-          fields[f].valid_frequencies++;
-        }
-        h++;
-      }
-    }
-  }
-
-
-}
-
-__host__ void MScopy(char const *in_dir, char const *in_dir_dest) {
-  string dir_origin = in_dir;
-  string dir_dest = in_dir_dest;
-
-  casa::Table tab_src(dir_origin);
-  tab_src.deepCopy(dir_dest,casa::Table::New);
-  if (verbose_flag) {
-      printf("Copied\n");
-  }
-
-}
-
-
-
-__host__ void residualsToHost(Field *fields, freqData data){
-  printf("Saving residuals to host memory\n");
-  if(num_gpus == 1){
-    for(int f=0; f<nfields;f++){
-      for(int i=0; i<data.total_frequencies; i++){
-        gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-      }
-    }
-  }else{
-    for(int f=0; f<nfields;f++){
-      for(int i=0; i<data.total_frequencies; i++){
-        cudaSetDevice((i%num_gpus) + firstgpu);
-        gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-      }
-    }
-  }
-
-  for(int f=0; f<nfields;f++){
-    for(int i=0; i<data.total_frequencies; i++){
-      for(int j=0; j<fields[f].numVisibilitiesPerFreq[i];j++){
-        if(fields[f].visibilities[i].u[j]<0){
-          fields[f].visibilities[i].Vm[j].y *= -1;
-        }
-      }
-    }
-  }
-
-}
-
-__host__ void writeMS(char *infile, char *outfile, Field *fields) {
-  MScopy(infile, outfile);
-  char* out_col = "DATA";
-  string dir=outfile;
-  string query;
-  casa::Table main_tab(dir,casa::Table::Update);
-  string column_name=out_col;
-
-  if (main_tab.tableDesc().isColumn(column_name))
-  {
-    printf("Column %s already exists... skipping creation...\n", out_col);
-  }else{
-    printf("Adding %s to the main table...\n", out_col);
-    main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
-    main_tab.flush();
-  }
-
-  if (column_name!="DATA")
-  {
-     query="UPDATE "+dir+" set "+column_name+"=DATA";
-     printf("Duplicating DATA column into %s\n", out_col);
-     casa::tableCommand(query);
-  }
-
-  casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,FLAG_ROW,DATA_DESC_ID"));
-  casa::Complex comp;
-  casa::Vector<casa::Bool> auxbool;
-  bool flag;
-  int spw, field, h = 0, g = 0;
-  for(int f=0; f<nfields; f++){
-    g=0;
-    for(int i=0; i < data.n_internal_frequencies; i++){
-      for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < nsamples; k++){
-          const casa::TableRecord &values = row.get(k);
-          flag = values.asBool("FLAG_ROW");
-          spw = values.asInt("DATA_DESC_ID");
-          field = values.asInt("FIELD_ID");
-          casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-          casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto<nstokes; sto++){
-              auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
-                comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
-                comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
-                dataCol[j][sto] = comp;
-                h++;
-              }
-            }
-            row.put(k);
-          }else continue;
-        }
-        h=0;
-        g++;
-      }
-    }
-  }
-  main_tab.flush();
-
 }
 
 
@@ -1336,177 +975,6 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 	return variables;
 }
-
-
-__host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int option)
-{
-	fitsfile *fpointer;
-	int status = 0;
-	long fpixel = 1;
-	long elements = M*N;
-  size_t needed;
-  char *name;
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *unit = "JY/PIXEL";
-  switch(option){
-    case 0:
-      needed = snprintf(NULL, 0, "!%s", out_image) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%s", out_image);
-      break;
-    case 1:
-      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
-      break;
-    case 2:
-      needed = snprintf(NULL, 0, "!%sMEM_V_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%sMEM_V_%d.fits", mempath, iteration);
-      break;
-    case 3:
-      needed = snprintf(NULL, 0, "!%sMEM_VB_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%sMEM_VB_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-
-	fits_create_file(&fpointer, name, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-  fits_copy_header(mod_in, fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-  if(option==0 || option==1){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
-  cufftComplex *host_IFITS;
-  host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
-
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-		for(int j=0; j < N; j++){
-      if(option == 0 || option == 1){
-			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-      }else{
-        image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y);
-        //image2D[N*x+y] = host_IFITS[N*i+j].y;
-      }
-      x--;
-		}
-    x=M-1;
-    y--;
-	}
-
-	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-	fits_close_file(fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-
-  free(host_IFITS);
-	free(image2D);
-  free(name);
-}
-
-__host__ void toFitsFloat(float *I, int iteration, long M, long N, int option)
-{
-	fitsfile *fpointer;
-	int status = 0;
-	long fpixel = 1;
-	long elements = M*N;
-  size_t needed;
-  char *name;
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *unit = "JY/PIXEL";
-  switch(option){
-    case 0:
-      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
-      break;
-    case 1:
-      needed = snprintf(NULL, 0, "!%snoise_0.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%snoise_0.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-
-	fits_create_file(&fpointer, name, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-  fits_copy_header(mod_in, fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-  if(option==0 || option==1){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
-  float *host_IFITS;
-  host_IFITS = (float*)malloc(M*N*sizeof(float));
-  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(float), I, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-		for(int j=0; j < N; j++){
-        image2D[N*i+j] = host_IFITS[N*i+j];
-      x--;
-		}
-    x=M-1;
-    y--;
-	}
-
-	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-	fits_close_file(fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    goToError();
-  }
-
-  free(host_IFITS);
-	free(image2D);
-  free(name);
-}
-
 
 template <bool nIsPow2>
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n)
@@ -2428,144 +1896,6 @@ __global__ void calculateInu(cufftComplex *I_nu, float3 *image3, float nu, float
 
 }
 
-__host__ void float3toImage(float3 *I, int iteration, long M, long N, int option)
-{
-  fitsfile *fpointerT, *fpointertau, *fpointerbeta, *fpointer;
-	int statusT = 0, statustau = 0, statusbeta = 0;
-	long fpixel = 1;
-	long elements = M*N;
-	char *Tname;
-  char *tauname;
-  char *betaname;
-  size_t needed_T;
-  size_t needed_tau;
-  size_t needed_beta;
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *Tunit = "K";
-  char *tauunit = "";
-  char *betaunit = "";
-
-  float3 *host_3Iout = (float3*)malloc(M*N*sizeof(float3));
-
-  gpuErrchk(cudaMemcpy2D(host_3Iout, sizeof(float3), I, sizeof(float3), sizeof(float3), M*N, cudaMemcpyDeviceToHost));
-
-  float *host_T = (float*)malloc(M*N*sizeof(float));
-  float *host_tau = (float*)malloc(M*N*sizeof(float));
-  float *host_beta = (float*)malloc(M*N*sizeof(float));
-
-  switch(option){
-    case 0:
-      needed_T = snprintf(NULL, 0, "!%s_T.fits", out_image) + 1;
-      Tname = (char*)malloc(needed_T*sizeof(char));
-      snprintf(Tname, needed_T*sizeof(char), "!%s_T.fits", out_image);
-      break;
-    case 1:
-      needed_T = snprintf(NULL, 0, "!%sT_%d.fits", mempath, iteration) + 1;
-      Tname = (char*)malloc(needed_T*sizeof(char));
-      snprintf(Tname, needed_T*sizeof(char), "!%sT_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  switch(option){
-    case 0:
-      needed_tau = snprintf(NULL, 0, "!%s_tau_0.fits", out_image) + 1;
-      tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%s_tau_0.fits", out_image);
-      break;
-    case 1:
-      needed_tau = snprintf(NULL, 0, "!%stau_0_%d.fits" , mempath, iteration) + 1;
-      tauname = (char*)malloc(needed_tau*sizeof(char));
-      snprintf(tauname, needed_tau*sizeof(char), "!%stau_0_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  switch(option){
-    case 0:
-      needed_beta = snprintf(NULL, 0, "!%s_beta.fits", out_image) + 1;
-      betaname = (char*)malloc(needed_beta*sizeof(char));
-      snprintf(betaname, needed_beta*sizeof(char), "!%s_beta.fits", out_image);
-      break;
-    case 1:
-      needed_beta = snprintf(NULL, 0, "!%sbeta_%d.fits", mempath, iteration) + 1;
-      betaname = (char*)malloc(needed_beta*sizeof(char));
-      snprintf(betaname, needed_beta*sizeof(char), "!%sbeta_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  fits_create_file(&fpointerT, Tname, &statusT);
-  fits_create_file(&fpointertau, tauname, &statustau);
-  fits_create_file(&fpointerbeta, betaname, &statusbeta);
-
-  if (statusT || statustau || statusbeta) {
-    goToError();
-  }
-
-  fits_copy_header(mod_in, fpointerT, &statusT);
-  fits_copy_header(mod_in, fpointertau, &statustau);
-  fits_copy_header(mod_in, fpointerbeta, &statusbeta);
-
-  if (statusT || statustau || statusbeta) {
-    goToError();
-  }
-
-  fits_update_key(fpointerT, TSTRING, "BUNIT", Tunit, "Unit of measurement", &statusT);
-  fits_update_key(fpointertau, TSTRING, "BUNIT", tauunit, "Unit of measurement", &statustau);
-  fits_update_key(fpointerbeta, TSTRING, "BUNIT", betaunit, "Unit of measurement", &statusbeta);
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-		for(int j=0; j < N; j++){
-        host_T[N*y+x] = host_3Iout[N*i+j].x; //* fg_scale;
-        host_tau[N*y+x] = host_3Iout[N*i+j].y; //* fg_scale;
-        host_beta[N*y+x] = host_3Iout[N*i+j].z; //* fg_scale;
-        x--;
-		}
-    x=M-1;
-    y--;
-	}
-
-  fits_write_img(fpointerT, TFLOAT, fpixel, elements, host_T, &statusT);
-  fits_write_img(fpointertau, TFLOAT, fpixel, elements, host_tau, &statustau);
-  fits_write_img(fpointerbeta, TFLOAT, fpixel, elements, host_beta, &statusbeta);
-  if (statusT || statustau || statusbeta) {
-    goToError();
-  }
-	fits_close_file(fpointerT, &statusT);
-  fits_close_file(fpointertau, &statustau);
-  fits_close_file(fpointerbeta, &statusbeta);
-  if (statusT || statustau || statusbeta) {
-    goToError();
-  }
-
-  free(host_T);
-  free(host_tau);
-  free(host_beta);
-  free(host_3Iout);
-
-  free(betaname);
-  free(tauname);
-  free(Tname);
-
-
-}
-
 __host__ float chiCuadrado(float3 *I)
 {
   if(num_gpus == 1){
@@ -2591,7 +1921,7 @@ __host__ float chiCuadrado(float3 *I)
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
-    for(int f=0; f<nfields;f++){
+    for(int f=0; f<data.nfields;f++){
       for(int i=0; i<data.total_frequencies;i++){
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
@@ -2653,19 +1983,19 @@ __host__ float chiCuadrado(float3 *I)
 
 
         	////chi 2 VECTOR
-        	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_vars[i].chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
+        	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_per_field[f].device_vars[i].chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
         	gpuErrchk(cudaDeviceSynchronize());
 
         	//REDUCTIONS
         	//chi2
-        	resultchi2  += deviceReduce(fields[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
+        	resultchi2  += deviceReduce(vars_per_field[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
           //S
           resultS += deviceReduce(device_S, M*N);
         }
       }
     }
   }else{
-    for(int f=0; f<nfields; f++){
+    for(int f=0; f<data.nfields; f++){
       #pragma omp parallel for schedule(static,1)
       for (int i = 0; i < data.total_frequencies; i++)
   		{
@@ -2679,29 +2009,29 @@ __host__ float chiCuadrado(float3 *I)
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, MINPIX, N);
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, MINPIX, N);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
-            clip<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, N, MINPIX);
+            clip<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, N, MINPIX);
             gpuErrchk(cudaDeviceSynchronize());
           }
 
-          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(iter>0 && lambda!=0.0){
             switch(reg_term){
               case 0:
-                SVector<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, device_noise_image, fields[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+                SVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                QVector<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, device_noise_image, fields[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+                QVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
-                TVVector<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, device_noise_image, fields[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+                TVVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               default:
@@ -2711,12 +2041,12 @@ __host__ float chiCuadrado(float3 *I)
             }
           }
 
-        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, fields[f].device_vars[i].device_Inu, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
+        	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, vars_per_field[f].device_vars[i].device_Inu, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
 
 
         	//FFT 2D
-        	if ((cufftExecC2C(fields[f].device_vars[i].plan, (cufftComplex*)fields[f].device_vars[i].device_Inu, (cufftComplex*)fields[f].device_vars[i].device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
+        	if ((cufftExecC2C(vars_per_field[f].device_vars[i].plan, (cufftComplex*)vars_per_field[f].device_vars[i].device_Inu, (cufftComplex*)vars_per_field[f].device_vars[i].device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
         		printf("CUFFT exec error\n");
         		//return -1 ;
         		goToError();
@@ -2724,11 +2054,11 @@ __host__ float chiCuadrado(float3 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //PHASE_ROTATE
-          phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_V, M, N, fields[f].global_xobs, fields[f].global_yobs);
+          phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_V, M, N, fields[f].global_xobs, fields[f].global_yobs);
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].device_vars[i].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, vars_per_field[f].device_vars[i].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
         	gpuErrchk(cudaDeviceSynchronize());
 
 
@@ -2736,13 +2066,13 @@ __host__ float chiCuadrado(float3 *I)
           gpuErrchk(cudaDeviceSynchronize());
 
         	////chi2 VECTOR
-        	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_vars[i].chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
+        	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_per_field[f].device_vars[i].chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
         	gpuErrchk(cudaDeviceSynchronize());
 
 
-          partial_chi2 = deviceReduce(fields[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
+          partial_chi2 = deviceReduce(vars_per_field[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
 
-          partial_S = deviceReduce(fields[f].device_vars[i].device_S, M*N);;
+          partial_S = deviceReduce(vars_per_field[f].device_vars[i].device_S, M*N);;
         	//REDUCTIONS
         	//chi2
           #pragma omp critical
@@ -2794,11 +2124,11 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  float3toImage(I, iter, M, N, 1);
+  float3toImage(I, mod_in, out_image, mempath, iter, M, N, 1);
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
-    for(int f=0; f<nfields; f++){
+    for(int f=0; f<data.nfields; f++){
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
@@ -2831,20 +2161,20 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
               }
             }
 
-            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
+            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_per_field[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
             gpuErrchk(cudaDeviceSynchronize());
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
-                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
             }
@@ -2852,7 +2182,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
       }
     }
   }else{
-    for(int f=0;f<nfields;f++){
+    for(int f=0;f<data.nfields;f++){
       #pragma omp parallel for schedule(static,1)
       for (int i = 0; i < data.total_frequencies; i++)
       {
@@ -2863,28 +2193,28 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
         cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
         cudaGetDevice(&gpu_id);
 
-        gpuErrchk(cudaMemset(fields[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
+        gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
 
-        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, MINPIX, N);
+        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, DELTAX, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
 
         if(clip_flag){
-          clip<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_Inu, N, MINPIX);
+          clip<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, N, MINPIX);
           gpuErrchk(cudaDeviceSynchronize());
         }
 
         if(iter>0 && lambda!=0.0){
           switch(reg_term){
             case 0:
-              DS<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              DS<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
               gpuErrchk(cudaDeviceSynchronize());
               break;
             case 1:
-              DQ<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              DQ<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
               gpuErrchk(cudaDeviceSynchronize());
               break;
             case 2:
-              DTV<<<numBlocksNN, threadsPerBlockNN>>>(fields[f].device_vars[i].device_S, fields[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              DTV<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
               gpuErrchk(cudaDeviceSynchronize());
               break;
             default:
@@ -2895,7 +2225,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
         }
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, fields[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_per_field[f].device_vars[i].dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
           gpuErrchk(cudaDeviceSynchronize());
 
           #pragma omp critical
@@ -2903,15 +2233,15 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
-                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, fields[f].device_vars[i].dchi2, fields[f].device_vars[i].device_Inu, I, fields[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
 
