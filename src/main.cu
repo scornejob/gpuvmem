@@ -41,13 +41,13 @@ cufftComplex *device_V, *device_Inu;
 
 float3 *device_dchi2_total, *device_3I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start, tau_min, T_min;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, read_tau_image = 0, apply_noise = 0, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
@@ -121,6 +121,8 @@ __host__ int main(int argc, char **argv) {
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
   beta_start = variables.beta_start;
+  T_min = variables.T_min;
+  tau_min = variables.tau_min;
 
   multigpu = 0;
   firstgpu = -1;
@@ -294,7 +296,13 @@ __host__ int main(int argc, char **argv) {
 	   printf("Reading visibilities from Measurement Set File\n");
   }
 
-	readMS(msinput, fields, data);
+  if(apply_noise){
+      readMSMCNoise(msinput, fields, data);
+  }else if(random_probability != 1.0){
+    readSubsampledMS(msinput, fields, data, random_probability);
+  }else{
+	   readMS(msinput, fields, data);
+   }
 
   if(verbose_flag){
     printf("MS File Successfully Read\n");
@@ -488,15 +496,18 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
       if(strcmp(Tinput, "NULL")==0){
-        host_3I[N*i+j].x = minpix_T;
+        host_3I[N*i+j].x = T_min;
       }else{
         host_3I[N*i+j].x = input_T[N*y+x];
       }
-
-      if(input_tau[N*y+x] > minpix_tau){
-	       host_3I[N*i+j].y = input_tau[N*y+x];  // tau
+      if(read_tau_image){
+        if(input_tau[N*y+x] > tau_min){
+  	       host_3I[N*i+j].y = input_tau[N*y+x];  // tau
+        }else{
+        	 host_3I[N*i+j].y = tau_min;
+        }
       }else{
-      	 host_3I[N*i+j].y = minpix_tau;
+        host_3I[N*i+j].y = tau_min;
       }
 
       host_3I[N*i+j].z = beta_start; // beta

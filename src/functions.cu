@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
+status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, flag_opt, read_tau_image, apply_noise;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float3 *device_dchi2_total, *device_3I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, beta_start;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, beta_start, tau_min, T_min;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -54,8 +54,6 @@ extern char* mempath, *out_image;
 extern fitsfile *mod_in;
 
 extern Field *fields;
-
-extern int flag_opt;
 
 extern VariablesPerField *vars_per_field;
 
@@ -817,10 +815,12 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.minpix = -1;
   variables.reg_term = 0;
   variables.beta_start = 0.0;
+  variables.tau_min = 1E-6;
+  variables.T_min = 1.0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:T:b:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:T:b:a:K:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -830,6 +830,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"verbose", 0, &verbose_flag, 1},
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
+                                    {"read-tau-image", 0, &read_tau_image, 1},
+                                    {"apply-noise", 0, &apply_noise, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -837,8 +839,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
                                     {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
-                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"T_start", 0, NULL, 'T'},
-                                    {"beta_start", 1, NULL, 'b'}, { NULL, 0, NULL, 0 }};
+                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"T_start", 0, NULL, 'T'}, {"beta_start", 1, NULL, 'b'},
+                                    {"T_min", 1, NULL, 'K'}, {"tau_min", 1, NULL, 'a'},
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -895,6 +898,12 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'T':
       variables.Tin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
       strcpy(variables.Tin, optarg);
+      break;
+    case 'a':
+      variables.tau_min = atof(optarg);
+      break;
+    case 'K':
+      variables.T_min = atof(optarg);
       break;
     case 'b':
       variables.beta_start = atof(optarg);
@@ -1362,16 +1371,16 @@ __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cu
   I[N*i+j].y = 0;
 }
 
-__global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut)
+__global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut, float tau_min, float T_min, float beta_start)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
   if(noise[N*i+j] > noise_cut){
-    //I[N*i+j].x = minpix_T;
-    I[N*i+j].y = minpix_tau;
-    /*I[N*i+j].z = minpix_beta;*/
+    //I[N*i+j].x = T_min;
+    I[N*i+j].y = tau_min;
+    /*I[N*i+j].z = beta_start;*/
   }
 
 }
@@ -1385,22 +1394,22 @@ __global__ void changeBeta(float3 *I, long N)
 	I[N*i+j].z = 2.0;
 }
 
-__global__ void clip3I(float3 *I, long N)
+__global__ void clip3I(float3 *I, long N, float tau_min, float T_min, float beta_start)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   //T
-  if(I[N*i+j].x < minpix_T){
-      I[N*i+j].x = minpix_T;
+  if(I[N*i+j].x < T_min){
+      I[N*i+j].x = T_min;
   }
   //tau
-  if(I[N*i+j].y < minpix_tau){
-      I[N*i+j].y = minpix_tau;
+  if(I[N*i+j].y < tau_min){
+      I[N*i+j].y = tau_min;
   }
   //beta
-  /*if(I[N*i+j].z < minpix_beta){
-      I[N*i+j].z = minpix_beta;
+  /*if(I[N*i+j].z < beta_start){
+      I[N*i+j].z = beta_start;
   }*/
 }
 
@@ -1416,7 +1425,7 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(float3 *p, float3 *xi, float xmin, long N)
+__global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min, float T_min, float beta_start)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1425,25 +1434,25 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N)
   xi[N*i+j].y *= xmin;
   xi[N*i+j].z *= xmin;
   //T
-  if(p[N*i+j].x + xi[N*i+j].x > minpix_T){
+  if(p[N*i+j].x + xi[N*i+j].x > T_min){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = minpix_T;
+    p[N*i+j].x = T_min;
     xi[N*i+j].x = 0.0;
   }
   //tau
-  if(p[N*i+j].y + xi[N*i+j].y > minpix_tau){
+  if(p[N*i+j].y + xi[N*i+j].y > tau_min){
     p[N*i+j].y += xi[N*i+j].y;
   }else{
-    p[N*i+j].y = minpix_tau;
+    p[N*i+j].y = tau_min;
     xi[N*i+j].y = 0.0;
   }
   //beta
   p[N*i+j].z += xi[N*i+j].z;
-  /*if(p[N*i+j].z + xi[N*i+j].z > minpix_beta){
+  /*if(p[N*i+j].z + xi[N*i+j].z > beta_start){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
-    p[N*i+j].z = minpix_beta;
+    p[N*i+j].z = beta_start;
     xi[N*i+j].z = 0.0;
   }*/
 
@@ -1464,29 +1473,29 @@ __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N)
   p[N*i+j].z += xi[N*i+j].z;
 }
 
-__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N)
+__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N, float tau_min, float T_min, float beta_start)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //T
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > minpix_T){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > T_min){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-      xt[N*i+j].x = minpix_T;
+      xt[N*i+j].x = T_min;
   }
   //tau
-  if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_tau){
+  if(pcom[N*i+j].y + x * xicom[N*i+j].y > tau_min){
     xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
   }else{
-      xt[N*i+j].y = minpix_tau;
+      xt[N*i+j].y = tau_min;
   }
 
   //beta
   xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
-  /*if(pcom[N*i+j].z + x * xicom[N*i+j].z > minpix_beta){
+  /*if(pcom[N*i+j].z + x * xicom[N*i+j].z > beta_start){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
-      xt[N*i+j].z = minpix_beta;
+      xt[N*i+j].z = beta_start;
   }*/
 }
 
@@ -1909,11 +1918,11 @@ __host__ float chiCuadrado(float3 *I)
   float resultS  = 0.0;
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min, T_min, beta_start);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut);
+  clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, tau_min, T_min, beta_start);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
@@ -2115,7 +2124,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
   }
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min, T_min, beta_start);
     gpuErrchk(cudaDeviceSynchronize());
   }
 

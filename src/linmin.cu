@@ -36,7 +36,7 @@ float3 *device_xicom;
 float (*nrfunc)(float3*);
 extern long M;
 extern long N;
-extern float MINPIX;
+extern float MINPIX, beta_start, T_min, tau_min;
 extern int nopositivity;
 
 extern dim3 threadsPerBlockNN;
@@ -74,7 +74,7 @@ __host__ void linmin(float3 *p, float3 *xi, float *fret, float (*func)(float3*))
   //xi     = xi*xmin;
   //p      = p + xi;
   if(nopositivity == 0){
-    newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);
+    newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N, tau_min, T_min, beta_start);
     gpuErrchk(cudaDeviceSynchronize());
   }else{
     newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);
