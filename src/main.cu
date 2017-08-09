@@ -712,10 +712,10 @@ __host__ int main(int argc, char **argv) {
   //gpuErrchk(cudaDeviceSynchronize());
 	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_3I);
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_3I);
+  chiCuadrado(device_3I);*/
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
   chiCuadrado(device_3I);
   t = clock() - t;
