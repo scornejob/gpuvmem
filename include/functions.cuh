@@ -20,8 +20,6 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.626070040E-34;
-const float minpix_T = 30.0;
-const float minpix_tau = 1E-6;
 
 typedef struct variablesPerFreq{
   float *chi2;
@@ -60,6 +58,8 @@ typedef struct variables {
   float minpix;
   float nu_0;
   float beta_start;
+  float tau_min;
+  float T_min;
 } Vars;
 
 __host__ void goToError();
@@ -79,11 +79,12 @@ __global__ void changeBeta(float3 *I, long N);
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void getGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
-__global__ void newP(float3 *p, float3 *xi, float xmin, long N);
+__global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min, float T_min, float beta_start);
 __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N);
 __global__ void getGGandDGG(float *gg, float *dgg, float3 *xi, float3 *g, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
-__global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut);
+__global__ void clip3I(float3 *I, long N, float tau_min, float T_min, float beta_start);
+__global__ void clip3IWNoise(float *noise, float3 *I, long N, float noise_cut, float tau_min, float T_min, float beta_start);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(float *total_atten, float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N);
@@ -97,7 +98,7 @@ __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufft
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
-__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N);
+__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N, float tau_min, float T_min, float beta_start);
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N);
 __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, int numVisibilities);
 __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
