@@ -34,7 +34,7 @@ extern float3 *device_xicom;
 extern float (*nrfunc)(float3*);
 extern long M;
 extern long N;
-extern float MINPIX, beta_start, T_min, tau_min;
+extern float MINPIX, tau_min;
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
 extern int nopositivity;
@@ -49,7 +49,7 @@ __host__ float f1dim(float x)
 
     //xt = pcom+x*xicom;
     if(nopositivity == 0){
-      evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N, tau_min, T_min, beta_start);
+      evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N, tau_min);
       gpuErrchk(cudaDeviceSynchronize());
     }else{
       evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);

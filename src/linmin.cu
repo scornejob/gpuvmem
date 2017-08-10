@@ -74,7 +74,7 @@ __host__ void linmin(float3 *p, float3 *xi, float *fret, float (*func)(float3*))
   //xi     = xi*xmin;
   //p      = p + xi;
   if(nopositivity == 0){
-    newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N, tau_min, T_min, beta_start);
+    newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N, tau_min);
     gpuErrchk(cudaDeviceSynchronize());
   }else{
     newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);

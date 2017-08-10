@@ -297,11 +297,11 @@ __host__ int main(int argc, char **argv) {
   }
 
   if(apply_noise){
-      readMSMCNoise(msinput, fields, data);
+    readMSMCNoise(msinput, fields, data);
   }else if(random_probability != 1.0){
     readSubsampledMS(msinput, fields, data, random_probability);
   }else{
-	   readMS(msinput, fields, data);
+	  readMS(msinput, fields, data);
    }
 
   if(verbose_flag){
@@ -723,6 +723,12 @@ __host__ int main(int argc, char **argv) {
   //gpuErrchk(cudaDeviceSynchronize());
 	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_3I);
+
+  /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  chiCuadrado(device_3I);
+
+  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  chiCuadrado(device_3I);*/
   /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
@@ -780,7 +786,7 @@ __host__ int main(int argc, char **argv) {
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");
-	writeMS(msinput, msoutput, fields, data, verbose_flag);
+	writeMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
 	printf("Residuals saved.\n");
 
 	//Free device and host memory

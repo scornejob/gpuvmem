@@ -759,8 +759,10 @@ __host__ void print_help() {
   printf("    -I  --inputdat         The name of the input file of parameters (Mandatory)\n");
   printf("    -m  --modin            mod_in_0 (tau_0 start) FITS file (Mandatory)\n");
   printf("    -F  --nu_0             Frequency of reference (Mandatory)\n");
-  printf(	"   -B  --beta_start       beta (spectral index) image start values\n");
+  printf(	"   -b  --beta_start       beta (spectral index) image start values\n");
   printf(	"   -T  --T_start          T (temperature) image start values\n");
+  printf(	"   -K  --T_min            Minimum temperature image values\n");
+  printf(	"   -a  --tau_min          Minimum optical depth image values\n");
   printf("    -x  --minpix           Minimum positive value of a pixel (Optional)\n");
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
@@ -1394,22 +1396,22 @@ __global__ void changeBeta(float3 *I, long N)
 	I[N*i+j].z = 2.0;
 }
 
-__global__ void clip3I(float3 *I, long N, float tau_min, float T_min, float beta_start)
+__global__ void clip3I(float3 *I, long N, float tau_min)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   //T
-  if(I[N*i+j].x < T_min){
-      I[N*i+j].x = T_min;
+  if(I[N*i+j].x < MIN_TEMP ){
+      I[N*i+j].x = MIN_TEMP ;
   }
   //tau
   if(I[N*i+j].y < tau_min){
       I[N*i+j].y = tau_min;
   }
   //beta
-  /*if(I[N*i+j].z < beta_start){
-      I[N*i+j].z = beta_start;
+  /*if(I[N*i+j].z < MIN_SINDEX){
+      I[N*i+j].z = MIN_SINDEX;
   }*/
 }
 
@@ -1425,7 +1427,7 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min, float T_min, float beta_start)
+__global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1434,10 +1436,10 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min, f
   xi[N*i+j].y *= xmin;
   xi[N*i+j].z *= xmin;
   //T
-  if(p[N*i+j].x + xi[N*i+j].x > T_min){
+  if(p[N*i+j].x + xi[N*i+j].x > MIN_TEMP){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = T_min;
+    p[N*i+j].x = MIN_TEMP;
     xi[N*i+j].x = 0.0;
   }
   //tau
@@ -1448,13 +1450,12 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min, f
     xi[N*i+j].y = 0.0;
   }
   //beta
-  p[N*i+j].z += xi[N*i+j].z;
-  /*if(p[N*i+j].z + xi[N*i+j].z > beta_start){
+  if(p[N*i+j].z + xi[N*i+j].z > MIN_SINDEX){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
-    p[N*i+j].z = beta_start;
+    p[N*i+j].z = MIN_SINDEX;
     xi[N*i+j].z = 0.0;
-  }*/
+  }
 
 
 }
@@ -1473,15 +1474,15 @@ __global__ void newPNoPositivity(float3 *p, float3 *xi, float xmin, long N)
   p[N*i+j].z += xi[N*i+j].z;
 }
 
-__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N, float tau_min, float T_min, float beta_start)
+__global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, long N, float tau_min)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //T
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > T_min){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > MIN_TEMP){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-      xt[N*i+j].x = T_min;
+      xt[N*i+j].x = MIN_TEMP;
   }
   //tau
   if(pcom[N*i+j].y + x * xicom[N*i+j].y > tau_min){
@@ -1491,12 +1492,11 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
   }
 
   //beta
-  xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
-  /*if(pcom[N*i+j].z + x * xicom[N*i+j].z > beta_start){
+  if(pcom[N*i+j].z + x * xicom[N*i+j].z > MIN_SINDEX){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
-      xt[N*i+j].z = beta_start;
-  }*/
+      xt[N*i+j].z = MIN_SINDEX;
+  }
 }
 
 __global__ void evaluateXtNoPositivity(float3 *xt, float3 *pcom, float3 *xicom, float x, long N)
@@ -1803,13 +1803,13 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT * 0.f;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT;
       dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta * 0.f;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta;
     }else{
-      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT * 0.f;
+      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT;
       dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau;
-      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta * 0.f;
+      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta;
     }
   }else{
     dchi2_total[N*i+j].x += 0.f;
@@ -1918,7 +1918,7 @@ __host__ float chiCuadrado(float3 *I)
   float resultS  = 0.0;
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min, T_min, beta_start);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
@@ -2124,7 +2124,7 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
   }
 
   if(clip_flag){
-    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min, T_min, beta_start);
+    clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min);
     gpuErrchk(cudaDeviceSynchronize());
   }
 

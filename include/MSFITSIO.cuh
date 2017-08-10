@@ -98,7 +98,7 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
 
 __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu);
 __host__ void readMS(char *file, char *file2, Field *fields);
-__host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag);
+__host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
 
 __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option);
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
