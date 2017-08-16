@@ -41,7 +41,7 @@ cufftComplex *device_V, *device_Inu;
 
 float3 *device_dchi2_total, *device_3I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start, tau_min, T_min;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start, tau_min, T_start;
 float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
 
 dim3 threadsPerBlockNN;
@@ -121,7 +121,7 @@ __host__ int main(int argc, char **argv) {
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
   beta_start = variables.beta_start;
-  T_min = variables.T_min;
+  T_start = variables.T_start;
   tau_min = variables.tau_min;
 
   multigpu = 0;
@@ -496,7 +496,7 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
       if(strcmp(Tinput, "NULL")==0){
-        host_3I[N*i+j].x = T_min;
+        host_3I[N*i+j].x = T_start;
       }else{
         host_3I[N*i+j].x = input_T[N*y+x];
       }
@@ -723,7 +723,6 @@ __host__ int main(int argc, char **argv) {
   //gpuErrchk(cudaDeviceSynchronize());
 	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_3I);
-
   /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_3I);
 

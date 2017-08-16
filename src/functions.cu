@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float3 *device_dchi2_total, *device_3I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, beta_start, tau_min, T_min;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, beta_start, tau_min, T_start;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -816,9 +816,9 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
-  variables.beta_start = 0.0;
+  variables.beta_start = -1;
   variables.tau_min = 1E-6;
-  variables.T_min = 1.0;
+  variables.T_start = 3.0;
 
 
 	long next_op;
@@ -841,8 +841,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
                                     {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
-                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"T_start", 0, NULL, 'T'}, {"beta_start", 1, NULL, 'b'},
-                                    {"T_min", 1, NULL, 'K'}, {"tau_min", 1, NULL, 'a'},
+                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"T_start_image", 0, NULL, 'T'}, {"beta_start", 1, NULL, 'b'},
+                                    {"T_start", 1, NULL, 'K'}, {"tau_min", 1, NULL, 'a'},
                                     { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
@@ -905,7 +905,7 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.tau_min = atof(optarg);
       break;
     case 'K':
-      variables.T_min = atof(optarg);
+      variables.T_start = atof(optarg);
       break;
     case 'b':
       variables.beta_start = atof(optarg);
@@ -970,7 +970,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || variables.beta_start == -1) {
         print_help();
         exit(EXIT_FAILURE);
   }
@@ -1756,18 +1756,18 @@ __global__ void DChi2_total_beta(float *noise, float3 *dchi2_total, float *dchi2
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT * 0.f;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau * 0.f;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT * 0.0;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau * 0.0;
       dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta;
     }else{
-      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT  * 0.f;
-      dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau * 0.f;
+      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT  * 0.0;
+      dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau * 0.0;
       dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta;
     }
   }else{
-    dchi2_total[N*i+j].x += 0.f;
-    dchi2_total[N*i+j].y += 0.f;
-    dchi2_total[N*i+j].z += 0.f;
+    dchi2_total[N*i+j].x += 0.0;
+    dchi2_total[N*i+j].y += 0.0;
+    dchi2_total[N*i+j].z += 0.0;
   }
 }
 
@@ -1803,18 +1803,18 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   if(noise[N*i+j] <= noise_cut){
     if(lambda != 0.0)
     {
-      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT;
+      dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT * 0.0;
       dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta * 0.0;
     }else{
-      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT;
+      dchi2_total[N*i+j].x += dchi2[N*i+j] * dT * 0.0;
       dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau;
-      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta;
+      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta * 0.0;
     }
   }else{
-    dchi2_total[N*i+j].x += 0.f;
-    dchi2_total[N*i+j].y += 0.f;
-    dchi2_total[N*i+j].z += 0.f;
+    dchi2_total[N*i+j].x += 0.0;
+    dchi2_total[N*i+j].y += 0.0;
+    dchi2_total[N*i+j].z += 0.0;
   }
 }
 
@@ -1851,17 +1851,17 @@ __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, c
     if(lambda != 0.0)
     {
       dchi2_total[N*i+j].x += (dchi2[N*i+j] + dS[N*i+j]) * dT;
-      dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau * 0.f;
-      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta * 0.f;
+      dchi2_total[N*i+j].y += (dchi2[N*i+j] + dS[N*i+j]) * dtau * 0.0;
+      dchi2_total[N*i+j].z += (dchi2[N*i+j] + dS[N*i+j]) * dbeta * 0.0;
     }else{
       dchi2_total[N*i+j].x += dchi2[N*i+j] * dT;
-      dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau * 0.f;
-      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta * 0.f;
+      dchi2_total[N*i+j].y += dchi2[N*i+j] * dtau * 0.0;
+      dchi2_total[N*i+j].z += dchi2[N*i+j] * dbeta * 0.0;
     }
   }else{
-    dchi2_total[N*i+j].x += 0.f;
-    dchi2_total[N*i+j].y += 0.f;
-    dchi2_total[N*i+j].z += 0.f;
+    dchi2_total[N*i+j].x += 0.0;
+    dchi2_total[N*i+j].y += 0.0;
+    dchi2_total[N*i+j].z += 0.0;
   }
 }
 
@@ -1922,7 +1922,7 @@ __host__ float chiCuadrado(float3 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, tau_min, T_min, beta_start);
+  clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, tau_min, T_start, beta_start);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));

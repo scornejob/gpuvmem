@@ -61,7 +61,7 @@ typedef struct variables {
   float nu_0;
   float beta_start;
   float tau_min;
-  float T_min;
+  float T_start;
 } Vars;
 
 __host__ void goToError();
