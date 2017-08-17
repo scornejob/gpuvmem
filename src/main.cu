@@ -500,6 +500,7 @@ __host__ int main(int argc, char **argv) {
       }else{
         host_3I[N*i+j].x = input_T[N*y+x];
       }
+
       if(read_tau_image){
         if(input_tau[N*y+x] > tau_min){
   	       host_3I[N*i+j].y = input_tau[N*y+x];  // tau
