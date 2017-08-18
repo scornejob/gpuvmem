@@ -1,37 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <algorithm>
-#include <cuda.h>
 #include <math.h>
 #include <string.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "math_constants.h"
-#include "rngs.cuh"
-#include <cufft.h>
-#include "fitsio.h"
 #include <float.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <fcntl.h>
 #include <omp.h>
 #include <sys/stat.h>
-#include <tables/Tables/Table.h>
-#include <tables/Tables/TableRow.h>
-#include <tables/Tables/TableIter.h>
-#include <tables/Tables/ScalarColumn.h>
-#include <tables/Tables/ArrayColumn.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Slicer.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <tables/Tables/TableParse.h>
-#include <ms/MeasurementSets.h>
-#include <tables/Tables/ColumnDesc.h>
-#include <tables/Tables/ScaColDesc.h>
-#include <tables/Tables/ArrColDesc.h>
-#include <ms/MeasurementSets/MSMainColumns.h>
-#include <tables/Tables/TableDesc.h>
-#include <ms/MeasurementSets/MSAntennaColumns.h>
+#include "MSFITSIO.cuh"
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64
@@ -43,15 +22,7 @@
 #define TDOUBLE      82
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-   if (code != cudaSuccess)
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
-}
+
 
 const float PI = CUDART_PI_F;
 const double PI_D = CUDART_PI;
@@ -61,23 +32,6 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.62607004E-34;
-const float minpix_alpha = 0;
-
-
-typedef struct observedVisibilities{
-  float *u;
-  float *v;
-  float *weight;
-  cufftComplex *Vo;
-  cufftComplex *Vm;
-  cufftComplex *Vr;
-  float freq;
-  long numVisibilities;
-
-  int *stokes;
-  int threadsPerBlockUV;
-  int numBlocksUV;
-}Vis;
 
 typedef struct variablesPerFreq{
   float *chi2;
@@ -88,22 +42,10 @@ typedef struct variablesPerFreq{
   float *device_S;
 }VPF;
 
-typedef struct freqData{
-  int n_internal_frequencies;
-  int total_frequencies;
-  int *channels;
-}freqData;
-
-typedef struct field{
-  int valid_frequencies;
-  double obsra, obsdec;
-  float global_xobs, global_yobs;
-  long *numVisibilitiesPerFreq;
+typedef struct variablesPerField{
   float *atten_image;
   VPF *device_vars;
-  Vis *visibilities;
-  Vis *device_visibilities;
-}Field;
+}VariablesPerField;
 
 typedef struct variables {
 	char *input;
@@ -130,23 +72,12 @@ typedef struct variables {
 } Vars;
 
 __host__ void goToError();
-__host__ freqData getFreqs(char * file);
 __host__ long NearestPowerOf2(long x);
 __host__ void readInputDat(char *file);
 __host__ void init_beam(int telescope);
-__host__ void residualsToHost(Field *fields, freqData data);
-__host__ void readMS(char *file, char *file2, Field *fields);
-__host__ void MScopy(char const *in_dir, char const *in_dir_dest);
-__host__ void writeMS(char *infile, char *outfile, Field *fields);
 __host__ void print_help();
 __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
-__host__ void Print2DFloatArray(int rows, int cols, float *array);
-__host__ void Print2DIntArray(int rows, int cols, int *array);
-__host__ void Print2DComplex(int rows, int cols, cufftComplex *data, bool cufft_symmetry);
-__host__ void toFitsFloat(float *I, int iteration, long M, long N, int option);
-__host__ void toFitsComplex(cufftComplex *I, int iteration, long M, long N, int option);
-__host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, int option);
 __host__ float chiCuadrado(float2 *I);
 __host__ void dchiCuadrado(float2 *I, float2 *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);
