@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float2 *device_dchi2_total, *device_2I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, freqavg, minInu_0;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, minInu_0;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -759,8 +759,9 @@ __host__ void print_help() {
   printf(	"   -o  --output           The name of the output file of residual visibilities(MS) (Mandatory)\n");
   printf(	"   -O  --output-image     The name of the output image FITS file (Mandatory)\n");
   printf("    -I  --inputdat         The name of the input file of parameters (Mandatory)\n");
-  printf("    -m  --modin            mod_in_0 FITS file (Mandatory)\n");
+  printf("    -m  --modin            mod_in_0 FITS (I_nu_0) image file (Mandatory)\n");
   printf("    -F  --nu_0             Frequency of reference (Mandatory)\n");
+  printf("    -a  --alpha_start      Alpha spectral index starting values\n");
   printf("    -x  --minpix           Minimum positive value of a pixel (Optional)\n");
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
@@ -801,7 +802,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.Tin = "NULL";
   variables.ofile = "NULL";
   variables.path = "mem/";
-  variables.output_image = "mod_out.fits";
+  variables.output_image = "mod_out";
   variables.select = 0;
   variables.blockSizeX = -1;
   variables.blockSizeY = -1;
@@ -814,10 +815,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
+  variables.alpha_start = 0.0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -834,7 +836,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"blockSizeX", 1, NULL, 'X'},
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
                                     {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
-                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, { NULL, 0, NULL, 0 }};
+                                    {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"alpha_start", 1, NULL, 'a' },
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -893,6 +896,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'F':
       variables.nu_0 = atof(optarg);
+      break;
+    case 'a':
+      variables.alpha_start = atof(optarg);
       break;
     case 'n':
       variables.noise = atof(optarg);
@@ -1751,152 +1757,6 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 
 }
 
-__host__ void float2toImage(float2 *I, float nu, int iteration, long M, long N, int option)
-{
-  fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
-	int statusI_nu_0 = 0, statusalpha = 0, status = 0;
-	long fpixel = 1;
-	long elements = M*N;
-	char *Inu_0_name;
-  char *alphaname;
-  char *I_nu_name;
-  size_t needed_I_nu_0;
-  size_t needed_alpha;
-  size_t needed_I_nu;
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *alphaunit = "";
-  char *I_unit = "JY/PIXEL";
-
-  cufftComplex *host_Iout = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-  float2 *host_2Iout = (float2*)malloc(M*N*sizeof(float2));
-
-  cufftComplex *I_out;
-  gpuErrchk(cudaMalloc((void**)&I_out, sizeof(cufftComplex)*M*N));
-  calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(I_out, I, nu, nu_0, fg_scale, MINPIX, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  gpuErrchk(cudaMemcpy2D(host_Iout, sizeof(cufftComplex), I_out, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
-
-  gpuErrchk(cudaMemcpy2D(host_2Iout, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToHost));
-
-  cudaFree(I_out);
-
-  float *host_alpha = (float*)malloc(M*N*sizeof(float));
-  float *host_I_nu_0 = (float*)malloc(M*N*sizeof(float));
-  float *host_Inu = (float*)malloc(M*N*sizeof(float));
-
-  switch(option){
-    case 0:
-      needed_alpha = snprintf(NULL, 0, "!%s_alpha.fits", out_image) + 1;
-      alphaname = (char*)malloc(needed_alpha*sizeof(char));
-      snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha.fits", out_image);
-      break;
-    case 1:
-      needed_alpha = snprintf(NULL, 0, "!%salpha_%d.fits", mempath, iteration) + 1;
-      alphaname = (char*)malloc(needed_alpha*sizeof(char));
-      snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  switch(option){
-    case 0:
-      needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0.fits", out_image) + 1;
-      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);
-      break;
-    case 1:
-      needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits" , mempath, iteration) + 1;
-      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  switch(option){
-    case 0:
-      needed_I_nu = snprintf(NULL, 0, "!%s.fits", out_image) + 1;
-      I_nu_name = (char*)malloc(needed_I_nu*sizeof(char));
-      snprintf(I_nu_name, needed_I_nu*sizeof(char), "!%s.fits", out_image);
-      break;
-    case 1:
-      needed_I_nu = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
-      I_nu_name = (char*)malloc(needed_I_nu*sizeof(char));
-      snprintf(I_nu_name, needed_I_nu*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      goToError();
-  }
-
-  fits_create_file(&fpointerI_nu_0, Inu_0_name, &statusI_nu_0);
-  fits_create_file(&fpointeralpha, alphaname, &statusalpha);
-  fits_create_file(&fpointer, I_nu_name, &status);
-
-  if (statusI_nu_0 || statusalpha || status) {
-    fits_report_error(stderr, status); /* print error message */
-  }
-
-  fits_copy_header(mod_in, fpointerI_nu_0, &statusI_nu_0);
-  fits_copy_header(mod_in, fpointeralpha, &statusalpha);
-  fits_copy_header(mod_in, fpointer, &status);
-
-  if (statusI_nu_0 || statusalpha || status) {
-    fits_report_error(stderr, status); /* print error message */
-  }
-
-  fits_update_key(fpointerI_nu_0, TSTRING, "BUNIT", I_unit, "Unit of measurement", &statusI_nu_0);
-  fits_update_key(fpointeralpha, TSTRING, "BUNIT", alphaunit, "Unit of measurement", &statusalpha);
-  fits_update_key(fpointer, TSTRING, "BUNIT", I_unit, "Unit of measurement", &status);
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-		for(int j=0; j < N; j++){
-		    host_Inu[N*y+x] = host_Iout[N*i+j].x * fg_scale;
-        host_I_nu_0[N*y+x] = host_2Iout[N*i+j].x; //* fg_scale;
-        host_alpha[N*y+x] = host_2Iout[N*i+j].y; //* fg_scale;
-        x--;
-		}
-    x=M-1;
-    y--;
-	}
-
-  fits_write_img(fpointerI_nu_0, TFLOAT, fpixel, elements, host_I_nu_0, &statusI_nu_0);
-  fits_write_img(fpointeralpha, TFLOAT, fpixel, elements, host_alpha, &statusalpha);
-  fits_write_img(fpointer, TFLOAT, fpixel, elements, host_Inu, &status);
-  if (statusI_nu_0 || statusalpha || status) {
-    fits_report_error(stderr, status); /* print error message */
-  }
-	fits_close_file(fpointerI_nu_0, &status);
-  fits_close_file(fpointeralpha, &status);
-  fits_close_file(fpointer, &status);
-  if (statusI_nu_0 || statusalpha || status) {
-    fits_report_error(stderr, status); /* print error message */
-  }
-  free(host_Inu);
-  free(host_I_nu_0);
-  free(host_alpha);
-  free(host_Iout);
-  free(host_2Iout);
-
-  free(I_nu_name);
-  free(alphaname);
-  free(Inu_0_name);
-
-
-}
 
 __host__ float chiCuadrado(float2 *I)
 {

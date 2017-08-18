@@ -42,7 +42,7 @@ cufftComplex *device_V, *device_Inu;
 float2 *device_dchi2_total, *device_2I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, minInu_0;
-float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, freqavg;
+float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -120,6 +120,7 @@ __host__ int main(int argc, char **argv) {
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
+  alpha_start = variables.alpha_start;
 
   multigpu = 0;
   firstgpu = -1;
@@ -307,8 +308,6 @@ __host__ int main(int argc, char **argv) {
     printf("Calculating weights sum\n");
   }
 
-  freqavg = 1.37995e+11;
-
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
   float sum_weights = 0.0;
@@ -481,7 +480,7 @@ __host__ int main(int argc, char **argv) {
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
-        host_2I[N*i+j].y = 3.5;
+        host_2I[N*i+j].y = alpha_start;
         x--;
 		}
     x=M-1;

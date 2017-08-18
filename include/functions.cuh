@@ -69,6 +69,7 @@ typedef struct variables {
   float lambda;
   float minpix;
   float nu_0;
+  float alpha_start;
 } Vars;
 
 __host__ void goToError();
