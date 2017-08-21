@@ -778,6 +778,8 @@ __host__ void print_help() {
   printf("    -w  --warranty         Shows no warranty details\n");
   printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
   printf("        --clipping         Clips the image to positive values\n");
+  printf("        --read-tau-image   Read canvas values as tau_0 input\n");
+  printf("        --apply-noise      Apply random gaussian noise to the data\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
