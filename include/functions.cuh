@@ -172,7 +172,7 @@ __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, f
 __global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N);
 __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, int numVisibilities);
 __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
-__global__ void QVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
+__global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void searchDirection(float *g, float *xi, float *h, long N);
 __global__ void newXi(float *g, float *xi, float *h, float gam, long N);
