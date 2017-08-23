@@ -2035,8 +2035,8 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
   float tv = 0.0;
   if(noise[N*i+j] <= noise_cut){
     if(i!= N-1 || j!=N-1){
-      float dx = I[N*i+(j+1)].x - I[N*i+j].x;
-      float dy = I[N*(i+1)+j].x - I[N*i+j].x;
+      float dx = I[N*i+j].x - I[N*i+(j+1)].x;
+      float dy = I[N*i+j].x - I[N*(i+1)+j].x;
       tv = sqrtf((dx * dx) + (dy * dy));
     }else{
       tv = 0;
