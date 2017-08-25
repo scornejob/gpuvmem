@@ -1820,6 +1820,8 @@ __global__ void DChi2_total_tau(float *noise, float3 *dchi2_total, float *dchi2,
   }
 }
 
+
+
 __global__ void DChi2_total_T(float *noise, float3 *dchi2_total, float *dchi2, cufftComplex *I_nu, float3 *I, float *dS, float lambda, float nu, float nu_0, float noise_cut, float DELTAX, float fg_scale, long N)
 {
 
@@ -2177,17 +2179,19 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
-                gpuErrchk(cudaDeviceSynchronize());
+                if(iter%2==0 || iter == 1){
+                  DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                }else{
+                  DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                }
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
-                gpuErrchk(cudaDeviceSynchronize());
-                break;
-              case 2:
                 DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
+
             }
         }
       }
@@ -2244,15 +2248,16 @@ __host__ void dchiCuadrado(float3 *I, float3 *dxi2)
 
             switch(flag_opt){
               case 0:
-                DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
-                gpuErrchk(cudaDeviceSynchronize());
+                if(iter%2==0 || iter == 1){
+                  DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                }else{
+                  DChi2_total_T<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                  gpuErrchk(cudaDeviceSynchronize());
+                }
                 break;
               case 1:
-                DChi2_total_tau<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
-                gpuErrchk(cudaDeviceSynchronize());
-                break;
-              case 2:
-                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, vars_per_field[f].device_vars[i].device_Inu, I, vars_per_field[f].device_vars[i].device_S, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
+                DChi2_total_beta<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2_total, vars_per_field[f].device_vars[i].dchi2, device_Inu, I, device_dS, lambda, fields[f].visibilities[i].freq, nu_0, noise_cut, DELTAX, fg_scale, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
 

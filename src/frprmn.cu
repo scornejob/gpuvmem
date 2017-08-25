@@ -60,6 +60,7 @@ __host__ void frprmn(float3 *p, float ftol, float *fret, float (*func)(float3*),
   float3 *device_g, *device_h, *xi;
   double start, end;
   flag_opt = flag;
+  iter = 0;
 
   //////////////////////MEMORY GPU//////////////////////////
   gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float3)*M*N));
