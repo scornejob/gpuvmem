@@ -22,6 +22,7 @@ const float CBOLTZMANN = 1.38064852E-23;
 const float CPLANCK = 6.626070040E-34;
 const float MIN_TEMP = 3.0;
 const float MIN_SINDEX = 0.5;
+const float MAX_SINDEX = 3.5;
 
 typedef struct variablesPerFreq{
   float *chi2;

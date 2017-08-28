@@ -1452,6 +1452,13 @@ __global__ void newP(float3 *p, float3 *xi, float xmin, long N, float tau_min)
     xi[N*i+j].y = 0.0;
   }
   //beta
+  if(p[N*i+j].z + xi[N*i+j].z < MAX_SINDEX){
+    p[N*i+j].z += xi[N*i+j].z;
+  }else{
+    p[N*i+j].z = MAX_SINDEX;
+    xi[N*i+j].z = 0.0;
+  }
+
   if(p[N*i+j].z + xi[N*i+j].z > MIN_SINDEX){
     p[N*i+j].z += xi[N*i+j].z;
   }else{
@@ -1494,6 +1501,12 @@ __global__ void evaluateXt(float3 *xt, float3 *pcom, float3 *xicom, float x, lon
   }
 
   //beta
+  if(pcom[N*i+j].z + x * xicom[N*i+j].z < MAX_SINDEX){
+    xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
+  }else{
+      xt[N*i+j].z = MAX_SINDEX;
+  }
+
   if(pcom[N*i+j].z + x * xicom[N*i+j].z > MIN_SINDEX){
     xt[N*i+j].z = pcom[N*i+j].z + x * xicom[N*i+j].z;
   }else{
