@@ -173,7 +173,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   float u;
   SelectStream(0);
-  PutSeed(1);
+  PutSeed(-1);
 
   for(int f=0; f<data.nfields; f++){
     g=0;
