@@ -36,7 +36,7 @@ float *device_xicom, (*nrfunc)(cufftComplex*);
 extern long M;
 extern long N;
 extern float MINPIX;
-extern int nopositivity;
+extern int nopositivity, reg_term;
 
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
@@ -76,8 +76,13 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
     newP<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, MINPIX, N);
     gpuErrchk(cudaDeviceSynchronize());
   }else{
-    newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);
-    gpuErrchk(cudaDeviceSynchronize());
+    if(reg_term == 3){
+      newPNoPositivityS<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, MINPIX, N);
+      gpuErrchk(cudaDeviceSynchronize());
+    }else{
+      newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);
+      gpuErrchk(cudaDeviceSynchronize());
+    }
   }
 
   cudaFree(device_xicom);

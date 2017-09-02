@@ -36,7 +36,7 @@ extern long N;
 extern float MINPIX;
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
-extern int nopositivity;
+extern int nopositivity, reg_term;
 
 __host__ float f1dim(float x)
 {
@@ -52,8 +52,13 @@ __host__ float f1dim(float x)
       evaluateXt<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
       gpuErrchk(cudaDeviceSynchronize());
     }else{
-      evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);
-      gpuErrchk(cudaDeviceSynchronize());
+      if(reg_term ==3){
+        evaluateXtNoPositivityS<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, MINPIX, N);
+        gpuErrchk(cudaDeviceSynchronize());
+      }else{
+        evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N);
+        gpuErrchk(cudaDeviceSynchronize());
+      }
     }
 
     f = (*nrfunc)(device_xt);

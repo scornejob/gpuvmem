@@ -1408,6 +1408,21 @@ __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long 
   p[N*i+j].y = 0.0;
 }
 
+__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  xi[N*i+j] *= xmin;
+  if(p[N*i+j].x + xi[N*i+j] > -MINPIX/2){
+    p[N*i+j].x += xi[N*i+j];
+  }else{
+    p[N*i+j].x = -MINPIX/2;
+    xi[N*i+j] = 0.0;
+  }
+  p[N*i+j].y = 0.0;
+}
+
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1427,6 +1442,19 @@ __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, f
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
       xt[N*i+j].x = MINPIX;
+  }
+  xt[N*i+j].y = 0.0;
+}
+
+__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > -MINPIX/2){
+    xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
+  }else{
+      xt[N*i+j].x = -MINPIX/2;
   }
   xt[N*i+j].y = 0.0;
 }
@@ -1459,6 +1487,19 @@ __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float n
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
     entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
+  }
+
+  S[N*i+j] = entropy;
+}
+
+__global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float entropy = 0.0;
+  if(noise[N*i+j] <= noise_cut){
+    entropy = I[N*i+j].x * logf((I[N*i+j].x + MINPIX) / MINPIX);
   }
 
   S[N*i+j] = entropy;
@@ -1536,6 +1577,16 @@ __global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, fl
 
   if(noise[N*i+j] <= noise_cut){
     dH[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
+  }
+}
+
+__global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j] <= noise_cut){
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x + MINPIX) / MINPIX) + 1.0);
   }
 }
 
@@ -1745,6 +1796,10 @@ __host__ float chiCuadrado(cufftComplex *I)
         TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
+      case 3:
+        SVectorNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
       default:
         printf("Selected prior is not defined\n");
         goToError();
@@ -1934,6 +1989,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         break;
       case 2:
         DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 3:
+        DSNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
