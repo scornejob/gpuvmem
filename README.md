@@ -57,6 +57,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
 -P  --prior           Prior used to regularize the solution (Default = 0 = Entropy)
+-S  --S_multiplier    Multiplier for minimum negative pixel when P=3
 -f  --file            Output file where final objective function values are saved (Optional)
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
