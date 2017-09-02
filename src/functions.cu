@@ -773,6 +773,7 @@ __host__ void print_help() {
   printf("    -w  --warranty         Shows no warranty details\n");
   printf("        --xcorr            Run gpuvmem with cross-correlation\n");
   printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
+  printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --verbose          Shows information through all the execution\n");
 }

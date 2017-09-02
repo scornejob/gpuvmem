@@ -63,6 +63,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -t  --iterations      Number of iterations for optimization (Default = 50)
     --xcorr           Run gpuvmem with cross-correlation
     --nopositivity    Run gpuvmem using chi2 with no positivity restriction
+    --apply-noise     Apply random gaussian noise to visibilities
     --clipping        Clips the image to positive values
     --verbose         Shows information through all the execution
 ```
