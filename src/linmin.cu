@@ -35,7 +35,7 @@ cufftComplex *device_pcom;
 float *device_xicom, (*nrfunc)(cufftComplex*);
 extern long M;
 extern long N;
-extern float MINPIX;
+extern float MINPIX, S_multiplier;
 extern int nopositivity, reg_term;
 
 extern dim3 threadsPerBlockNN;
@@ -77,7 +77,7 @@ __host__ void linmin(cufftComplex *p, float *xi, float *fret, float (*func)(cuff
     gpuErrchk(cudaDeviceSynchronize());
   }else{
     if(reg_term == 3){
-      newPNoPositivityS<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, MINPIX, N);
+      newPNoPositivityS<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, MINPIX, S_multiplier, N);
       gpuErrchk(cudaDeviceSynchronize());
     }else{
       newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N);
