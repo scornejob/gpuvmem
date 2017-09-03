@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float2 *device_dchi2_total, *device_2I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, S_multiplier, alpha_start, minInu_0;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, minInu_0;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -768,7 +768,6 @@ __host__ void print_help() {
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
-  printf("    -S  --S_multiplier     Multiplier for minimum negative pixel when P=3\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
@@ -812,7 +811,6 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.nu_0 = -1;
   variables.it_max = 500;
   variables.noise = -1;
-  variables.S_multiplier = -1;
   variables.lambda = -1;
   variables.randoms = -1;
   variables.noise_cut = -1;
@@ -822,7 +820,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:S:p:P:X:Y:V:t:F:a:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -836,7 +834,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"S_multiplier", 0, NULL, 'S'},
+                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
@@ -921,9 +919,6 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'M':
       variables.multigpu = optarg;
-      break;
-    case 'S':
-      variables.S_multiplier = atof(optarg);
       break;
     case 'r':
       variables.randoms = atof(optarg);
@@ -1429,7 +1424,7 @@ __global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix)
 
 }
 
-__global__ void newPNoPositivityS(float2 *p, float2 *xi, float xmin, long N, float minpix, float S_multiplier)
+__global__ void newPNoPositivityS(float2 *p, float2 *xi, float xmin, long N, float minpix)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1437,10 +1432,10 @@ __global__ void newPNoPositivityS(float2 *p, float2 *xi, float xmin, long N, flo
   xi[N*i+j].x *= xmin;
   xi[N*i+j].y *= xmin;
   //I_nu_0
-  if(p[N*i+j].x + xi[N*i+j].x > -minpix*S_multiplier){
+  if(p[N*i+j].x + xi[N*i+j].x > -minpix/2){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = -minpix*S_multiplier;
+    p[N*i+j].x = -minpix/2;
     xi[N*i+j].x = 0.0;
   }
 
@@ -1487,15 +1482,15 @@ __global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, lon
   }*/
 }
 
-__global__ void evaluateXtNoPositivityS(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix, float S_multiplier)
+__global__ void evaluateXtNoPositivityS(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //I_nu_0
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -minpix*S_multiplier){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -minpix/2){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-    xt[N*i+j].x = -minpix*S_multiplier;
+    xt[N*i+j].x = -minpix/2;
   }
 
   xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;

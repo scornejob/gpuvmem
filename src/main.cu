@@ -42,7 +42,7 @@ cufftComplex *device_V, *device_Inu;
 float2 *device_dchi2_total, *device_2I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, minInu_0;
-float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, S_multiplier;
+float difmap_noise, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -121,7 +121,6 @@ __host__ int main(int argc, char **argv) {
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
   alpha_start = variables.alpha_start;
-  S_multiplier = variables.S_multiplier;
 
   multigpu = 0;
   firstgpu = -1;
