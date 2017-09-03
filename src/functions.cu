@@ -764,7 +764,6 @@ __host__ void print_help() {
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
-  printf("    -S  --S_multiplier    Multiplier for minimum negative pixel when P=3\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
@@ -811,12 +810,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.randoms = 1.0;
   variables.noise_cut = -1;
   variables.minpix = -1;
-  variables.S_multiplier = -1.0;
   variables.reg_term = 0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:S:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -832,7 +830,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"S_multiplier", 0, NULL, 'S'},
+                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
@@ -908,9 +906,6 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'P':
       variables.reg_term = atoi(optarg);;
       break;
-    case 'S':
-      variables.S_multiplier = atof(optarg);;
-      break;
     case 'M':
       variables.multigpu = optarg;
       break;
@@ -955,6 +950,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 
   if(!isPow2(variables.blockSizeX) && !isPow2(variables.blockSizeY) && !isPow2(variables.blockSizeV)){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
+  if(variables.reg_term > 3){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1414,16 +1414,16 @@ __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long 
   p[N*i+j].y = 0.0;
 }
 
-__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, float S_multiplier, long N)
+__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   xi[N*i+j] *= xmin;
-  if(p[N*i+j].x + xi[N*i+j] > -MINPIX*S_multiplier){
+  if(p[N*i+j].x + xi[N*i+j] > -MINPIX/2){
     p[N*i+j].x += xi[N*i+j];
   }else{
-    p[N*i+j].x = -MINPIX*S_multiplier;
+    p[N*i+j].x = -MINPIX/2;
     xi[N*i+j] = 0.0;
   }
   p[N*i+j].y = 0.0;
@@ -1452,15 +1452,15 @@ __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, f
   xt[N*i+j].y = 0.0;
 }
 
-__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, float S_multiplier, long N)
+__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(pcom[N*i+j].x + x * xicom[N*i+j] > -MINPIX*S_multiplier){
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > -MINPIX/2){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
-      xt[N*i+j].x = -MINPIX*S_multiplier;
+      xt[N*i+j].x = -MINPIX/2;
   }
   xt[N*i+j].y = 0.0;
 }

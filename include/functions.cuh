@@ -68,7 +68,6 @@ typedef struct variables {
   float randoms;
   float lambda;
   float minpix;
-  float S_multiplier;
 } Vars;
 
 __host__ void goToError();
@@ -91,7 +90,7 @@ __global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I
 __global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N);
 __global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N);
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N);
-__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, float S_multiplier, long N);
+__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
@@ -108,7 +107,7 @@ __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex 
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N);
 __global__ void evaluateXtNoPositivity(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, long N);
-__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, float S_multiplier, long N);
+__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N);
 __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, int numVisibilities);
 __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
