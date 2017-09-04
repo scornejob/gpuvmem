@@ -1420,10 +1420,10 @@ __global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float 
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   xi[N*i+j] *= xmin;
-  if(p[N*i+j].x + xi[N*i+j] > -2*MINPIX){
+  if(p[N*i+j].x + xi[N*i+j] > -3 + MINPIX){
     p[N*i+j].x += xi[N*i+j];
   }else{
-    p[N*i+j].x = -2*MINPIX;
+    p[N*i+j].x = -3 + MINPIX;
     xi[N*i+j] = 0.0;
   }
   p[N*i+j].y = 0.0;
@@ -1457,10 +1457,10 @@ __global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, fl
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(pcom[N*i+j].x + x * xicom[N*i+j] > -2*MINPIX){
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > -3 + MINPIX){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
-      xt[N*i+j].x = -2*MINPIX;
+      xt[N*i+j].x = -3 + MINPIX;
   }
   xt[N*i+j].y = 0.0;
 }
