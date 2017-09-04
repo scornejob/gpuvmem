@@ -1505,7 +1505,7 @@ __global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N,
 
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX));
+    entropy = I[N*i+j].x * logf((I[N*i+j].x + 3.0) / 3.0);
   }
 
   S[N*i+j] = entropy;
@@ -1592,7 +1592,7 @@ __global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX)) + (I[N*i+j].x * 3*MINPIX)/(I[N*i+j].x + 3*MINPIX));
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3.0) / 3.0) + (I[N*i+j].x * 3)/(I[N*i+j].x + 3));
   }
 }
 
