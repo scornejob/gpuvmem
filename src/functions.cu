@@ -1592,7 +1592,7 @@ __global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX)) + I[N*i+j].x/(I[N*i+j].x + 3*MINPIX));
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX)) + (I[N*i+j].x * 3*MINPIX)/(I[N*i+j].x + 3*MINPIX));
   }
 }
 
