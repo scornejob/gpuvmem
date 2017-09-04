@@ -1420,10 +1420,10 @@ __global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float 
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   xi[N*i+j] *= xmin;
-  if(p[N*i+j].x + xi[N*i+j] > -MINPIX/2){
+  if(p[N*i+j].x + xi[N*i+j] > -2*MINPIX){
     p[N*i+j].x += xi[N*i+j];
   }else{
-    p[N*i+j].x = -MINPIX/2;
+    p[N*i+j].x = -2*MINPIX;
     xi[N*i+j] = 0.0;
   }
   p[N*i+j].y = 0.0;
@@ -1457,10 +1457,10 @@ __global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, fl
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(pcom[N*i+j].x + x * xicom[N*i+j] > -MINPIX/2){
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > -2*MINPIX){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
-      xt[N*i+j].x = -MINPIX/2;
+      xt[N*i+j].x = -2*MINPIX;
   }
   xt[N*i+j].y = 0.0;
 }
@@ -1505,7 +1505,7 @@ __global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N,
 
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf((I[N*i+j].x + MINPIX) / MINPIX);
+    entropy = I[N*i+j].x * logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX));
   }
 
   S[N*i+j] = entropy;
@@ -1592,7 +1592,7 @@ __global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x + MINPIX) / MINPIX) + 1.0);
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3*MINPIX) / (3*MINPIX)) + I[N*i+j].x/(I[N*i+j].x + 3*MINPIX));
   }
 }
 
