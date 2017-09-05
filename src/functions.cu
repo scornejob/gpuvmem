@@ -1369,14 +1369,14 @@ __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex 
   }
 }
 
-__global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
 
   if(noise[N*i+j] > noise_cut){
-    I[N*i+j].x = MINPIX;
+    I[N*i+j].x = -1.0 * eta * MINPIX;
   }
 
   fg_image[N*i+j].x = I[N*i+j].x;
@@ -1738,7 +1738,7 @@ __host__ float chiCuadrado(cufftComplex *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_fg_image, device_noise_image, I, N, noise_cut, MINPIX);
+  clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_fg_image, device_noise_image, I, N, noise_cut, MINPIX, eta);
   gpuErrchk(cudaDeviceSynchronize());
 
 
