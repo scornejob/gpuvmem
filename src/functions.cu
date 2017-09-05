@@ -44,7 +44,7 @@ minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff, eta;
 extern double ra, dec;
 
 extern freqData data;
@@ -768,6 +768,7 @@ __host__ void print_help() {
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
+  printf("    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
@@ -817,6 +818,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.minpix = -1;
   variables.reg_term = 0;
   variables.alpha_start = 0.0;
+  variables.eta = -1.0;
 
 
 	long next_op;
@@ -834,7 +836,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'},
+                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"eta", 0, NULL, 'e'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
@@ -894,6 +896,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     	break;
     case 'x':
       variables.minpix = atof(optarg);
+      break;
+    case 'e':
+      variables.eta = atof(optarg);
       break;
     case 'F':
       variables.nu_0 = atof(optarg);
@@ -961,6 +966,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 
   if(!isPow2(variables.blockSizeX) && !isPow2(variables.blockSizeY) && !isPow2(variables.blockSizeV)){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
+  if(variables.reg_term > 2){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1398,7 +1408,7 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix)
+__global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1406,36 +1416,10 @@ __global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix)
   xi[N*i+j].x *= xmin;
   xi[N*i+j].y *= xmin;
   //I_nu_0
-  if(p[N*i+j].x + xi[N*i+j].x > minpix){
+  if(p[N*i+j].x + xi[N*i+j].x > -1.0*eta*minpix){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = minpix;
-    xi[N*i+j].x = 0.0;
-  }
-
-  p[N*i+j].y += xi[N*i+j].y;
-  /*//alpha
-  if(p[N*i+j].y + xi[N*i+j].y > minpix_alpha){
-    p[N*i+j].y += xi[N*i+j].y;
-  }else{
-    p[N*i+j].y = minpix_alpha;
-    xi[N*i+j].y = 0.0;
-  }*/
-
-}
-
-__global__ void newPNoPositivityS(float2 *p, float2 *xi, float xmin, long N, float minpix)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  xi[N*i+j].x *= xmin;
-  xi[N*i+j].y *= xmin;
-  //I_nu_0
-  if(p[N*i+j].x + xi[N*i+j].x > -minpix/2){
-    p[N*i+j].x += xi[N*i+j].x;
-  }else{
-    p[N*i+j].x = -minpix/2;
+    p[N*i+j].x = -1.0*eta*minpix;
     xi[N*i+j].x = 0.0;
   }
 
@@ -1462,15 +1446,15 @@ __global__ void newPNoPositivity(float2 *p, float2 *xi, float xmin, long N)
   p[N*i+j].y += xi[N*i+j].y;
 }
 
-__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix)
+__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //I_nu_0
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > minpix){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -1.0*eta*minpix){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-    xt[N*i+j].x = minpix;
+    xt[N*i+j].x = -1.0*eta*minpix;
   }
 
   xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
@@ -1482,25 +1466,6 @@ __global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, lon
   }*/
 }
 
-__global__ void evaluateXtNoPositivityS(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-  //I_nu_0
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -minpix/2){
-    xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
-  }else{
-    xt[N*i+j].x = -minpix/2;
-  }
-
-  xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
-  //alpha
-  /*if(pcom[N*i+j].y + x * xicom[N*i+j].y > minpix_alpha){
-    xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
-  }else{
-      xt[N*i+j].y = minpix_alpha;
-  }*/
-}
 
 __global__ void evaluateXtNoPositivity(float2 *xt, float2 *pcom, float2 *xicom, float x, long N)
 {
@@ -1523,27 +1488,14 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
-  }
-
-  S[N*i+j] = entropy;
-}
-
-__global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float entropy = 0.0;
-  if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf((I[N*i+j].x + MINPIX) / MINPIX);
+    entropy = I[N*i+j].x * logf((I[N*i+j].x / MINPIX) + (eta + 1.0));
   }
 
   S[N*i+j] = entropy;
@@ -1640,23 +1592,13 @@ __global__ void restartDPhi(float2 *dChi2, float *dS, long N)
 
 }
 
-__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
-  }
-}
-
-__global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x + MINPIX) / MINPIX) + 1.0);
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x / MINPIX) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*MINPIX) / I[N*i+j].x)));
   }
 }
 
@@ -1900,7 +1842,7 @@ __host__ float chiCuadrado(float2 *I)
           if(iter>0 && lambda!=0.0){
             switch(reg_term){
               case 0:
-                SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX);
+                SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX, eta);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
@@ -1909,10 +1851,6 @@ __host__ float chiCuadrado(float2 *I)
                 break;
               case 2:
                 TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX);
-                gpuErrchk(cudaDeviceSynchronize());
-                break;
-              case 3:
-                SVectorNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               default:
@@ -1991,7 +1929,7 @@ __host__ float chiCuadrado(float2 *I)
           if(iter>0 && lambda!=0.0){
             switch(reg_term){
               case 0:
-                SVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+                SVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX, eta);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
@@ -2000,10 +1938,6 @@ __host__ float chiCuadrado(float2 *I)
                 break;
               case 2:
                 TVVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
-                gpuErrchk(cudaDeviceSynchronize());
-                break;
-              case 3:
-                SVectorNegative<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               default:
@@ -2120,7 +2054,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
             if(iter>0 && lambda!=0.0){
               switch(reg_term){
                 case 0:
-                  DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+                  DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, eta, N);
                   gpuErrchk(cudaDeviceSynchronize());
                   break;
                 case 1:
@@ -2129,10 +2063,6 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
                   break;
                 case 2:
                   DTV<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
-                  gpuErrchk(cudaDeviceSynchronize());
-                  break;
-                case 3:
-                  DSNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
                   gpuErrchk(cudaDeviceSynchronize());
                   break;
                 default:
@@ -2186,7 +2116,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
         if(iter>0 && lambda!=0.0){
           switch(reg_term){
             case 0:
-              DS<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
+              DS<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, eta, N);
               gpuErrchk(cudaDeviceSynchronize());
               break;
             case 1:
@@ -2195,10 +2125,6 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
               break;
             case 2:
               DTV<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
-              gpuErrchk(cudaDeviceSynchronize());
-              break;
-            case 3:
-              DSNegative<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, vars_per_field[f].device_vars[i].device_Inu, device_noise_image, noise_cut, lambda, MINPIX, N);
               gpuErrchk(cudaDeviceSynchronize());
               break;
             default:
