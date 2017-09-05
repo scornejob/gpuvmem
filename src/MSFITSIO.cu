@@ -285,7 +285,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto < data.nstokes; sto++){
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 u = Random();
                 if(u<random_probability){
                   fields[f].visibilities[g].stokes[h] = polarizations[sto];
@@ -527,7 +527,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto< data.nstokes; sto++){
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
                 comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
                 dataCol[j][sto] = comp;
