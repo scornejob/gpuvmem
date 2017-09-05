@@ -56,6 +56,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
   casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
   casa::Vector<casa::Bool> auxbool;
+  casa::Vector<float> weights;
   bool flag;
   int spw, field, counter;
 
@@ -69,10 +70,11 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
           field = values.asInt("FIELD_ID");
           spw = values.asInt("DATA_DESC_ID");
           casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
+          weights=values.asArrayFloat("WEIGHT");
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 fields[f].numVisibilitiesPerFreq[counter]++;
               }
             }
@@ -191,7 +193,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto<data.nstokes; sto++) {
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 u = Normal(0.0, 1.0);
                 fields[f].visibilities[g].stokes[h] = polarizations[sto];
                 fields[f].visibilities[g].u[h] = uvw[0];
@@ -283,7 +285,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto < data.nstokes; sto++){
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 u = Random();
                 if(u<random_probability){
                   fields[f].visibilities[g].stokes[h] = polarizations[sto];
@@ -385,7 +387,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto < data.nstokes; sto++) {
               auxbool = flagCol[j][sto];
-              if(auxbool[0] == false){
+              if(auxbool[0] == false && weights[sto] != 0.0){
                 fields[f].visibilities[g].stokes[h] = polarizations[sto];
                 fields[f].visibilities[g].u[h] = uvw[0];
                 fields[f].visibilities[g].v[h] = uvw[1];
