@@ -75,7 +75,6 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 0. Entropy
 1. Quadratic variation
 2. Total Variation
-3. Negative Entropy
 
 # IMPORTANT
 

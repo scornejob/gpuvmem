@@ -41,7 +41,7 @@ cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
 
 float *device_dphi, *device_dchi2_total, *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
-float difmap_noise, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff;
+float difmap_noise, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff, eta;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -117,6 +117,7 @@ __host__ int main(int argc, char **argv) {
   noise_cut = variables.noise_cut;
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
+  eta = variables.eta;
 
   multigpu = 0;
   firstgpu = -1;

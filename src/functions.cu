@@ -39,7 +39,7 @@ extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
 
 extern float *device_dphi, *device_chi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
 extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, final_S;
+minpix, lambda, ftol, random_probability, final_chi2, final_S, eta;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -764,6 +764,7 @@ __host__ void print_help() {
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
+  printf("    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)\n");
   printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
   printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
@@ -811,10 +812,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
+  variables.eta = -1.0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:e:p:P:X:Y:V:t:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -830,7 +832,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'},
+                                    {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"eta", 0, NULL, 'e'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
@@ -893,6 +895,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'n':
       variables.noise = atof(optarg);
       break;
+    case 'e':
+      variables.eta = atof(optarg);
+      break;
     case 'N':
       variables.noise_cut = atof(optarg);
       break;
@@ -954,7 +959,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if(variables.reg_term > 3){
+  if(variables.reg_term > 2){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1399,31 +1404,16 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
+__global__ void newP(cufftComplex *p, float *xi, float xmin, float MINPIX, float eta, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   xi[N*i+j] *= xmin;
-  if(p[N*i+j].x + xi[N*i+j] > MINPIX){
+  if(p[N*i+j].x + xi[N*i+j] > -1.0*eta*MINPIX){
     p[N*i+j].x += xi[N*i+j];
   }else{
-    p[N*i+j].x = MINPIX;
-    xi[N*i+j] = 0.0;
-  }
-  p[N*i+j].y = 0.0;
-}
-
-__global__ void newPNoPositivityS(cufftComplex *p, float *xi, float xmin, float MINPIX, long N)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  xi[N*i+j] *= xmin;
-  if(p[N*i+j].x + xi[N*i+j] > -3 + MINPIX){
-    p[N*i+j].x += xi[N*i+j];
-  }else{
-    p[N*i+j].x = -3 + MINPIX;
+    p[N*i+j].x = -1.0*eta*MINPIX;
     xi[N*i+j] = 0.0;
   }
   p[N*i+j].y = 0.0;
@@ -1439,28 +1429,15 @@ __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N)
   p[N*i+j].y = 0.0;
 }
 
-__global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
+__global__ void evaluateXt(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, float eta, long N)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  if(pcom[N*i+j].x + x * xicom[N*i+j] > MINPIX){
+  if(pcom[N*i+j].x + x * xicom[N*i+j] > -1.0*eta*MINPIX){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
   }else{
-      xt[N*i+j].x = MINPIX;
-  }
-  xt[N*i+j].y = 0.0;
-}
-
-__global__ void evaluateXtNoPositivityS(cufftComplex *xt, cufftComplex *pcom, float *xicom, float x, float MINPIX, long N)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  if(pcom[N*i+j].x + x * xicom[N*i+j] > -3 + MINPIX){
-    xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j];
-  }else{
-      xt[N*i+j].x = -3 + MINPIX;
+      xt[N*i+j].x = -1.0*eta*MINPIX;
   }
   xt[N*i+j].y = 0.0;
 }
@@ -1485,27 +1462,14 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
-__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf(I[N*i+j].x / MINPIX);
-  }
-
-  S[N*i+j] = entropy;
-}
-
-__global__ void SVectorNegative(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
-{
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float entropy = 0.0;
-  if(noise[N*i+j] <= noise_cut){
-    entropy = I[N*i+j].x * logf((I[N*i+j].x + 3.0) / 3.0);
+    entropy = I[N*i+j].x * logf((I[N*i+j].x / MINPIX) + (eta + 1.0));
   }
 
   S[N*i+j] = entropy;
@@ -1576,23 +1540,13 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 }
 
-__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf(I[N*i+j].x / MINPIX) + 1.0);
-  }
-}
-
-__global__ void DSNegative(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x + 3.0) / 3.0) + (I[N*i+j].x * 3)/(I[N*i+j].x + 3));
+    dH[N*i+j] = lambda * (logf((I[N*i+j].x / MINPIX) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*MINPIX) / I[N*i+j].x)));
   }
 }
 
@@ -1791,7 +1745,7 @@ __host__ float chiCuadrado(cufftComplex *I)
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
-        SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX, eta);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
@@ -1800,10 +1754,6 @@ __host__ float chiCuadrado(cufftComplex *I)
         break;
       case 2:
         TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 3:
-        SVectorNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -1986,7 +1936,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
       case 0:
-        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, eta, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
@@ -1995,10 +1945,6 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         break;
       case 2:
         DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 3:
-        DSNegative<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
