@@ -298,7 +298,7 @@ __host__ int main(int argc, char **argv) {
     readSubsampledMS(msinput, fields, data, random_probability);
   }else{
 	  readMS(msinput, fields, data);
-  } 
+  }
 
   if(verbose_flag){
     printf("MS File Successfully Read\n");
