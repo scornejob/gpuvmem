@@ -314,17 +314,13 @@ __host__ int main(int argc, char **argv) {
   float sum_weights = 0.0;
   for(int f=0; f<data.nfields; f++){
   	for(int i=0; i< data.total_frequencies; i++){
-      if(beam_noise == -1){
         //Calculating beam noise
         for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
             if(fields[f].visibilities[i].weight[j] != 0.0){
               sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+              sum_weights += fields[f].visibilities[i].weight[j];
             }
         }
-      }
-      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-          sum_weights += fields[f].visibilities[i].weight[j];
-      }
   		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
   		long UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
       fields[f].visibilities[i].threadsPerBlockUV = variables.blockSizeV;
@@ -332,9 +328,19 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
+  if(verbose_flag){
+      float aux_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      printf("Calculated NOISE %e\n", aux_noise);
+      printf("Using canvas NOISE anyway...\n");
+      printf("Canvas NOISE = %e\n", beam_noise);
+  }
+
   if(beam_noise == -1){
       beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
-      printf("Noise: %e\n", beam_noise);
+      if(verbose_flag){
+        printf("No NOISE value detected in canvas...\n");
+        printf("Using NOISE: %e ...\n", beam_noise);
+      }
   }
 
 	if(num_gpus == 1){
