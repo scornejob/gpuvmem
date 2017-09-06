@@ -194,13 +194,14 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
             for (int sto=0; sto<data.nstokes; sto++) {
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false && weights[sto] != 0.0){
-                u = Normal(0.0, 1.0);
                 fields[f].visibilities[g].stokes[h] = polarizations[sto];
                 fields[f].visibilities[g].u[h] = uvw[0];
                 fields[f].visibilities[g].v[h] = uvw[1];
                 v = casa::real(dataCol[j][sto]);
+                u = Normal(0.0, 1.0);
                 fields[f].visibilities[g].Vo[h].x = v[0] + u * (1/sqrt(weights[sto]));
                 v = casa::imag(dataCol[j][sto]);
+                u = Normal(0.0, 1.0);
                 fields[f].visibilities[g].Vo[h].y = v[0] + u * (1/sqrt(weights[sto]));
                 fields[f].visibilities[g].weight[h] = weights[sto];
                 h++;
