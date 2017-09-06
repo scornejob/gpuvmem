@@ -320,7 +320,9 @@ __host__ int main(int argc, char **argv) {
       if(beam_noise == -1){
         //Calculating beam noise
         for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-            sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+            if(fields[f].visibilities[i].weight[j] != 0.0){
+              sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+            }
         }
       }
       for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
