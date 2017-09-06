@@ -1376,7 +1376,13 @@ __global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I
 
 
   if(noise[N*i+j] > noise_cut){
-    I[N*i+j].x = -1.0 * eta * MINPIX;
+    if(eta > 0.0){
+      I[N*i+j].x = 0.0;
+    }
+    else{
+      I[N*i+j].x = -1.0 * eta * MINPIX;
+    }
+
   }
 
   fg_image[N*i+j].x = I[N*i+j].x;
