@@ -287,7 +287,7 @@ __host__ int main(int argc, char **argv) {
   if(verbose_flag){
 	   printf("Reading visibilities and FITS input files...\n");
   }
-  
+
   if(apply_noise){
     readMSMCNoise(msinput, fields, data);
   }else if(random_probability != 1.0){
@@ -310,8 +310,10 @@ __host__ int main(int argc, char **argv) {
   	for(int i=0; i< data.total_frequencies; i++){
       //Calculating beam noise
       for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-        sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
-        sum_weights += fields[f].visibilities[i].weight[j];
+        if(fields[f].visibilities[i].weight[j] != 0.0){
+          sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+          sum_weights += fields[f].visibilities[i].weight[j];
+        }
       }
 
   		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
