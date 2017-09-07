@@ -41,7 +41,7 @@ cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
 
 float *device_dphi, *device_dchi2_total, *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
-float difmap_noise, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff, eta;
+float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff, eta;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -440,7 +440,7 @@ __host__ int main(int argc, char **argv) {
 	threadsPerBlockNN = threads;
 	numBlocksNN = blocks;
 
-	difmap_noise = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
+	noise_jypix = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
   if(lambda == 0.0){
     MINPIX = 0.0;
   }else{
@@ -658,10 +658,10 @@ __host__ int main(int argc, char **argv) {
   }
 
   for(int f=0; f<data.nfields; f++){
-    weight_image<<<numBlocksNN, threadsPerBlockNN>>>(device_weight_image, vars_per_field[f].atten_image, difmap_noise, N);
+    weight_image<<<numBlocksNN, threadsPerBlockNN>>>(device_weight_image, vars_per_field[f].atten_image, noise_jypix, N);
     gpuErrchk(cudaDeviceSynchronize());
   }
-  noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, difmap_noise, N);
+  noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, noise_jypix, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
@@ -681,7 +681,7 @@ __host__ int main(int argc, char **argv) {
 	noise_cut = noise_cut * noise_min;
   if(verbose_flag){
 	   printf("fg_scale = %e\n", fg_scale);
-     printf("difmap_noise = %e\n", difmap_noise);
+     printf("noise (Jy/pix) = %e\n", noise_jypix);
   }
 	free(host_noise_image);
   cudaFree(device_weight_image);
