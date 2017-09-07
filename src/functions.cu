@@ -39,7 +39,7 @@ extern cufftComplex *device_V, *device_Inu;
 
 extern float2 *device_dchi2_total, *device_2I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
-extern float difmap_noise, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
+extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
 minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, minInu_0;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
@@ -1196,16 +1196,16 @@ __global__ void mean_attenuation(float *total_atten, int channels, long N)
   total_atten[N*i+j] /= channels;
 }
 
-__global__ void weight_image(float *weight_image, float *total_atten, float difmap_noise, long N)
+__global__ void weight_image(float *weight_image, float *total_atten, float noise_jypix, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float atten = total_atten[N*i+j];
-  weight_image[N*i+j] += (atten / difmap_noise) * (atten / difmap_noise);
+  weight_image[N*i+j] += (atten / noise_jypix) * (atten / noise_jypix);
 }
 
-__global__ void noise_image(float *noise_image, float *weight_image, float difmap_noise, long N)
+__global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
