@@ -945,6 +945,11 @@ __host__ Vars getOptions(int argc, char **argv) {
         exit(EXIT_FAILURE);
   }
 
+  if(variables.randoms > 1.0){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
   if(!isPow2(variables.blockSizeX) && !isPow2(variables.blockSizeY) && !isPow2(variables.blockSizeV)){
     print_help();
     exit(EXIT_FAILURE);
