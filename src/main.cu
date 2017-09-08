@@ -289,12 +289,16 @@ __host__ int main(int argc, char **argv) {
 	   printf("Reading visibilities and FITS input files...\n");
   }
 
-  if(apply_noise){
-    readMSMCNoise(msinput, fields, data);
-  }else if(random_probability != 1.0){
+
+
+  if(apply_noise && random_probability < 1.0){
+    readMCNoiseSubsampledMS(msinput, fields, data, random_probability);
+  }else if(random_probability < 1.0){
     readSubsampledMS(msinput, fields, data, random_probability);
+  }else if(apply_noise){
+    readMSMCNoise(msinput, fields, data);
   }else{
-	  readMS(msinput, fields, data);
+     readMS(msinput, fields, data);
   }
 
   if(verbose_flag){
