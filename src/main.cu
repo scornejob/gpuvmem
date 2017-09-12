@@ -445,12 +445,7 @@ __host__ int main(int argc, char **argv) {
   if(lambda == 0.0){
     MINPIX = 0.0;
   }else{
-    if(reg_term == 0 && minpix == 0.0){
-      printf("Cannot use entropy with a minimum value of pixel 0\n");
-      goToError();
-    }else{
-      MINPIX = minpix;
-    }
+    MINPIX = minpix;
   }
 
 	float deltax = RPDEG*DELTAX; //radians
