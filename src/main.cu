@@ -312,7 +312,7 @@ __host__ int main(int argc, char **argv) {
   	for(int i=0; i< data.total_frequencies; i++){
       //Calculating beam noise
       for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-        if(fields[f].visibilities[i].weight[j] != 0.0){
+        if(fields[f].visibilities[i].weight[j] > 0.0){
           sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
           sum_weights += fields[f].visibilities[i].weight[j];
         }
