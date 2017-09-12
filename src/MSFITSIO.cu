@@ -233,7 +233,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
     fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[h] > 0){
           fields[f].valid_frequencies++;
         }
         h++;
@@ -336,7 +336,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
     fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[h] > 0){
           fields[f].valid_frequencies++;
         }
         h++;
@@ -443,7 +443,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
     fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[h] > 0){
           fields[f].valid_frequencies++;
         }
         h++;
@@ -534,7 +534,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
     fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
+        if(fields[f].numVisibilitiesPerFreq[h] > 0){
           fields[f].valid_frequencies++;
         }
         h++;
