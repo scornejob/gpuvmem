@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
+status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -830,6 +830,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"copyright", 0, NULL, 'c' },
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
+                                    {"apply-noise", 0, &apply_noise, 1},
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
                                     /* These options don’t set a flag. */
