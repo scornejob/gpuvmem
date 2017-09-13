@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise;
+status_mod_in, verbose_flag, xcorr_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
@@ -776,6 +776,7 @@ __host__ void print_help() {
   printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
+  printf("        --print-images     Prints images per iteration\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -828,6 +829,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
                                     {"apply-noise", 0, &apply_noise, 1},
+                                    {"print-images", 0, &print_images, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -1942,7 +1944,8 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
+  if(print_images)
+    fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
