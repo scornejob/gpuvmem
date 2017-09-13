@@ -64,6 +64,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --xcorr           Run gpuvmem with cross-correlation
     --nopositivity    Run gpuvmem using chi2 with no positivity restriction
     --clipping        Clips the image to positive values
+    --print-images    Prints images per iteration
     --verbose         Shows information through all the execution
 ```
 
