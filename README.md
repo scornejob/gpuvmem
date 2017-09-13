@@ -65,6 +65,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --nopositivity    Run gpuvmem using chi2 with no positivity restriction
     --apply-noise     Apply random gaussian noise to visibilities
     --clipping        Clips the image to positive values
+    --print-images    Prints images per iteration
     --verbose         Shows information through all the execution
 ```
 

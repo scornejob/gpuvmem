@@ -127,8 +127,8 @@ __host__ int main(int argc, char **argv) {
   firstgpu = -1;
 
   struct stat st = {0};
-
-  if(stat(mempath, &st) == -1) mkdir(mempath,0700);
+  if(print_images)
+    if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
@@ -645,7 +645,8 @@ __host__ int main(int argc, char **argv) {
     	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, fields[f].valid_frequencies, N);
     	gpuErrchk(cudaDeviceSynchronize());
   	}
-    fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
+    if(print_images)
+      fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
   }
 
   if(num_gpus == 1){
@@ -660,7 +661,8 @@ __host__ int main(int argc, char **argv) {
   }
   noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, noise_jypix, N);
   gpuErrchk(cudaDeviceSynchronize());
-  fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
+  if(print_images)
+    fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
 
 
 	float *host_noise_image = (float*)malloc(M*N*sizeof(float));
