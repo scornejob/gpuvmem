@@ -88,13 +88,13 @@ __host__ float deviceReduce(float *in, long N);
 
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
-__global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
+__global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta);
 __global__ void getGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N);
 __global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix, float eta);
 __global__ void newPNoPositivity(float2 *p, float2 *xi, float xmin, long N);
 __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
-__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix);
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float eta);
 __global__ void clip2I(float2 *I, long N, float minpix);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
@@ -128,5 +128,4 @@ __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
 __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
-__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, long N);
-__global__ void calculateNegativeInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, int regterm, long N);
+__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);

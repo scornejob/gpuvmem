@@ -1363,28 +1363,38 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
     Vr[i].y = Vm[i].y - Vo[i].y;
   }
 }
-__global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-
   if(noise[N*i+j] > noise_cut){
-    I[N*i+j].x = MINPIX;
+    if(eta > 0.0){
+      I[N*i+j].x = 0.0;
+    }
+    else{
+      I[N*i+j].x = -1.0 * eta * MINPIX;
+    }
+
   }
+
   I[N*i+j].y = 0;
 }
 
-__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix)
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-
   if(noise[N*i+j] > noise_cut){
-    I[N*i+j].x = minpix;
-    //I[N*i+j].y = minpix_alpha;
+    if(eta > 0.0){
+      I[N*i+j].x = 0.0;
+    }
+    else{
+      I[N*i+j].x = -1.0 * eta * minpix;;
+    }
+
   }
 
 }
@@ -1754,7 +1764,7 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
 }
 
 
-__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, long N)
+__global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1770,33 +1780,11 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 
   I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha / fg_scale;
 
-  if(I_nu[N*i+j].x < minpix){
-    I_nu[N*i+j].x = minpix;
+  if(I_nu[N*i+j].x < -1.0*eta*minpix){
+    I_nu[N*i+j].x = -1.0*eta*minpix;
   }
+
   I_nu[N*i+j].y = 0.f;
-}
-
-__global__ void calculateNegativeInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, int regterm, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float I_nu_0, alpha, nudiv_pow_alpha, nudiv;
-
-  nudiv = nu/nu_0;
-
-  I_nu_0 = image2[N*i+j].x;
-  alpha = image2[N*i+j].y;
-
-  nudiv_pow_alpha = powf(nudiv, alpha);
-
-  I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha / fg_scale;
-
-  if(I_nu[N*i+j].x < -minpix/2){
-    I_nu[N*i+j].x = -minpix/2;
-  }
-  I_nu[N*i+j].y = 0.f;
-
 }
 
 
@@ -1817,7 +1805,7 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, minInu_0);
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, minInu_0, eta);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
@@ -1830,20 +1818,15 @@ __host__ float chiCuadrado(float2 *I)
 
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          if(reg_term == 3){
-            calculateNegativeInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, reg_term, N);
-            gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
+          gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
             clip<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, N, MINPIX);
             gpuErrchk(cudaDeviceSynchronize());
           }
 
-          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_Inu, N, noise_cut, MINPIX);
+          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_Inu, N, noise_cut, MINPIX, eta);
           gpuErrchk(cudaDeviceSynchronize());
 
 
@@ -1918,20 +1901,16 @@ __host__ float chiCuadrado(float2 *I)
   			cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          if(reg_term ==3){
-            calculateNegativeInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, reg_term, N);
-            gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
+
+          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
+          gpuErrchk(cudaDeviceSynchronize());
 
           if(clip_flag){
             clip<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, N, MINPIX);
             gpuErrchk(cudaDeviceSynchronize());
           }
 
-          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+          clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX, eta);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(iter>0 && lambda!=0.0){
@@ -2047,13 +2026,8 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          if(reg_term == 3){
-            calculateNegativeInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, reg_term, N);
+            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
             gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
 
             if(clip_flag){
               clip<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, N, MINPIX);
@@ -2109,13 +2083,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
 
         gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
 
-        if(reg_term ==3){
-          calculateNegativeInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, reg_term, N);
-          gpuErrchk(cudaDeviceSynchronize());
-        }else{
-          calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, N);
-          gpuErrchk(cudaDeviceSynchronize());
-        }
+
+        calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
+        gpuErrchk(cudaDeviceSynchronize());
+
 
         if(clip_flag){
           clip<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_Inu, N, MINPIX);
