@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, apply_noise, xcorr_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term;
+status_mod_in, verbose_flag, apply_noise, xcorr_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
@@ -821,6 +821,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"xcorr", 0, &xcorr_flag, 1},
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
+                                    {"print-images", 0, &print_images, 1},
                                     {"apply-noise", 0, &apply_noise, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
@@ -1926,7 +1927,8 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dchi2_total, device_dS, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
+  if(print_images)
+    fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
