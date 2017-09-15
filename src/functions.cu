@@ -40,7 +40,7 @@ extern cufftComplex *device_V, *device_Inu;
 extern float2 *device_dchi2_total, *device_2I;
 extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, minInu_0;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
@@ -1382,7 +1382,7 @@ __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cu
   I[N*i+j].y = 0;
 }
 
-__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float eta)
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float fg_scale, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1392,21 +1392,21 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
       I[N*i+j].x = 0.0;
     }
     else{
-      I[N*i+j].x = -1.0 * eta * minpix;;
+      I[N*i+j].x = -1.0 * eta * minpix * fg_scale;;
     }
 
   }
 
 }
 
-__global__ void clip2I(float2 *I, long N, float minpix)
+__global__ void clip2I(float2 *I, long N, float minpix, float fg_scale)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   //I_nu_0
-  if(I[N*i+j].x < minpix){
-      I[N*i+j].x = minpix;
+  if(I[N*i+j].x < minpix * fg_scale){
+      I[N*i+j].x = minpix * fg_scale;
   }
   /*//alpha
   if(I[N*i+j].y < minpix_alpha){
@@ -1426,7 +1426,7 @@ __global__ void clip(cufftComplex *I, long N, float MINPIX)
   I[N*i+j].y = 0;
 }
 
-__global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix, float eta)
+__global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix, float fg_scale, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1434,10 +1434,10 @@ __global__ void newP(float2 *p, float2 *xi, float xmin, long N, float minpix, fl
   xi[N*i+j].x *= xmin;
   xi[N*i+j].y *= xmin;
   //I_nu_0
-  if(p[N*i+j].x + xi[N*i+j].x > -1.0*eta*minpix){
+  if(p[N*i+j].x + xi[N*i+j].x > -1.0*eta*minpix*fg_scale){
     p[N*i+j].x += xi[N*i+j].x;
   }else{
-    p[N*i+j].x = -1.0*eta*minpix;
+    p[N*i+j].x = -1.0*eta*minpix*fg_scale;
     xi[N*i+j].x = 0.0;
   }
 
@@ -1464,15 +1464,15 @@ __global__ void newPNoPositivity(float2 *p, float2 *xi, float xmin, long N)
   p[N*i+j].y += xi[N*i+j].y;
 }
 
-__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix, float eta)
+__global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float minpix, float fg_scale, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
   //I_nu_0
-  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -1.0*eta*minpix){
+  if(pcom[N*i+j].x + x * xicom[N*i+j].x > -1.0*eta*minpix*fg_scale){
     xt[N*i+j].x = pcom[N*i+j].x + x * xicom[N*i+j].x;
   }else{
-    xt[N*i+j].x = -1.0*eta*minpix;
+    xt[N*i+j].x = -1.0*eta*minpix*fg_scale;
   }
 
   xt[N*i+j].y = pcom[N*i+j].y + x * xicom[N*i+j].y;
@@ -1801,11 +1801,11 @@ __host__ float chiCuadrado(float2 *I)
   float resultS  = 0.0;
 
   if(clip_flag){
-    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, minInu_0);
+    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, minInu_0, eta);
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, fg_scale, eta);
   gpuErrchk(cudaDeviceSynchronize());
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
@@ -2008,7 +2008,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   }
 
   if(clip_flag){
-    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, minInu_0);
+    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
     gpuErrchk(cudaDeviceSynchronize());
   }
 

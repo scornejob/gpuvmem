@@ -41,7 +41,7 @@ cufftComplex *device_V, *device_Inu;
 
 float2 *device_dchi2_total, *device_2I;
 float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, minInu_0;
+float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta;
 
 dim3 threadsPerBlockNN;
@@ -480,7 +480,7 @@ __host__ int main(int argc, char **argv) {
   float peak;
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
-  minInu_0 = *std::min_element(input_Inu_0,input_Inu_0+(M*N));
+
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
