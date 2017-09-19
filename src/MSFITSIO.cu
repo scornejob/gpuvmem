@@ -1010,11 +1010,11 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-        x--;
+			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j].x * fg_scale;
+        //x--;
 		}
-    x=M-1;
-    y--;
+    //x=M-1;
+    //y--;
 	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
@@ -1088,11 +1088,11 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-        image2D[N*y+x] = host_IFITS[N*i+j];
-        x--;
+        image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
+        //x--;
 		}
-    x=M-1;
-    y--;
+    //x=M-1;
+    //y--;
 	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
