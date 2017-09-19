@@ -1010,11 +1010,8 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-			  image2D[N*y+x] = host_IFITS[N*i+j].x * fg_scale;
-        x--;
+			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j].x * fg_scale;
 		}
-    x=M-1;
-    y--;
 	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
@@ -1088,11 +1085,8 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-        image2D[N*y+x] = host_IFITS[N*i+j];
-        x--;
+        image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
 		}
-    x=M-1;
-    y--;
 	}
 
 	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
@@ -1195,12 +1189,9 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-        host_I_nu_0[N*y+x] = host_2Iout[N*i+j].x;
-        host_alpha[N*y+x] = host_2Iout[N*i+j].y;
-        x--;
+        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x;
+        host_alpha[N*(y-i)+(x-j)] = host_2Iout[N*i+j].y;
 		}
-    x=M-1;
-    y--;
 	}
 
   fits_write_img(fpointerI_nu_0, TFLOAT, fpixel, elements, host_I_nu_0, &statusI_nu_0);
@@ -1341,13 +1332,10 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-        host_T[N*y+x] = host_3Iout[N*i+j].x;
-        host_tau[N*y+x] = host_3Iout[N*i+j].y;
-        host_beta[N*y+x] = host_3Iout[N*i+j].z;
-        x--;
+        host_T[N*(y-i)+(x-j)] = host_3Iout[N*i+j].x;
+        host_tau[N*(y-i)+(x-j)] = host_3Iout[N*i+j].y;
+        host_beta[N*(y-i)+(x-j)] = host_3Iout[N*i+j].z;
 		}
-    x=M-1;
-    y--;
 	}
 
   fits_write_img(fpointerT, TFLOAT, fpixel, elements, host_T, &statusT);
