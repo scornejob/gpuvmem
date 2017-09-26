@@ -471,7 +471,7 @@ __host__ int main(int argc, char **argv) {
     }else{
       fields[f].global_xobs = (crpix1 - 1.0) - (lobs/deltax) - 1.0;
   	  fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
-    }   
+    }
     if(verbose_flag){
   	   printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
     }
@@ -510,12 +510,12 @@ __host__ int main(int argc, char **argv) {
       if(strcmp(Tinput, "NULL")==0){
         host_3I[N*i+j].x = T_start;
       }else{
-        host_3I[N*i+j].x = input_T[N*y+x];
+        host_3I[N*i+j].x = input_T[N*(y-i)+(x-j)];
       }
 
       if(read_tau_image){
-        if(input_tau[N*y+x] > tau_min){
-  	       host_3I[N*i+j].y = input_tau[N*y+x];  // tau
+        if(input_tau[N*(y-i)+(x-j)] > tau_min){
+  	       host_3I[N*i+j].y = input_tau[N*(y-i)+(x-j)];  // tau
         }else{
         	 host_3I[N*i+j].y = tau_min;
         }
@@ -524,10 +524,7 @@ __host__ int main(int argc, char **argv) {
       }
 
       host_3I[N*i+j].z = beta_start; // beta
-      x--;
 		}
-    x=M-1;
-    y--;
 	}
   free(input_tau);
   free(input_T);
@@ -731,23 +728,26 @@ __host__ int main(int argc, char **argv) {
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_3I);
+  /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  chiCuadrado(device_3I);*/
   //changeBeta<<<numBlocksNN, threadsPerBlockNN>>>(device_3I, N);
   //gpuErrchk(cudaDeviceSynchronize());
-	/*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+	frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_3I);
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
-  chiCuadrado(device_3I);
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_3I);
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
-  chiCuadrado(device_3I);
-  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_3I);*/
   fret = 0.0;
   frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_3I);
+  /*fret = 0.0;
+  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  chiCuadrado(device_3I);
+  fret = 0.0;
+  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  chiCuadrado(device_3I);
+  fret = 0.0;
+  frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
+  chiCuadrado(device_3I);*/
+  /*frprmn(device_3I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  chiCuadrado(device_3I);*/
   t = clock() - t;
   end = omp_get_wtime();
   printf("Minimization ended successfully\n\n");
