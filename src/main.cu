@@ -701,6 +701,11 @@ __host__ int main(int argc, char **argv) {
 
 	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
+  //change alpha value to test
+  SelectStream(0);
+  PutSeed(-1);
+  float random_un = Uniform(-10.0,10.0);
+  changeAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_2I, random_un, N);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);

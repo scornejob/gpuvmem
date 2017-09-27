@@ -127,5 +127,6 @@ __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N)
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
 __global__ void normVectorCalculation(float *normVector, float *gc, long N);
+__global__ void changeAlpha(float2 *I, float new_alpha, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);

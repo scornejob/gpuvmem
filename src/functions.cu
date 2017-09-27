@@ -1610,6 +1610,15 @@ __global__ void restartDPhi(float2 *dChi2, float *dS, long N)
 
 }
 
+__global__ void changeAlpha(float2 *I, float new_alpha, long N)
+{
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+
+	I[N*i+j].y = new_alpha; 
+}
+
 __global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
