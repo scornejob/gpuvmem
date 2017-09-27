@@ -465,7 +465,7 @@ __host__ int main(int argc, char **argv) {
       fields[f].global_xobs = (crpix1 - 1.0) - (lobs/deltax) - 1.0;
   	  fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
     }
-    
+
     if(verbose_flag){
   	   printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
     }
@@ -706,6 +706,7 @@ __host__ int main(int argc, char **argv) {
   PutSeed(-1);
   float random_un = Uniform(-10.0,10.0);
   changeAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_2I, random_un, N);
+  gpuErrchk(cudaDeviceSynchronize());
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
