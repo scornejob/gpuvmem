@@ -704,7 +704,7 @@ __host__ int main(int argc, char **argv) {
   //change alpha value to test
   SelectStream(1);
   PutSeed(-1);
-  float random_un = Uniform(2.0, 5.0);
+  float random_un = Uniform(1.0, 6.0);
   changeAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_2I, random_un, N);
   gpuErrchk(cudaDeviceSynchronize());
 
