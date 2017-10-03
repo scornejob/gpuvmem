@@ -32,19 +32,20 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, flag_opt, read_tau_image, apply_noise, print_images;
+status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, flag_opt, read_tau_image;
+extern int apply_noise, print_images;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
 
 extern float3 *device_dchi2_total, *device_3I;
-extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
+extern float *device_chi2, *device_S, *device_dS, *device_Lbeta, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
 minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, beta_start, tau_min, T_start;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff, epsilon;
 extern double ra, dec;
 
 extern freqData data;
@@ -822,10 +823,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.beta_start = -1;
   variables.tau_min = 1E-6;
   variables.T_start = 3.0;
+  variables.epsilon = 0.0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:T:b:a:K:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:T:b:a:K:E:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -846,7 +848,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'}, {"iterations", 0, NULL, 't'},
                                     {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' }, {"randoms", 0, NULL, 'r' },
                                     {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' }, {"T_start_image", 0, NULL, 'T'}, {"beta_start", 1, NULL, 'b'},
-                                    {"T_start", 1, NULL, 'K'}, {"tau_min", 1, NULL, 'a'},
+                                    {"T_start", 1, NULL, 'K'}, {"tau_min", 1, NULL, 'a'}, {"epsilon", 1, NULL, 'E'},
                                     { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
@@ -907,6 +909,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'a':
       variables.tau_min = atof(optarg);
+      break;
+    case 'E':
+      variables.epsilon = atof(optarg);
       break;
     case 'K':
       variables.T_start = atof(optarg);
@@ -974,7 +979,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || variables.beta_start == -1) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || variables.beta_start == -1 || variables.epsilon < 0.0) {
         print_help();
         exit(EXIT_FAILURE);
   }
@@ -1554,7 +1559,10 @@ __global__ void QVector(float *Q, float *noise, cufftComplex *I, long N, float n
   float entropy = 0.0;
   if(noise[N*i+j] <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
-      entropy = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x) + (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
+      entropy = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) +
+                (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) +
+                (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x) +
+                (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
       entropy /= 2;
     }else{
       entropy = I[N*i+j].x;
@@ -1571,7 +1579,7 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
 
   float tv = 0.0;
   if(noise[N*i+j] <= noise_cut){
-    if(i!= N-1 || j!=N-1){
+    if((i>0 && i<N) && (j>0 && j<N)){
       float dx = I[N*i+(j+1)].x - I[N*i+j].x;
       float dy = I[N*(i+1)+j].x - I[N*i+j].x;
       tv = sqrtf((dx * dx) + (dy * dy));
@@ -1582,6 +1590,26 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
 
   TV[N*i+j] = tv;
 }
+
+__global__ void LaplacianVectorBeta(float3 *I, float *L, float *noise, float noise_cut, float DELTAX, float DELTAY, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float Dx, Dy;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>0 && i<N) && (j>0 && j<N)){
+      Dx = I[N*i+(j-1)].z - 2 * I[N*i+j].z + I[N*i+(j+1)].z;
+      Dy = I[N*(i-1)+j].z - 2 * I[N*i+j].z + I[N*(i+1)+j].z;
+      L[N*i+j] = 0.5 * (Dx + Dy);
+    }else{
+      L[N*i+j] = I[N*i+j].z;
+    }
+  }
+
+}
+
 __global__ void searchDirection(float3 *g, float3 *xi, float3 *h, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1697,6 +1725,7 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
     dTV[N*i+j] = lambda * dtv;
   }
 }
+
 
 __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
 {
@@ -1929,6 +1958,7 @@ __host__ float chiCuadrado(float3 *I)
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
   float resultS  = 0.0;
+  float result_Lbeta = 0.0;
 
   if(clip_flag){
     clip3I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, tau_min);
@@ -1937,6 +1967,11 @@ __host__ float chiCuadrado(float3 *I)
 
   clip3IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, tau_min, T_start, beta_start);
   gpuErrchk(cudaDeviceSynchronize());
+
+  if(epsilon){
+    LaplacianVectorBeta<<<numBlocksNN, threadsPerBlockNN>>>(I, device_Lbeta, device_noise_image, noise_cut, DELTAX, DELTAY, N);
+    gpuErrchk(cudaDeviceSynchronize());
+  }
 
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
 
@@ -2094,7 +2129,7 @@ __host__ float chiCuadrado(float3 *I)
 
           partial_chi2 = deviceReduce(vars_per_field[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
 
-          partial_S = deviceReduce(vars_per_field[f].device_vars[i].device_S, M*N);;
+          partial_S = deviceReduce(vars_per_field[f].device_vars[i].device_S, M*N);
         	//REDUCTIONS
         	//chi2
           #pragma omp critical
@@ -2112,7 +2147,9 @@ __host__ float chiCuadrado(float3 *I)
     cudaSetDevice(firstgpu);
   }
 
-  resultPhi = (0.5 * resultchi2) + (lambda * resultS);
+  result_Lbeta = deviceReduce(device_Lbeta, M*N);
+
+  resultPhi = 0.5 * resultchi2 + lambda * resultS + epsilon * result_Lbeta;
 
   final_chi2 = resultchi2;
   final_H = resultS;

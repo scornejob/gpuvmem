@@ -40,14 +40,15 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float3 *device_dchi2_total, *device_3I;
-float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
+float *device_dS, *device_chi2, *device_S, *device_Lbeta, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beta_start, tau_min, T_start;
-float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff;
+float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, epsilon;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, read_tau_image = 0, apply_noise = 0, print_images = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, read_tau_image = 0, apply_noise = 0, print_images = 0;
+int it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
@@ -123,6 +124,7 @@ __host__ int main(int argc, char **argv) {
   beta_start = variables.beta_start;
   T_start = variables.T_start;
   tau_min = variables.tau_min;
+  epsilon = variables.epsilon;
 
   multigpu = 0;
   firstgpu = -1;
@@ -550,6 +552,10 @@ __host__ int main(int argc, char **argv) {
   }else{
 	   cudaSetDevice(firstgpu);
   }
+
+  gpuErrchk(cudaMalloc((void**)&device_Lbeta, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_Lbeta, 0, sizeof(float)*M*N));
+
 	gpuErrchk(cudaMalloc((void**)&device_3I, sizeof(float3)*M*N));
   gpuErrchk(cudaMemset(device_3I, 0, sizeof(float3)*M*N));
 
