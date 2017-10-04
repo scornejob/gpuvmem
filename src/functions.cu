@@ -1570,10 +1570,11 @@ __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, fl
 
   if(noise[N*i+j] <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
-    dQ[N*i+j] = (I[N*i+j].x - I[N*i+(j-1)].x) + (I[N*i+j].x - I[N*i+(j+1)].x) + (I[N*i+j].x - I[N*(i-1)+j].x)  + (I[N*i+j].x - I[N*(i+1)+j].x);
-  }else{
-    dQ[N*i+j] = I[N*i+j].x;
+        dQ[N*i+j] = 4 * (2 * I[N*i+j].x - (I[N*(i+1)+j].x  + I[N*(i-1)+j].x +  I[N*i+(j+1)].x + I[N*i+(j-1)].x));
+    }else{
+      dQ[N*i+j] = I[N*i+j].x;
     }
+
     dQ[N*i+j] *= lambda;
   }
 }
