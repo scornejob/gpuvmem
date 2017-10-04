@@ -1584,20 +1584,28 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float dtv = 0.0;
-  float num = 0.0;
-  float den = 0.0;
+  float num0, num1, num2;
+  float den0, den1, den2;
+  float dtv;
+
   if(noise[N*i+j] <= noise_cut){
-    if(i!= N-1 || j!=N-1){
-      float a = I[N*i+(j+1)].x;
-      float b = I[N*(i+1)+j].x;
-      float y = I[N*i+j].x;
-      float num = -a-b+(2*y);
-      float den = (a*a) - 2*y*(a+b) + (b*b) + 2*(y*y);
-      if(den <= 0){
+    if((i>0 && i<N) && (j>0 && j<N)){
+      num0 = 2 * I[N*i+j].x - I[N*i+(j+1)].x - I[N*(i+1)+j].x;
+      num1 = I[N*i+j].x - I[N*i+(j-1)].x;
+      num2 = I[N*i+j].x - I[N*(i-1)+j].x;
+
+      den0 = (I[N*i+(j+1)].x - I[N*i+j].x) * (I[N*i+(j+1)].x - I[N*i+j].x) +
+             (I[N*(i+1)+j].x - I[N*i+j].x) * (I[N*(i+1)+j].x - I[N*i+j].x);
+
+      den1 = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) +
+             (I[N*(i+1)+(j-1)].x - I[N*i+(j-1)].x) * (I[N*(i+1)+(j-1)].x - I[N*i+(j-1)].x);
+
+      den2 = (I[N*(i-1)+(j+1)].x - I[N*(i-1)+j].x) * (I[N*(i-1)+(j+1)].x - I[N*(i-1)+j].x) +
+             (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x);
+      if(den0 == 0 || den1 == 0 || den2 == 0){
         dtv = 0;
       }else{
-        dtv = num/sqrtf(den);
+        dtv = num0/sqrtf(den0) + num1/sqrtf(den1) + num2/sqrtf(den2);
       }
     }else{
       dtv = 0;
