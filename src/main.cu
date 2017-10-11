@@ -473,7 +473,7 @@ __host__ int main(int argc, char **argv) {
     }else{
       fields[f].global_xobs = (crpix1 - 1.0) - (lobs/deltax) - 1.0;
   	  fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
-    }   
+    }
     if(verbose_flag){
   	   printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
     }
@@ -757,7 +757,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	fitsOutputCufftComplex(device_I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+	fitsOutputCufftComplex_RU(device_I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");

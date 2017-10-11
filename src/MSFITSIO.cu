@@ -1030,6 +1030,81 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
   free(name);
 }
 
+__host__ void fitsOutputCufftComplex_RU(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+{
+  fitsfile *fpointer;
+	int status = 0;
+	long fpixel = 1;
+	long elements = M*N;
+  size_t needed;
+  char *name;
+	long naxes[2]={M,N};
+	long naxis = 2;
+  char *unit = "JY/PIXEL";
+
+  switch(option){
+    case 0:
+      needed = snprintf(NULL, 0, "!%s", out_image) + 1;
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%s", out_image);
+      break;
+    case 1:
+      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
+      name = (char*)malloc(needed*sizeof(char));
+      snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      exit(-1);
+  }
+
+  fits_create_file(&fpointer, name, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+  fits_copy_header(canvas, fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+  if(option==0 || option==1){
+    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  }
+
+  cufftComplex *host_IFITS;
+  host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+  gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
+
+	float* image2D;
+	image2D = (float*) malloc(M*N*sizeof(float));
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j].x;
+		}
+	}
+
+	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+	fits_close_file(fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+
+  free(host_IFITS);
+	free(image2D);
+  free(name);
+}
+
 __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option)
 {
   fitsfile *fpointer;

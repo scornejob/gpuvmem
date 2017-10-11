@@ -107,6 +107,7 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option);
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
+__host__ void fitsOutputCufftComplex_RU(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void closeCanvas(fitsfile *canvas);
