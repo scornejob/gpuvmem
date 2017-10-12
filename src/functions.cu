@@ -1479,7 +1479,7 @@ __global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float 
            (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
       qp /= 2;
     }else{
-      qp = I[N*i+j].x;
+      qp = 0.0;
     }
   }
 
@@ -1552,7 +1552,7 @@ __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, fl
     if((i>0 && i<N) && (j>0 && j<N)){
       dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
     }else{
-      dQ[N*i+j] = I[N*i+j].x;
+      dQ[N*i+j] = 0.0;
     }
     dQ[N*i+j] *= lambda;
   }
@@ -1573,14 +1573,14 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
       num1 = I[N*i+j].x - I[N*i+(j-1)].x;
       num2 = I[N*i+j].x - I[N*(i-1)+j].x;
 
-      den0 = (I[N*i+(j+1)].x - I[N*i+j].x) * (I[N*i+(j+1)].x - I[N*i+j].x) +
-             (I[N*(i+1)+j].x - I[N*i+j].x) * (I[N*(i+1)+j].x - I[N*i+j].x);
+      den0 = (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) +
+             (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
 
-      den1 = (I[N*i+j].x - I[N*i+(j-1)].x) * (I[N*i+j].x - I[N*i+(j-1)].x) +
-             (I[N*(i+1)+(j-1)].x - I[N*i+(j-1)].x) * (I[N*(i+1)+(j-1)].x - I[N*i+(j-1)].x);
+      den1 = (I[N*i+(j-1)].x - I[N*i+j].x) * (I[N*i+(j-1)].x - I[N*i+j].x) +
+             (I[N*i+(j-1)].x - I[N*(i+1)+(j-1)].x) * (I[N*i+(j-1)].x - I[N*(i+1)+(j-1)].x);
 
-      den2 = (I[N*(i-1)+(j+1)].x - I[N*(i-1)+j].x) * (I[N*(i-1)+(j+1)].x - I[N*(i-1)+j].x) +
-             (I[N*i+j].x - I[N*(i-1)+j].x) * (I[N*i+j].x - I[N*(i-1)+j].x);
+      den2 = (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) * (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) +
+             (I[N*(i-1)+j].x - I[N*i+j].x) * (I[N*(i-1)+j].x - I[N*i+j].x);
       if(den0 == 0 || den1 == 0 || den2 == 0){
         dtv = 0;
       }else{
