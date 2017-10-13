@@ -1479,7 +1479,7 @@ __global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float 
            (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
       qp /= 2.0;
     }else{
-      qp = 0.0;
+      qp = I[N*i+j].x;
     }
   }
 
@@ -1498,7 +1498,7 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
       float dy = I[N*i+j].x - I[N*(i+1)+j].x;
       tv = sqrtf((dx * dx) + (dy * dy));
     }else{
-      tv = 0;
+      tv = I[N*i+j].x;
     }
   }
 
@@ -1552,7 +1552,7 @@ __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, fl
     if((i>0 && i<N) && (j>0 && j<N)){
       dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
     }else{
-      dQ[N*i+j] = 0.0;
+      dQ[N*i+j] = I[N*i+j].x;
     }
     dQ[N*i+j] *= lambda;
   }
@@ -1582,12 +1582,12 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
       den2 = (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) * (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) +
              (I[N*(i-1)+j].x - I[N*i+j].x) * (I[N*(i-1)+j].x - I[N*i+j].x);
       if(den0 == 0 || den1 == 0 || den2 == 0){
-        dtv = 0;
+        dtv = I[N*i+j].x;
       }else{
         dtv = num0/sqrtf(den0) + num1/sqrtf(den1) + num2/sqrtf(den2);
       }
     }else{
-      dtv = 0;
+      dtv = I[N*i+j].x;
     }
     dTV[N*i+j] = lambda * dtv;
   }
