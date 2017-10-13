@@ -758,7 +758,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	fitsOutputCufftComplex_RU(device_I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+	fitsOutputCufftComplex(device_I, mod_in, out_image, mempath, iter, 1.0, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");

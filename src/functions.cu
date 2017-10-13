@@ -1933,7 +1933,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
   gpuErrchk(cudaDeviceSynchronize());
 
   if(print_images)
-    fitsOutputCufftComplex_RU(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
+    fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, 1.0, M, N, 1);
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
