@@ -1622,7 +1622,7 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= atten;
+  dchi2 *= atten * fg_scale * fg_scale;
   dChi2[N*i+j] = dchi2;
   }
 }
@@ -1657,7 +1657,7 @@ __global__ void DChi2_XCORR(float *noise, float *dChi2, cufftComplex *Vr, float 
       dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
   	}
 
-  dchi2 *= alpha * atten;
+  dchi2 *= alpha * atten * fg_scale * fg_scale;
   dChi2[N*i+j] = dchi2;
   }
 }
