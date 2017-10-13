@@ -442,11 +442,6 @@ __host__ int main(int argc, char **argv) {
 	numBlocksNN = blocks;
 
 	noise_jypix = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
-  if(lambda == 0.0){
-    MINPIX = 0.0;
-  }else{
-    MINPIX = minpix;
-  }
 
 	float deltax = RPDEG*DELTAX; //radians
 	float deltay = RPDEG*DELTAY; //radians
@@ -673,7 +668,13 @@ __host__ int main(int argc, char **argv) {
 
 	fg_scale = noise_min;
 	noise_cut = noise_cut * noise_min;
-  MINPIX = MINPIX * fg_scale;
+
+  if(lambda == 0.0){
+    MINPIX = 0.0;
+  }else{
+    MINPIX = minpix * fg_scale;
+  }
+
   if(verbose_flag){
 	   printf("fg_scale = %e\n", fg_scale);
      printf("noise_jypix = %e\n", noise_jypix);
