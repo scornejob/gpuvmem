@@ -1849,7 +1849,7 @@ __host__ float chiCuadrado(float2 *I)
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                QVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX);
+                QPVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
@@ -1932,7 +1932,7 @@ __host__ float chiCuadrado(float2 *I)
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 1:
-                QVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
+                QPVector<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].device_vars[i].device_S, device_noise_image, vars_per_field[f].device_vars[i].device_Inu, N, noise_cut, MINPIX);
                 gpuErrchk(cudaDeviceSynchronize());
                 break;
               case 2:
