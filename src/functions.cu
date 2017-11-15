@@ -1599,7 +1599,7 @@ __global__ void LaplacianVectorBeta(float *L, float *noise, float3 *I, long N, f
   float Dx, Dy;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
       Dx = I[N*i+(j-1)].z - 2 * I[N*i+j].z + I[N*i+(j+1)].z;
       Dy = I[N*(i-1)+j].z - 2 * I[N*i+j].z + I[N*(i+1)+j].z;
       L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
@@ -1615,7 +1615,7 @@ __global__ void LaplacianGradientBeta(float *dL, float3 *I, float *noise, float 
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
       dL[N*i+j] = 20 * I[N*i+j].z -
                   8 * I[N*(i+1)+j].z - 8 * I[N*i+(j+1)].z - 8 * I[N*(i-1)+j].z - 8 * I[N*i+(j-1)].z +
                   2 * I[N*(i+1)+(j-1)].z + 2 * I[N*(i+1)+(j+1)].z + 2 * I[N*(i-1)+(j-1)].z + 2 * I[N*(i-1)+(j+1)].z +
