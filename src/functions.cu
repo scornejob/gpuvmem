@@ -1591,7 +1591,7 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
   TV[N*i+j] = tv;
 }
 
-__global__ void LaplacianVectorBeta(float3 *I, float *L, float *noise, float noise_cut, float DELTAX, float DELTAY, long N)
+__global__ void LaplacianVectorBeta(float *L, float *noise, float3 *I, long N, float noise_cut)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1602,13 +1602,34 @@ __global__ void LaplacianVectorBeta(float3 *I, float *L, float *noise, float noi
     if((i>0 && i<N) && (j>0 && j<N)){
       Dx = I[N*i+(j-1)].z - 2 * I[N*i+j].z + I[N*i+(j+1)].z;
       Dy = I[N*(i-1)+j].z - 2 * I[N*i+j].z + I[N*(i+1)+j].z;
-      L[N*i+j] = 0.5 * (Dx + Dy);
+      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
     }else{
       L[N*i+j] = I[N*i+j].z;
     }
   }
+}
+
+__global__ void LaplacianGradientBeta(float *dL, float3 *I, float *noise, float noise_cut, float lambda, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>0 && i<N) && (j>0 && j<N)){
+      dL[N*i+j] = 20 * I[N*i+j].z -
+                  8 * I[N*(i+1)+j].z - 8 * I[N*i+(j+1)].z - 8 * I[N*(i-1)+j].z - 8 * I[N*i+(j-1)].z +
+                  2 * I[N*(i+1)+(j-1)].z + 2 * I[N*(i+1)+(j+1)].z + 2 * I[N*(i-1)+(j-1)].z + 2 * I[N*(i-1)+(j+1)].z +
+                  I[N*(i+2)+j].z + I[N*i+(j+2)].z + I[N*(i-2)+j].z + I[N*i+(j-2)].z;
+    }else{
+      dL[N*i+j] = 0.0;
+    }
+  }
+
+  dL[N*i+j] *= lambda;
 
 }
+
+
 
 __global__ void searchDirection(float3 *g, float3 *xi, float3 *h, long N)
 {
@@ -1691,9 +1712,9 @@ __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, fl
 
   if(noise[N*i+j] <= noise_cut){
     if((i>0 && i<N) && (j>0 && j<N)){
-    dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
-  }else{
-    dQ[N*i+j] = I[N*i+j].x;
+      dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
+    }else{
+      dQ[N*i+j] = I[N*i+j].x;
     }
     dQ[N*i+j] *= lambda;
   }
@@ -1977,7 +1998,7 @@ __host__ float chiCuadrado(float3 *I)
   gpuErrchk(cudaDeviceSynchronize());
 
   if(epsilon){
-    LaplacianVectorBeta<<<numBlocksNN, threadsPerBlockNN>>>(I, device_Lbeta, device_noise_image, noise_cut, DELTAX, DELTAY, N);
+    LaplacianVectorBeta<<<numBlocksNN, threadsPerBlockNN>>>(device_Lbeta, device_noise_image, I,  N, noise_cut);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
