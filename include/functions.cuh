@@ -30,8 +30,6 @@ const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
-const float CBOLTZMANN = 1.38064852E-23;
-const float CPLANCK = 6.62607004E-34;
 
 typedef struct variablesPerFreq{
   float *chi2;
@@ -71,6 +69,7 @@ typedef struct variables {
   float nu_0;
   float alpha_start;
   float eta;
+  float epsilon;
 } Vars;
 
 __host__ void goToError();

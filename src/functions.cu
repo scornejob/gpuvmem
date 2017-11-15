@@ -766,6 +766,7 @@ __host__ void print_help() {
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
+  printf("    -E  --epsilon          Epsilon Regularization Parameter (Optional)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
   printf("    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)\n");
@@ -813,6 +814,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.nu_0 = -1;
   variables.it_max = 500;
   variables.noise = -1;
+  variables.epsilon = 0.0;
   variables.lambda = -1;
   variables.randoms = -1;
   variables.noise_cut = -1;
@@ -823,7 +825,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -843,7 +845,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
-                                    {"alpha_start", 1, NULL, 'a' }, { NULL, 0, NULL, 0 }};
+                                    {"epsilon", 0, NULL, 'E' }, {"alpha_start", 1, NULL, 'a' }, { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -902,6 +904,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 'e':
       variables.eta = atof(optarg);
+      break;
+    case 'E':
+      variables.epsilon = atof(optarg);
       break;
     case 'F':
       variables.nu_0 = atof(optarg);
