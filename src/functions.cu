@@ -1625,7 +1625,11 @@ __global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, fl
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    dH[N*i+j] = lambda * (logf((I[N*i+j].x / MINPIX) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*MINPIX) / I[N*i+j].x)));
+    if(I[N*i+j].x != 0.0){
+      dH[N*i+j] = lambda * (logf((I[N*i+j].x / MINPIX) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*MINPIX) / I[N*i+j].x)));
+    }else{
+      dH[N*i+j] = lambda * logf((I[N*i+j].x / MINPIX));
+    }
   }
 }
 
