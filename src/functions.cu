@@ -961,7 +961,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if(variables.reg_term > 2){
+  if(variables.reg_term > 3){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1488,7 +1488,7 @@ __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float n
   S[N*i+j] = entropy;
 }
 
-__global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1509,7 +1509,7 @@ __global__ void QPVector(float *Q, float *noise, cufftComplex *I, long N, float 
   Q[N*i+j] = qp;
 }
 
-__global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX)
+__global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1527,6 +1527,25 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
 
   TV[N*i+j] = tv;
 }
+
+__global__ void LVector(float *L, float *noise, cufftComplex *I, long N, float noise_cut)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float Dx, Dy;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      Dx = I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x;
+      Dy = I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x;
+      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
+    }else{
+      L[N*i+j] = I[N*i+j].x;
+    }
+  }
+}
+
 __global__ void searchDirection(float *g, float *xi, float *h, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1570,7 +1589,7 @@ __global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, fl
   }
 }
 
-__global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, float lambda, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1585,7 +1604,7 @@ __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, fl
   }
 }
 
-__global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N)
+__global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, float lambda, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1619,6 +1638,27 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
     dTV[N*i+j] = lambda * dtv;
   }
 }
+
+__global__ void DL(float *dL, cufftComplex *I, float *noise, float noise_cut, float lambda, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      dL[N*i+j] = 20 * I[N*i+j].x -
+                  8 * I[N*(i+1)+j].x - 8 * I[N*i+(j+1)].x - 8 * I[N*(i-1)+j].x - 8 * I[N*i+(j-1)].x +
+                  2 * I[N*(i+1)+(j-1)].x + 2 * I[N*(i+1)+(j+1)].x + 2 * I[N*(i-1)+(j-1)].x + 2 * I[N*(i-1)+(j+1)].x +
+                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;
+    }else{
+      dL[N*i+j] = 0.0;
+    }
+  }
+
+  dL[N*i+j] *= lambda;
+
+}
+
 
 __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
 {
@@ -1777,11 +1817,15 @@ __host__ float chiCuadrado(cufftComplex *I)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
-        QPVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        QPVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 2:
-        TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut, MINPIX);
+        TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 3:
+        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -1969,11 +2013,15 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 1:
-        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 2:
-        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, N);
+        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 3:
+        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:

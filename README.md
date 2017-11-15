@@ -74,8 +74,9 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 # PRIORS
 
 0. Entropy
-1. Quadratic variation
+1. Quadratic penalization
 2. Total Variation
+3. Laplacian Regularization
 
 # IMPORTANT
 
