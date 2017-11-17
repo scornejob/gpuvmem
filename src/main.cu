@@ -40,9 +40,9 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float2 *device_dchi2_total, *device_2I;
-float *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
+float *device_dS, *device_dS_alpha, *device_chi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
-float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta;
+float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -122,6 +122,7 @@ __host__ int main(int argc, char **argv) {
   nu_0 = variables.nu_0;
   alpha_start = variables.alpha_start;
   eta = variables.eta;
+  epsilon = variables.epsilon;
 
   multigpu = 0;
   firstgpu = -1;
@@ -539,8 +540,14 @@ __host__ int main(int argc, char **argv) {
 	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
 
+  gpuErrchk(cudaMalloc((void**)&device_dS_alpha, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_dS_alpha, 0, sizeof(float)*M*N));
+
 	gpuErrchk(cudaMalloc((void**)&device_S, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_S, 0, sizeof(float)*M*N));
+
+  gpuErrchk(cudaMalloc((void**)&device_S_alpha, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(device_S_alpha, 0, sizeof(float)*M*N));
 
 
 
@@ -816,9 +823,11 @@ __host__ int main(int argc, char **argv) {
 
 	cudaFree(device_dchi2_total);
 	cudaFree(device_dS);
+  cudaFree(device_dS_alpha);
 
 	cudaFree(device_chi2);
 	cudaFree(device_S);
+  cudaFree(device_S_alpha);
 
   //Disabling UVA
   if(num_gpus > 1){

@@ -38,13 +38,13 @@ extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
 
 extern float2 *device_dchi2_total, *device_2I;
-extern float *device_chi2, *device_S, *device_dS, *device_noise_image;
+extern float *device_chi2, *device_S, *device_S_alpha, *device_dS, device_dS_alpha, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
-minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start;
+minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, eta, epsilon;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff, eta;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
 extern double ra, dec;
 
 extern freqData data;
@@ -1511,6 +1511,24 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
+__global__ void LVectorAlpha(float *L, float *noise, float2 *I, long N, float noise_cut)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float Dx, Dy;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      Dx = I[N*i+(j-1)].y - 2 * I[N*i+j].y + I[N*i+(j+1)].y;
+      Dy = I[N*(i-1)+j].y - 2 * I[N*i+j].y + I[N*(i+1)+j].y;
+      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
+    }else{
+      L[N*i+j] = I[N*i+j].y;
+    }
+  }
+}
+
 __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1683,6 +1701,26 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
   }
 }
 
+__global__ void DLAlpha(float *dL, float2 *I, float *noise, float noise_cut, float epsilon, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      dL[N*i+j] = 20 * I[N*i+j].y -
+                  8 * I[N*(i+1)+j].y - 8 * I[N*i+(j+1)].y - 8 * I[N*(i-1)+j].y - 8 * I[N*i+(j-1)].y +
+                  2 * I[N*(i+1)+(j-1)].y + 2 * I[N*(i+1)+(j+1)].y + 2 * I[N*(i-1)+(j-1)].y + 2 * I[N*(i-1)+(j+1)].y +
+                  I[N*(i+2)+j].y + I[N*i+(j+2)].y + I[N*(i-2)+j].y + I[N*i+(j-2)].y;
+    }else{
+      dL[N*i+j] = 0.0;
+    }
+  }
+
+  dL[N*i+j] *= epsilon;
+
+}
+
 __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
 {
 
@@ -1820,9 +1858,15 @@ __host__ float chiCuadrado(float2 *I)
   float resultPhi = 0.0;
   float resultchi2  = 0.0;
   float resultS  = 0.0;
+  float resultS_alpha = 0.0;
 
   if(clip_flag){
     clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
+    gpuErrchk(cudaDeviceSynchronize());
+  }
+
+  if(epsilon){
+    LVectorAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_S_alpha, device_noise_image, I, N, noise_cut);
     gpuErrchk(cudaDeviceSynchronize());
   }
 
@@ -1986,7 +2030,7 @@ __host__ float chiCuadrado(float2 *I)
 
           partial_chi2 = deviceReduce(vars_per_field[f].device_vars[i].chi2, fields[f].numVisibilitiesPerFreq[i]);
 
-          partial_S = deviceReduce(vars_per_field[f].device_vars[i].device_S, M*N);;
+          partial_S = deviceReduce(vars_per_field[f].device_vars[i].device_S, M*N);
         	//REDUCTIONS
         	//chi2
           #pragma omp critical
@@ -1998,13 +2042,18 @@ __host__ float chiCuadrado(float2 *I)
       }
     }
   }
+
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
     cudaSetDevice(firstgpu);
   }
 
-  resultPhi = (0.5 * resultchi2) + (lambda * resultS);
+  if(epsilon){
+    resultS_alpha = deviceReduce(device_S_alpha, M*N);
+  }
+
+  resultPhi = (0.5 * resultchi2) + (lambda * resultS) + (epsilon * resultS_alpha);
 
   final_chi2 = resultchi2;
   final_H = resultS;
