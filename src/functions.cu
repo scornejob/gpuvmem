@@ -2055,7 +2055,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dS, device_dS_alpha, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  if(iter>0 && lambda!=0.0){
+  if(iter>0 && lambda!=0.0 && flag_opt==1){
     switch(reg_term){
       case 0:
         DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, fg_scale, eta, N);
@@ -2076,7 +2076,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
     }
   }
 
-  if(epsilon){
+  if(epsilon && flag_opt != 1){
     DLAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_dS_alpha, I, device_noise_image, noise_cut, epsilon, N);
     gpuErrchk(cudaDeviceSynchronize());
   }
