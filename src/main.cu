@@ -39,7 +39,7 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_V, *device_Inu;
 
-float2 *device_dchi2_total, *device_2I;
+float2 *device_dphi, *device_2I;
 float *device_dS, *device_dS_alpha, *device_chi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon;
@@ -406,8 +406,6 @@ __host__ int main(int argc, char **argv) {
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(cufftComplex)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
   			cudaSetDevice((i%num_gpus) + firstgpu);
-        gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].device_S, sizeof(float)*M*N));
-        gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_S, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
@@ -533,8 +531,8 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMalloc((void**)&device_weight_image, sizeof(cufftComplex)*M*N));
   gpuErrchk(cudaMemset(device_weight_image, 0, sizeof(cufftComplex)*M*N));
 
-	gpuErrchk(cudaMalloc((void**)&device_dchi2_total, sizeof(float2)*M*N));
-  gpuErrchk(cudaMemset(device_dchi2_total, 0, sizeof(float2)*M*N));
+	gpuErrchk(cudaMalloc((void**)&device_dphi, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(device_dphi, 0, sizeof(float2)*M*N));
 
 
 	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
@@ -809,7 +807,6 @@ __host__ int main(int argc, char **argv) {
   			cudaSetDevice((i%num_gpus) + firstgpu);
   			cudaFree(vars_per_field[f].device_vars[i].device_V);
   			cudaFree(vars_per_field[f].device_vars[i].device_Inu);
-        cudaFree(vars_per_field[f].device_vars[i].device_S);
   		}
     }
 	}
@@ -821,7 +818,7 @@ __host__ int main(int argc, char **argv) {
 
 	cudaFree(device_noise_image);
 
-	cudaFree(device_dchi2_total);
+	cudaFree(device_dphi);
 	cudaFree(device_dS);
   cudaFree(device_dS_alpha);
 

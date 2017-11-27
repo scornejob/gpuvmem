@@ -37,7 +37,6 @@ typedef struct variablesPerFreq{
   cufftHandle plan;
   cufftComplex *device_Inu;
   cufftComplex *device_V;
-  float *device_S;
 }VPF;
 
 typedef struct variablesPerField{

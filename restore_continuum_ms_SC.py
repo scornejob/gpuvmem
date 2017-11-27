@@ -1,8 +1,16 @@
 #casapy --log2term --nogui -c restore_continum_ms_SC.py
-residual_ms = str(sys.argv[5]); #input
-model_fits = str(sys.argv[6]);  # input
-restored = str(sys.argv[7]);  #output
-weight=str(sys.argv[8]); # "briggs or natural"
+
+#residual_ms = str(sys.argv[5]); #input
+#model_fits = str(sys.argv[6]);  # input
+#restored = str(sys.argv[7]);  #output
+#weight=str(sys.argv[8]); # "briggs or natural"
+
+residual_ms = str(sys.argv[3]); #input
+model_fits = str(sys.argv[4]);  # input
+restored = str(sys.argv[5]);  #output
+weight=str(sys.argv[6]); # "briggs or natural"
+
+
 polarization="I"
 
 ######################################################################
