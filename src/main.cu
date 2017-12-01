@@ -39,7 +39,7 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
 
-float *device_dphi, *device_dchi2_total, *device_dS, *device_chi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
+float *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
 float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff, eta;
 
@@ -53,11 +53,14 @@ char *output, *mempath, *out_image;
 double ra, dec;
 
 freqData data;
+
 fitsfile *mod_in;
 
 Field *fields;
 
 VariablesPerField *vars_per_field;
+
+varsPerGPU *vars_gpu;
 
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
@@ -187,7 +190,7 @@ __host__ int main(int argc, char **argv) {
         firstgpu = atoi(pt);
       }
       multigpu++;
-      pt = strtok (NULL, ",");
+      pt = strtok(NULL, ",");
     }
   }else{
     multigpu = 0;
@@ -263,6 +266,8 @@ __host__ int main(int argc, char **argv) {
     		}
 			}
 	 	}
+
+    vars_gpu = (varsPerGPU*)malloc(num_gpus*sizeof(varsPerGPU));
   }
 
   for(int f=0; f<data.nfields; f++){
@@ -373,13 +378,18 @@ __host__ int main(int argc, char **argv) {
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
+    gpuErrchk(cudaMalloc((void**)&device_dchi2, sizeof(float)*M*N));
+    gpuErrchk(cudaMemset(device_dchi2, 0, sizeof(float)*M*N));
+
+    gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+    gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
     for(int f=0; f<data.nfields; f++){
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(float)*M*N));
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(float)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
 
-  			gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+  			//gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+  			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
         if(xcorr_flag){
           gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_num, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
@@ -387,10 +397,6 @@ __host__ int main(int argc, char **argv) {
           gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_den, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
     			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_den, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         }
-
-
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -406,14 +412,24 @@ __host__ int main(int argc, char **argv) {
   		}
     }
 	}else{
+
+    for(int g=0; g<num_gpus; g++){
+      cudaSetDevice((g%num_gpus) + firstgpu);
+      gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_dchi2, sizeof(float)*M*N));
+      gpuErrchk(cudaMemset(vars_gpu[g].device_dchi2, 0, sizeof(float)*M*N));
+
+      gpuErrchk(cudaMalloc(&vars_gpu[g].device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+      gpuErrchk(cudaMemset(vars_gpu[g].device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+    }
+
     for(int f=0; f<data.nfields; f++){
       cudaSetDevice(firstgpu);
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(float)*M*N));
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(float)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
   			cudaSetDevice((i%num_gpus) + firstgpu);
-  			gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+  			//gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+  			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
         if(xcorr_flag){
           gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_num, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
@@ -422,8 +438,8 @@ __host__ int main(int argc, char **argv) {
     			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_den, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         }
 
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
+  			//gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
+  			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -763,6 +779,7 @@ __host__ int main(int argc, char **argv) {
   	for(int i=0; i<data.total_frequencies; i++){
       if(num_gpus > 1){
   		    cudaSetDevice((i%num_gpus) + firstgpu);
+          //cudaFree(vars_per_field[f].device_vars[i].dchi2);
       }
   		cudaFree(fields[f].device_visibilities[i].u);
   		cudaFree(fields[f].device_visibilities[i].v);
@@ -815,10 +832,11 @@ __host__ int main(int argc, char **argv) {
 	cudaFree(device_fg_image);
 
 	cudaFree(device_dphi);
+  cudaFree(device_dchi2);
+  cudaFree(device_chi2);
 	cudaFree(device_dchi2_total);
 	cudaFree(device_dS);
 
-	cudaFree(device_chi2);
 	cudaFree(device_S);
 
   //Disabling UVA

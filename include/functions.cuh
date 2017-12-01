@@ -32,8 +32,8 @@ const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 
 typedef struct variablesPerFreq{
-  float *chi2;
-  float *dchi2;
+  //float *chi2;
+  //float *dchi2;
   cufftHandle plan;
   cufftComplex *device_image;
   cufftComplex *device_V;
@@ -42,6 +42,11 @@ typedef struct variablesPerFreq{
   float *alpha_den;
   float alpha;
 }VPF;
+
+typedef struct varsPerGPU{
+  float *device_chi2;
+  float *device_dchi2;
+}varsPerGPU;
 
 typedef struct variablesPerField{
   float *atten_image;

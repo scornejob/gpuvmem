@@ -51,6 +51,7 @@ typedef struct freqData{
   int nfields;
   int nsamples;
   int nstokes;
+  int max_number_visibilities_in_channel;
 }freqData;
 
 typedef struct observedVisibilities{
