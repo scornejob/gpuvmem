@@ -519,12 +519,10 @@ __host__ int main(int argc, char **argv) {
 		gpuErrchk(cudaMalloc((void**)&device_V, sizeof(cufftComplex)*M*N));
 	  gpuErrchk(cudaMalloc((void**)&device_image, sizeof(cufftComplex)*M*N));
 	}else{
-    for(int f = 0; f<data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].device_V, sizeof(cufftComplex)*M*N));
-  		  gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].device_image, sizeof(cufftComplex)*M*N));
-  		}
+    for(int g=0; g<num_gpus; g++){
+      cudaSetDevice((g%num_gpus) + firstgpu);
+      gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_V, sizeof(cufftComplex)*M*N));
+      gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_image, sizeof(cufftComplex)*M*N));
     }
 	}
 
@@ -567,14 +565,11 @@ __host__ int main(int argc, char **argv) {
 		gpuErrchk(cudaMemset(device_V, 0, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMemset(device_image, 0, sizeof(cufftComplex)*M*N));
 	}else{
-    for(int f = 0; f < data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_V, 0, sizeof(cufftComplex)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_image, 0, sizeof(cufftComplex)*M*N));
-
-  		}
-    }
+    for(int g=0; g<num_gpus; g++){
+  	    cudaSetDevice((g%num_gpus) + firstgpu);
+  	    gpuErrchk(cudaMemset(vars_gpu[g].device_V, 0, sizeof(cufftComplex)*M*N));
+  			gpuErrchk(cudaMemset(vars_gpu[g].device_V, 0, sizeof(cufftComplex)*M*N));
+  	}
 	}
 
 
@@ -587,15 +582,13 @@ __host__ int main(int argc, char **argv) {
 			return -1;
 		}
 	}else{
-    for(int f = 0; f < data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			if ((cufftPlan2d(&vars_per_field[f].device_vars[i].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
+    for(int g=0; g<num_gpus; g++){
+  	    cudaSetDevice((g%num_gpus) + firstgpu);
+  			if ((cufftPlan2d(&vars_gpu[g].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
   				printf("cufft plan error\n");
   				return -1;
   			}
   		}
-    }
 	}
 
   //Time is taken from first kernel
@@ -793,8 +786,14 @@ __host__ int main(int argc, char **argv) {
         cudaFree(vars_per_field[f].device_vars[i].alpha_den);
       }
 
-  		cufftDestroy(vars_per_field[f].device_vars[i].plan);
   	}
+  }
+
+  if(num_gpus > 1){
+    for(int g=0; g<num_gpus; g++){
+      cudaSetDevice((g%num_gpus) + firstgpu);
+      cufftDestroy(vars_gpu[g].plan);
+    }
   }
 
   for(int f=0; f<data.nfields; f++){
@@ -814,12 +813,10 @@ __host__ int main(int argc, char **argv) {
 		cudaFree(device_V);
 		cudaFree(device_image);
 	}else{
-    for(int f=0; f<data.nfields;f++){
-  		for(int i=0; i<data.total_frequencies; i++){
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			cudaFree(vars_per_field[f].device_vars[i].device_V);
-  			cudaFree(vars_per_field[f].device_vars[i].device_image);
-  		}
+    for(int g=0; g<num_gpus; g++){
+  			cudaSetDevice((g%num_gpus) + firstgpu);
+  			cudaFree(vars_gpu[g].device_V);
+  			cudaFree(vars_gpu[g].device_image);
     }
 	}
   if(num_gpus == 1){

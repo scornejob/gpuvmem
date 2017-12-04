@@ -34,9 +34,9 @@ const float LIGHTSPEED = 2.99792458E8;
 typedef struct variablesPerFreq{
   //float *chi2;
   //float *dchi2;
-  cufftHandle plan;
-  cufftComplex *device_image;
-  cufftComplex *device_V;
+  //cufftHandle plan;
+  //cufftComplex *device_image;
+  //cufftComplex *device_V;
   float *device_S;
   float *alpha_num;
   float *alpha_den;
@@ -46,6 +46,9 @@ typedef struct variablesPerFreq{
 typedef struct varsPerGPU{
   float *device_chi2;
   float *device_dchi2;
+  cufftHandle plan;
+  cufftComplex *device_image;
+  cufftComplex *device_V;
 }varsPerGPU;
 
 typedef struct variablesPerField{
@@ -105,7 +108,7 @@ __global__ void weight_image(float *weight_image, float *total_atten, float nois
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);
 __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
-__global__ void vis_mod(cufftComplex *Vm, cufftComplex *Vo, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
 __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities);
