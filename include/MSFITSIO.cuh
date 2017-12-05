@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
+#include <string>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
 #include <tables/Tables/TableIter.h>

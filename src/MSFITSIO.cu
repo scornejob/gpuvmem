@@ -1005,9 +1005,10 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
   }
-  if(option==0 || option==1){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
+
+  fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
+
 
   cufftComplex *host_IFITS;
   host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
