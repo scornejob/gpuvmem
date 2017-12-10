@@ -85,6 +85,17 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
     }
   }
 
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < freqsAndVisibilities.nfields; f++){
+    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+total_frequencies);
+    if(local_max > max){
+      max = local_max;
+    }
+  }
+  
+  freqsAndVisibilities.max_number_visibilities_in_channel = max;
+
   return freqsAndVisibilities;
 }
 
