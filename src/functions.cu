@@ -1528,18 +1528,22 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
   TV[N*i+j] = tv;
 }
 
-__global__ void LVector(float *L, float *noise, cufftComplex *I, long N, float noise_cut)
+__global__ void LVector(float *L, float *noise, cufftComplex *I, float noise_cut, float DELTAX, float DELTAY, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Dx, Dy;
+  float Dx, Dy, dx, dy, norconst;
+  dx = DELTAX * RPDEG;
+  dy = DELTAX * RPDEG;
+  norconst = (dx * dy) * (dx * dy);
+
 
   if(noise[N*i+j] <= noise_cut){
     if((i>1 && i<N-1) && (j>1 && j<N-1)){
-      Dx = I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x;
-      Dy = I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x;
-      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
+      Dx = (I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x) / (dx * dx);
+      Dy = (I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x) / (dy * dy);
+      L[N*i+j] = 0.5 * norconst * (Dx + Dy) * (Dx + Dy);
     }else{
       L[N*i+j] = I[N*i+j].x;
     }
@@ -1639,17 +1643,26 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
   }
 }
 
-__global__ void DL(float *dL, cufftComplex *I, float *noise, float noise_cut, float lambda, long N)
+__global__ void DL(float *dL, cufftComplex *I, float *noise, float noise_cut, float lambda, float DELTAX, float DELTAY, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
+  float dx, dy, DDx, DDy, norconst;
+  dx = DELTAX * RPDEG;
+  dy = DELTAY * RPDEG;
+  norconst = (dx * dy) * (dx * dy);
+
   if(noise[N*i+j] <= noise_cut){
     if((i>1 && i<N-1) && (j>1 && j<N-1)){
-      dL[N*i+j] = 20 * I[N*i+j].x -
+      DDx = (-2 * I[N*i+j].x - 4 * I[N*i+(j-1)].x - 4 * I[N*i+(j+1)].x + I[N*i+(j+2)].x + I[N*i+(j-2)].x) / (dx * dx);
+      DDy = (-2 * I[N*i+j].x - 4 * I[N*(i-1)+j].x - 4 * I[N*(i+1)+j].x + I[N*(i+2)+j].x + I[N*(i-2)+j].x) / (dy * dy);
+      dL[N*i+j] = norconst * (DDx + DDy);
+      /*dL[N*i+j] = 20 * I[N*i+j].x -
                   8 * I[N*(i+1)+j].x - 8 * I[N*i+(j+1)].x - 8 * I[N*(i-1)+j].x - 8 * I[N*i+(j-1)].x +
                   2 * I[N*(i+1)+(j-1)].x + 2 * I[N*(i+1)+(j+1)].x + 2 * I[N*(i-1)+(j-1)].x + 2 * I[N*(i-1)+(j+1)].x +
-                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;
+                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;*/
+
     }else{
       dL[N*i+j] = 0.0;
     }
@@ -1825,7 +1838,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 3:
-        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut);
+        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, noise_cut, DELTAX, DELTAY, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -2021,7 +2034,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 3:
-        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
+        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, DELTAX, DELTAY, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
