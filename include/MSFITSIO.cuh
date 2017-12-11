@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
+#include <string>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
 #include <tables/Tables/TableIter.h>
@@ -51,6 +52,7 @@ typedef struct freqData{
   int nfields;
   int nsamples;
   int nstokes;
+  int max_number_visibilities_in_channel;
 }freqData;
 
 typedef struct observedVisibilities{

@@ -85,6 +85,16 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
     }
   }
 
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < freqsAndVisibilities.nfields; f++){
+    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+total_frequencies);
+    if(local_max > max){
+      max = local_max;
+    }
+  }
+  freqsAndVisibilities.max_number_visibilities_in_channel = max;
+
   return freqsAndVisibilities;
 }
 
@@ -995,9 +1005,10 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
   }
-  if(option==0 || option==1){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
+
+  fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
+
 
   cufftComplex *host_IFITS;
   host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
