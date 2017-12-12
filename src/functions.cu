@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, xcorr_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images;
+status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
@@ -827,7 +827,6 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"copyright", 0, NULL, 'c' },
                                     /* These options set a flag. */
                                     {"verbose", 0, &verbose_flag, 1},
-                                    {"xcorr", 0, &xcorr_flag, 1},
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
                                     {"apply-noise", 0, &apply_noise, 1},
@@ -1347,14 +1346,6 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
 
 }
 
-__global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  if (i < numVisibilities){
-    alpha_num[i] = w[i] * ((Vo[i].x * Vm[i].x) + (Vo[i].y * Vm[i].y));
-    alpha_den[i] = w[i] * ((Vm[i].x * Vm[i].x) + (Vm[i].y * Vm[i].y));
-  }
-
-}
 
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
   int i = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1365,18 +1356,6 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
 }
 
 
-
-
-__global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities)
-{
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  if (i < numVisibilities){
-    Vm[i].x *= alpha;
-    Vm[i].y *= alpha;
-    Vr[i].x = Vm[i].x - Vo[i].x;
-    Vr[i].y = Vm[i].y - Vo[i].y;
-  }
-}
 
 __global__ void clipWNoise(cufftComplex *fg_image, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta)
 {
@@ -1530,22 +1509,18 @@ __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float
   TV[N*i+j] = tv;
 }
 
-__global__ void LVector(float *L, float *noise, cufftComplex *I, float noise_cut, float DELTAX, float DELTAY, long N)
+__global__ void LVector(float *L, float *noise, cufftComplex *I, long N, float noise_cut)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float Dx, Dy, dx, dy, norconst;
-  dx = DELTAX * RPDEG;
-  dy = DELTAX * RPDEG;
-  norconst = (dx * dy) * (dx * dy);
-
+  float Dx, Dy;
 
   if(noise[N*i+j] <= noise_cut){
     if((i>1 && i<N-1) && (j>1 && j<N-1)){
-      Dx = (I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x) / (dx * dx);
-      Dy = (I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x) / (dy * dy);
-      L[N*i+j] = 0.5 * norconst * (Dx + Dy) * (Dx + Dy);
+      Dx = I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x;
+      Dy = I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x;
+      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
     }else{
       L[N*i+j] = I[N*i+j].x;
     }
@@ -1645,25 +1620,17 @@ __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, 
   }
 }
 
-__global__ void DL(float *dL, cufftComplex *I, float *noise, float noise_cut, float lambda, float DELTAX, float DELTAY, long N)
+__global__ void DL(float *dL, cufftComplex *I, float *noise, float noise_cut, float lambda, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float dx, dy, DDx, DDy, norconst;
-  dx = DELTAX * RPDEG;
-  dy = DELTAY * RPDEG;
-  norconst = (dx * dy) * (dx * dy);
-
   if(noise[N*i+j] <= noise_cut){
     if((i>1 && i<N-1) && (j>1 && j<N-1)){
-      DDx = (-2 * I[N*i+j].x - 4 * I[N*i+(j-1)].x - 4 * I[N*i+(j+1)].x + I[N*i+(j+2)].x + I[N*i+(j-2)].x) / (dx * dx);
-      DDy = (-2 * I[N*i+j].x - 4 * I[N*(i-1)+j].x - 4 * I[N*(i+1)+j].x + I[N*(i+2)+j].x + I[N*(i-2)+j].x) / (dy * dy);
-      dL[N*i+j] = norconst * (DDx + DDy);
-      /*dL[N*i+j] = 20 * I[N*i+j].x -
+      dL[N*i+j] = 20 * I[N*i+j].x -
                   8 * I[N*(i+1)+j].x - 8 * I[N*i+(j+1)].x - 8 * I[N*(i-1)+j].x - 8 * I[N*i+(j-1)].x +
                   2 * I[N*(i+1)+(j-1)].x + 2 * I[N*(i+1)+(j+1)].x + 2 * I[N*(i-1)+(j-1)].x + 2 * I[N*(i-1)+(j+1)].x +
-                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;*/
+                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;
 
     }else{
       dL[N*i+j] = 0.0;
@@ -1705,41 +1672,6 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
   	}
 
   dchi2 *= fg_scale * atten;
-  dChi2[N*i+j] = dchi2;
-  }
-}
-
-
-__global__ void DChi2_XCORR(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float alpha, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
-{
-
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  int x0 = xobs;
-  int y0 = yobs;
-  float x = (j - x0) * DELTAX * RPDEG;
-  float y = (i - y0) * DELTAY * RPDEG;
-
-	float Ukv, Vkv, cosk, sink, atten;
-
-  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
-
-  float dchi2 = 0.0;
-  if(noise[N*i+j] <= noise_cut){
-  	for(int v=0; v<numVisibilities; v++){
-      Ukv = x * U[v];
-  		Vkv = y * V[v];
-      #if (__CUDA_ARCH__ >= 300 )
-        sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
-      #else
-        cosk = cospif(2.0*(Ukv+Vkv));
-        sink = sinpif(2.0*(Ukv+Vkv));
-      #endif
-      dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
-  	}
-
-  dchi2 *= alpha * fg_scale * atten;
   dChi2[N*i+j] = dchi2;
   }
 }
@@ -1840,7 +1772,7 @@ __host__ float chiCuadrado(cufftComplex *I)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 3:
-        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, noise_cut, DELTAX, DELTAY, N);
+        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, device_fg_image, N, noise_cut);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -1877,27 +1809,8 @@ __host__ float chiCuadrado(cufftComplex *I)
           vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
         	gpuErrchk(cudaDeviceSynchronize());
 
-          if(xcorr_flag){
-            float alpha_num = 0.0;
-            float alpha_den = 0.0;
-            alphaVectors<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_per_field[f].device_vars[i].alpha_num, vars_per_field[f].device_vars[i].alpha_den, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-
-            alpha_num = deviceReduce(vars_per_field[f].device_vars[i].alpha_num, fields[f].numVisibilitiesPerFreq[i]);
-
-            alpha_den = deviceReduce(vars_per_field[f].device_vars[i].alpha_den, fields[f].numVisibilitiesPerFreq[i]);
-
-            if(alpha_den > 0.0){
-              vars_per_field[f].device_vars[i].alpha = alpha_num/alpha_den;
-            }else{
-              vars_per_field[f].device_vars[i].alpha = 1.0;
-            }
-            residual_XCORR<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, vars_per_field[f].device_vars[i].alpha, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
+          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
 
         	////chi 2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
@@ -1945,30 +1858,8 @@ __host__ float chiCuadrado(cufftComplex *I)
           vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
         	gpuErrchk(cudaDeviceSynchronize());
 
-
-          if(xcorr_flag){
-            float alpha_num = 0.0;
-            float alpha_den = 0.0;
-            alphaVectors<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_per_field[f].device_vars[i].alpha_num, vars_per_field[f].device_vars[i].alpha_den, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-
-            alpha_num = deviceReduce(vars_per_field[f].device_vars[i].alpha_num, fields[f].numVisibilitiesPerFreq[i]);
-
-            alpha_den = deviceReduce(vars_per_field[f].device_vars[i].alpha_den, fields[f].numVisibilitiesPerFreq[i]);
-
-            if(alpha_den > 0.0){
-              vars_per_field[f].device_vars[i].alpha = alpha_num/alpha_den;
-            }else{
-              vars_per_field[f].device_vars[i].alpha = 1.0;
-            }
-
-            residual_XCORR<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, vars_per_field[f].device_vars[i].alpha, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
-
+          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
 
         	////chi2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_gpu[i%num_gpus].device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
@@ -2042,7 +1933,7 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         gpuErrchk(cudaDeviceSynchronize());
         break;
       case 3:
-        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, DELTAX, DELTAY, N);
+        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
@@ -2057,15 +1948,13 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
     for(int f=0; f<data.nfields; f++){
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-            if(xcorr_flag){
-              DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, vars_per_field[f].device_vars[i].alpha, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }else{
-              DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }
-            DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_dchi2, N);
-          	gpuErrchk(cudaDeviceSynchronize());
+
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
+          gpuErrchk(cudaDeviceSynchronize());
+
+          DChi2_total<<<numBlocksNN, threadsPerBlockNN>>>(device_dchi2_total, device_dchi2, N);
+          gpuErrchk(cudaDeviceSynchronize());
+
         }
       }
     }
@@ -2081,13 +1970,10 @@ __host__ void dchiCuadrado(cufftComplex *I, float *dxi2)
         cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
         cudaGetDevice(&gpu_id);
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-          if(xcorr_flag){
-            DChi2_XCORR<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, vars_per_field[f].device_vars[i].alpha, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-            gpuErrchk(cudaDeviceSynchronize());
-          }else{
-            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-            gpuErrchk(cudaDeviceSynchronize());
-          }
+
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
+          gpuErrchk(cudaDeviceSynchronize());
+
 
           #pragma omp critical
           {

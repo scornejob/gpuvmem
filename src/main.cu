@@ -46,7 +46,7 @@ float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cut
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, xcorr_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
@@ -273,7 +273,6 @@ __host__ int main(int argc, char **argv) {
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
-  	vars_per_field[f].device_vars = (VPF*)malloc(data.total_frequencies*sizeof(VPF));
   }
 
   //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
@@ -391,13 +390,6 @@ __host__ int main(int argc, char **argv) {
   			//gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
-        if(xcorr_flag){
-          gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_num, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-    			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_num, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-          gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_den, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-    			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_den, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-        }
-
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
@@ -430,13 +422,6 @@ __host__ int main(int argc, char **argv) {
   			cudaSetDevice((i%num_gpus) + firstgpu);
   			//gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
   			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-
-        if(xcorr_flag){
-          gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_num, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-    			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_num, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-          gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].alpha_den, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-    			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].alpha_den, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-        }
 
   			//gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
   			//gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
@@ -780,11 +765,6 @@ __host__ int main(int argc, char **argv) {
 
   		cudaFree(fields[f].device_visibilities[i].Vr);
   		cudaFree(fields[f].device_visibilities[i].Vo);
-
-      if(xcorr_flag){
-        cudaFree(vars_per_field[f].device_vars[i].alpha_num);
-        cudaFree(vars_per_field[f].device_vars[i].alpha_den);
-      }
 
   	}
   }
