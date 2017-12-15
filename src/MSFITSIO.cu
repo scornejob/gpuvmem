@@ -4,15 +4,41 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 {
    freqData freqsAndVisibilities;
    string dir = MS_name;
-   string query;
+   //string query;
+  
+   char query[255];
+   
    casa::Vector<double> pointing;
-   casa::Table main_tab(dir);
+   
+   //casa::Table main_tab(dir);
+
+
+ 	sprintf(query,"select * from %s",MS_name);
+    
+    casa::Table main_tab = casa::tableCommand(query);
+
+   
+    
+    
+   
    casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
    casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
    casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
    freqsAndVisibilities.nfields = field_tab.nrow();
    casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
 
+   
+	
+	//if (verbosity==1) cout <<"\ninicio lectura de directorio ms...\n"<<endl;
+	//abro tablas y subtablas
+	//si no puede abrir, el constructor genera un exit.	
+	//original : Table main_tab(dir);
+	//cambiado a uso con tsql (parametro constraints)
+	//if (constraints.length()>0) query += " where " + constraints;
+	//if (verbosity) cout << "subset de datos segun query : "<<query << endl;
+   
+   
+   
    fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
    for(int f=0; f<freqsAndVisibilities.nfields; f++){
      const casa::TableRecord &values = field_row.get(f);
@@ -43,6 +69,9 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
     }
   }
 
+  // suma de todos los canales, no pescando las spw
+  
+  
   freqsAndVisibilities.total_frequencies = total_frequencies;
   for(int f=0; f < freqsAndVisibilities.nfields; f++){
     fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
@@ -71,6 +100,30 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
           spw = values.asInt("DATA_DESC_ID");
           casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
           weights=values.asArrayFloat("WEIGHT");
+     /*      
+            // recorro todo y clasifico !?? muy asegurado !
+            // 
+    
+            select ntrue(FLAG), FLAG from hd107146.b7.12m.calibrated.rew.split.ms limit 1;
+                using style python select ntrue(FLAG), FLAG from hd107146.b7.12m.calibrated.rew.split.ms limit 1;
+                has been executed
+                select result of 1 rows
+                2 selected columns:  Col_1 FLAG
+                4       Axis Lengths: [2, 2]  (NB: Matrix in Row/Column order)
+                [1, 1
+                1, 1]
+
+    
+    
+                select FLAG[0,*] from  hd107146.b7.12m.calibrated.rew.split.ms limit 1;
+    
+    
+                // recorrer por fields
+    
+                // contaR POR FIELDS AGREGANDO NFALSE(flAG) POR STOKE, CON PESO > 0 (POR MULTIPLICACION O POR IF )
+    
+    
+ */
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
               auxbool = flagCol[j][sto];
@@ -458,10 +511,22 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 {
 
   char *error = 0;
+  
   int g = 0, h = 0;
-  string query;
+  char query[255];
   string dir = MS_name;
-  casa::Table main_tab(dir);
+  
+
+  
+  //casa::Table main_tab(dir);
+    sprintf(query," select * from %s",MS_name);
+	
+	casa::Table main_tab = casa::tableCommand(query);
+  
+  //casa::Table main_tab = casa::tableCommand(query);
+  
+  
+  
   casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
   casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
@@ -472,43 +537,80 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
+ // casa::ROTableRow row(main_tab, casa::stringToVector("FLAG,FLAG_ROW,FIELD_ID,UVW,WEIGHT,SIGMA,ANTENNA1,ANTENNA2,TIME,EXPOSURE,DATA,DATA_DESC_ID"));
+ 
+  
+  
   casa::Vector<casa::Bool> auxbool;
-  casa::Vector<float> v;
+  //casa::Vector<float> v;
+  
+  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID"); 
+  
+  casa::ROArrayColumn<double> uvw_col(main_tab,"UVW");
+  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
+  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
+  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT"); 
+  casa::ROArrayColumn<casa::Complex> data_col(main_tab,"DATA");
+  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
+  
+  
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
+  casa::Array<casa::Complex> dataCol ;
+  casa::Array<casa::Bool> flagCol;
+  
+ // casa::Matrix<casa::Complex> data_col(main_tab,"DATA");
+ // casa::Matrix<bool> flag_data_col(main_tab,"FLAG");  
+  
+
+//  casa::Array<float> dataColReal;
   bool flag;
   int spw, field;
+  
 
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
       for(int j=0; j < data.channels[i]; j++){
         for (int k=0; k < data.nsamples; k++){
-          const casa::TableRecord &values = row.get(k);
-          uvw = values.asArrayDouble("UVW");
-          flag = values.asBool("FLAG_ROW");
-          spw = values.asInt("DATA_DESC_ID");
-          field = values.asInt("FIELD_ID");
-          casa::Array<casa::Complex> dataCol = values.asArrayComplex("DATA");
-          casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-          weights=values.asArrayFloat("WEIGHT");
+            
+//          const casa::TableRecord &values = row.get(k);
+          uvw = uvw_col(k); //.asArrayDouble("UVW");
+//          flag = values.asBool("FLAG_ROW");
+          flag=flag_col(k);
+          //spw = values.asInt("DATA_DESC_ID");
+          spw=data_desc_id_col(k);
+//          field = values.asInt("FIELD_ID");
+            field=field_id_col(k);
+//          dataCol = values.asArrayComplex("DATA");
+            dataCol = data_col(k);
+          //dataColReal = values.asArrayFloat("REAL(DATA)");
+//          flagCol = values.asArrayBool("FLAG");
+            flagCol=flag_data_col(k);
+//          weights=values.asArrayFloat("WEIGHT");
+          weights=weight_col(k);
+         casa::Vector<casa::Complex> datavec(dataCol[j]);
+         casa::Vector<bool> flag_vec(flagCol[j]);
+
+          
+          
           if(field == f && spw == i && flag == false){
             for (int sto=0; sto < data.nstokes; sto++) {
-              auxbool = flagCol[j][sto];
-              if(auxbool[0] == false && weights[sto] > 0.0){
+//               auxbool = flag_vec[sto];
+              if(flag_vec[sto] == false && weights[sto] > 0.0){
                 fields[f].visibilities[g].stokes[h] = polarizations[sto];
                 fields[f].visibilities[g].u[h] = uvw[0];
                 fields[f].visibilities[g].v[h] = uvw[1];
-                v = casa::real(dataCol[j][sto]);
-                fields[f].visibilities[g].Vo[h].x = v[0];
-                v = casa::imag(dataCol[j][sto]);
-                fields[f].visibilities[g].Vo[h].y = v[0];
+                //v = casa::real(dataCol[j][sto]);
+                fields[f].visibilities[g].Vo[h].x = datavec[sto].real(); // v[0];
+                //v = casa::imag(dataCol[j][sto]);
+                fields[f].visibilities[g].Vo[h].y = datavec[sto].imag(); //v[0];
                 fields[f].visibilities[g].weight[h] = weights[sto];
                 h++;
               }
             }
           }else continue;
+          
         }
         h=0;
         g++;

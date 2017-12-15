@@ -7,6 +7,7 @@
 #include <tables/Tables/ScalarColumn.h>
 #include <tables/Tables/ArrayColumn.h>
 #include <casa/Arrays/Vector.h>
+#include <casa/Arrays/Matrix.h>
 #include <casa/Arrays/Slicer.h>
 #include <casa/Arrays/ArrayMath.h>
 #include <tables/Tables/TableParse.h>
@@ -17,6 +18,14 @@
 #include <ms/MeasurementSets/MSMainColumns.h>
 #include <tables/Tables/TableDesc.h>
 #include <ms/MeasurementSets/MSAntennaColumns.h>
+
+
+
+// CASA TaQL Parsing functions
+#include <tables/TaQL/TableParse.h>
+#include <string.h>
+
+
 #include "fitsio.h"
 #include "rngs.cuh"
 #include "rvgs.cuh"

@@ -167,6 +167,8 @@ __host__ int main(int argc, char **argv) {
   beam_bmaj = canvas_vars.beam_bmaj;
   beam_bmin = canvas_vars.beam_bmin;
   beam_noise = canvas_vars.beam_noise;
+  
+  if(verbose_flag){ printf("Counting data..\n"); }
 
   data = countVisibilities(msinput, fields);
 
@@ -176,6 +178,7 @@ __host__ int main(int argc, char **argv) {
      printf("Number of fields = %d\n", data.nfields);
 	   printf("Number of frequencies = %d\n", data.total_frequencies);
    }
+   
 
   if(strcmp(variables.multigpu, "NULL")!=0){
     //Counts number of gpus to use
@@ -301,6 +304,10 @@ __host__ int main(int argc, char **argv) {
   }else{
      readMS(msinput, fields, data);
   }
+  
+  
+  exit(-1);
+  
 
   if(verbose_flag){
     printf("MS File Successfully Read\n");
