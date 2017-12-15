@@ -24,7 +24,7 @@ pix_size = str(cdelta['value'])+"arcsec"
 
 
 
-clean(vis=residual_ms, imagename=residual_image, mode='mfs', niter=0, stokes=polarization, weighting=weight, imsize=[pix_num,pix_num], cell=pix_size)
+clean(vis=residual_ms, imagename=residual_image, mode='mfs', niter=0, stokes=polarization, weighting=weight, imsize=[pix_num,pix_num], cell=pix_size, phasecenter ='J2000 5h41m38.90 -2d15m57.00', imagermode='mosaic')
 
 exportfits(imagename=residual_image+".image", fitsimage=residual_image+".image.fits")
 
