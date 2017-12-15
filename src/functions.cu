@@ -1779,11 +1779,11 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
     printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
 
   if(noise[N*i+j] <= noise_cut){
-    dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0 * 0.f;
+    dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0 * 0.0f;
     dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha;
   }else{
-    dchi2_total[N*i+j].x += 0.f;
-    dchi2_total[N*i+j].y += 0.f;
+    dchi2_total[N*i+j].x += 0.0f;
+    dchi2_total[N*i+j].y += 0.0f;
   }
 }
 
@@ -1808,10 +1808,10 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
 
   if(noise[N*i+j] <= noise_cut){
     dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0;
-    dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha * 0.f;
+    dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha * 0.0f;
   }else{
-    dchi2_total[N*i+j].x += 0.f;
-    dchi2_total[N*i+j].y += 0.f;
+    dchi2_total[N*i+j].x += 0.0f;
+    dchi2_total[N*i+j].y += 0.0f;
   }
 }
 
@@ -1846,7 +1846,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
     I_nu[N*i+j].x = -1.0*eta*minpix;
   }
 
-  I_nu[N*i+j].y = 0.f;
+  I_nu[N*i+j].y = 0.0f;
 }
 
 
@@ -2055,7 +2055,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dS, device_dS_alpha, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  if(iter>0 && lambda!=0.0){
+  if(iter>0 && lambda!=0.0 && flag_opt==1){
     switch(reg_term){
       case 0:
         DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, fg_scale, eta, N);
@@ -2076,7 +2076,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
     }
   }
 
-  if(epsilon){
+  if(epsilon && flag_opt != 1){
     DLAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_dS_alpha, I, device_noise_image, noise_cut, epsilon, N);
     gpuErrchk(cudaDeviceSynchronize());
   }
