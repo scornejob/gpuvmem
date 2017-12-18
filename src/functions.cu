@@ -763,7 +763,7 @@ __host__ void print_help() {
   printf("    -I  --inputdat         The name of the input file of parameters (Mandatory)\n");
   printf("    -m  --modin            mod_in_0 FITS (I_nu_0) image file (Mandatory)\n");
   printf("    -F  --nu_0             Frequency of reference (Mandatory)\n");
-  printf("    -a  --alpha_start      Alpha spectral index starting values\n");
+  printf("    -a  --alpha            Alpha spectral index image\n");
   printf("    -x  --minpix           Minimum positive value of a pixel (Optional)\n");
   printf("    -n  --noise            Noise Parameter (Optional)\n");
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
@@ -822,7 +822,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
-  variables.alpha_start = 0.0;
+  variables.alpha = "NULL";
   variables.eta = -1.0;
 
 
@@ -914,7 +914,8 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.nu_0 = atof(optarg);
       break;
     case 'a':
-      variables.alpha_start = atof(optarg);
+      variables.alpha = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+      strcpy(variables.alpha, optarg);
       break;
     case 'n':
       variables.noise = atof(optarg);
@@ -970,7 +971,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || variables.alpha_start == 0.0) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || strcmp(strip(variables.alpha, " "),"") == 0) {
         print_help();
         exit(EXIT_FAILURE);
   }
@@ -1642,191 +1643,6 @@ __global__ void restartDPhi(float2 *dphi, float *dS, float *dL, long N)
 
 }
 
-__global__ void DS(float *dS, float2 *I, float *noise, float noise_cut, float lambda, float MINPIX, float fg_scale, float eta, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float I_code = I[N*i+j].x / fg_scale;
-
-  if(noise[N*i+j] <= noise_cut){
-    if(I_code != 0.0){
-      dS[N*i+j] = lambda * (logf((I_code / MINPIX) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*MINPIX) / I_code)));
-    }else{
-      dS[N*i+j] = lambda * logf((I_code / MINPIX));
-    }
-  }
-}
-
-__global__ void DQ(float *dQ, float2 *I, float *noise, float noise_cut, float lambda, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
-      dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
-    }else{
-      dQ[N*i+j] = I[N*i+j].x;
-    }
-    dQ[N*i+j] *= lambda;
-  }
-}
-
-__global__ void DTV(float *dTV, float2 *I, float *noise, float noise_cut, float lambda, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float num0, num1, num2;
-  float den0, den1, den2;
-  float dtv;
-
-  if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
-      num0 = 2 * I[N*i+j].x - I[N*i+(j+1)].x - I[N*(i+1)+j].x;
-      num1 = I[N*i+j].x - I[N*i+(j-1)].x;
-      num2 = I[N*i+j].x - I[N*(i-1)+j].x;
-
-      den0 = (I[N*i+j].x - I[N*i+(j+1)].x) * (I[N*i+j].x - I[N*i+(j+1)].x) +
-             (I[N*i+j].x - I[N*(i+1)+j].x) * (I[N*i+j].x - I[N*(i+1)+j].x);
-
-      den1 = (I[N*i+(j-1)].x - I[N*i+j].x) * (I[N*i+(j-1)].x - I[N*i+j].x) +
-             (I[N*i+(j-1)].x - I[N*(i+1)+(j-1)].x) * (I[N*i+(j-1)].x - I[N*(i+1)+(j-1)].x);
-
-      den2 = (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) * (I[N*(i-1)+j].x - I[N*(i-1)+(j+1)].x) +
-             (I[N*(i-1)+j].x - I[N*i+j].x) * (I[N*(i-1)+j].x - I[N*i+j].x);
-      if(den0 == 0 || den1 == 0 || den2 == 0){
-        dtv = I[N*i+j].x;
-      }else{
-        dtv = num0/sqrtf(den0) + num1/sqrtf(den1) + num2/sqrtf(den2);
-      }
-    }else{
-      dtv = I[N*i+j].x;
-    }
-    dTV[N*i+j] = lambda * dtv;
-  }
-}
-
-__global__ void DLAlpha(float *dL, float2 *I, float *noise, float noise_cut, float epsilon, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-  int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  if(noise[N*i+j] <= noise_cut){
-    if((i>1 && i<N-1) && (j>1 && j<N-1)){
-      dL[N*i+j] = 20 * I[N*i+j].y -
-                  8 * I[N*(i+1)+j].y - 8 * I[N*i+(j+1)].y - 8 * I[N*(i-1)+j].y - 8 * I[N*i+(j-1)].y +
-                  2 * I[N*(i+1)+(j-1)].y + 2 * I[N*(i+1)+(j+1)].y + 2 * I[N*(i-1)+(j-1)].y + 2 * I[N*(i-1)+(j+1)].y +
-                  I[N*(i+2)+j].y + I[N*i+(j+2)].y + I[N*(i-2)+j].y + I[N*i+(j-2)].y;
-    }else{
-      dL[N*i+j] = 0.0;
-    }
-  }
-
-  dL[N*i+j] *= epsilon;
-
-}
-
-__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
-{
-
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  int x0 = xobs;
-  int y0 = yobs;
-  float x = (j - x0) * DELTAX * RPDEG;
-  float y = (i - y0) * DELTAY * RPDEG;
-
-	float Ukv, Vkv, cosk, sink, atten;
-
-  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
-
-  float dchi2 = 0.0;
-  if(noise[N*i+j] <= noise_cut){
-  	for(int v=0; v<numVisibilities; v++){
-      Ukv = x * U[v];
-  		Vkv = y * V[v];
-      #if (__CUDA_ARCH__ >= 300 )
-        sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
-      #else
-        cosk = cospif(2.0*(Ukv+Vkv));
-        sink = sinpif(2.0*(Ukv+Vkv));
-      #endif
-      dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
-  	}
-
-  dchi2 *= fg_scale * atten;
-  dChi2[N*i+j] = dchi2;
-  }
-}
-
-
-
-__global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float nu, float nu_0, float noise_cut, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-  int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float I_nu_0, alpha, dalpha, dI_nu_0;
-  float nudiv = nu/nu_0;
-
-  I_nu_0 = I[N*i+j].x;
-  alpha = I[N*i+j].y;
-
-  dI_nu_0 = powf(nudiv, alpha);
-  dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
-  /*if (i==242 & j==277)
-    printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
-
-  if(noise[N*i+j] <= noise_cut){
-    dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0 * 0.0f;
-    dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha;
-  }else{
-    dchi2_total[N*i+j].x += 0.0f;
-    dchi2_total[N*i+j].y += 0.0f;
-  }
-}
-
-__global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dchi2, float2 *I, float nu, float nu_0, float noise_cut, long N)
-{
-
-	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  float I_nu_0, alpha, dalpha, dI_nu_0;
-  float nudiv = nu/nu_0;
-
-  I_nu_0 = I[N*i+j].x;
-  alpha = I[N*i+j].y;
-
-  dI_nu_0 = powf(nudiv, alpha);
-  dalpha = dI_nu_0 * I_nu_0 * logf(nudiv);
-
-  /*if (i==242 & j==277)
-    printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
-
-
-  if(noise[N*i+j] <= noise_cut){
-    dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0;
-    dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha * 0.0f;
-  }else{
-    dchi2_total[N*i+j].x += 0.0f;
-    dchi2_total[N*i+j].y += 0.0f;
-  }
-}
-
-__global__ void DPhi(float2 *dphi, float *dS, float *dL, long N)
-{
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-  dphi[N*i+j].x += dS[N*i+j];
-  dphi[N*i+j].y += dL[N*i+j];
-
-}
-
 
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N)
 {
@@ -1851,6 +1667,30 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
   I_nu[N*i+j].y = 0.0f;
 }
 
+__global__ void random_init(unsigned int seed, curandState_t* states, long N)
+{
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
+    curand_init(seed, /* the seed can be the same for each thread, here we pass the time from CPU */
+                (N*i+j),   /* the sequence number should be different for each core */
+                0,    /* the offset is how much extra we advance in the sequence for each call, can be 0 */
+                &states[N*i+j]);
+}
+
+__global__ void changeI(float2 *I, float2 *temp, float2 theta, curandState_t* states, long N)
+{
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+    float2 nrandom;
+
+    nrandom.x= curand_normal(&states[N*i+j]) * theta.x;
+    nrandom.y = curand_normal(&states[N*i+j]) * theta.y;
+
+    temp[N*i+j].x = I[N*i+j].x + nrandom.x;
+    temp[N*i+j].y = I[N*i+j].y + nrandom.y;
+
+}
 
 __host__ float chiCuadrado(float2 *I)
 {
@@ -2040,114 +1880,55 @@ __host__ float chiCuadrado(float2 *I)
 }
 
 
-
-__host__ void dchiCuadrado(float2 *I, float2 *dxi2)
+__host__ void MCMC(float2 *I, float2 theta, int iterations)
 {
-
-  if(num_gpus == 1){
-    cudaSetDevice(selected);
-  }else{
-    cudaSetDevice(firstgpu);
-  }
-
-  if(clip_flag){
-    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
-    gpuErrchk(cudaDeviceSynchronize());
-  }
-
-  restartDPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dS, device_dS_alpha, N);
+  curandState_t* states;
+  cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
+  float chi2_t_0, chi2_t_1;
+  float delta_chi2 = 0.0;
+  float l = 0.0;
+  int accepted = 0;
+  float2 *temp;
+  gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(temp, 0, sizeof(float2)*M*N));
+  SelectStream(0);
+  PutSeed(-1);
+  random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states, N);
   gpuErrchk(cudaDeviceSynchronize());
+  FILE *outfile = fopen("chi2.txt", "w");
 
-  if(iter>0 && lambda!=0.0 && flag_opt==1){
-    switch(reg_term){
-      case 0:
-        DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, fg_scale, eta, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 1:
-        DQ<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      case 2:
-        DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
-        gpuErrchk(cudaDeviceSynchronize());
-        break;
-      default:
-        printf("Selected prior is not defined\n");
-        goToError();
-        break;
-    }
-  }
+  for(int i = 0; i< iterations; i++){
 
-  if(epsilon && flag_opt != 1){
-    DLAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_dS_alpha, I, device_noise_image, noise_cut, epsilon, N);
+    printf("--------------Iteration %d-----------\n", i);
+
+    changeI<<<numBlocksNN, threadsPerBlockNN>>>(I, temp, theta, states, N);
     gpuErrchk(cudaDeviceSynchronize());
-  }
-
-  if(print_images)
-    float2toImage(I, mod_in, out_image, mempath, iter, M, N, 1);
-
-  if(num_gpus == 1){
-    cudaSetDevice(selected);
-    for(int f=0; f<data.nfields; f++){
-      for(int i=0; i<data.total_frequencies;i++){
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
-
-            DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-            gpuErrchk(cudaDeviceSynchronize());
-
-            if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dphi, device_dchi2, I, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dphi, device_dchi2, I, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }
-
-        }
-      }
+    chi2_t_1 = chiCuadrado(I);
+    chi2_t_0 = chiCuadrado(temp);
+    fprintf(outfile, "%f\n", chi2_t_1);
+    delta_chi2 = chi2_t_1 - chi2_t_0;
+    if(delta_chi2 >= 0){
+      printf("Delta chi2: %f\n", delta_chi2);
+      gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+      if(i%3 == 0)
+        float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);
+      accepted++;
+      continue;
     }
-  }else{
-    for(int f=0;f<data.nfields;f++){
-      #pragma omp parallel for schedule(static,1)
-      for (int i = 0; i < data.total_frequencies; i++)
-      {
-        unsigned int j = omp_get_thread_num();
-        //unsigned int num_cpu_threads = omp_get_num_threads();
-        // set and check the CUDA device for this CPU thread
-        int gpu_id = -1;
-        cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
-        cudaGetDevice(&gpu_id);
-
-        if(fields[f].numVisibilitiesPerFreq[i] != 0){
-          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
-          gpuErrchk(cudaDeviceSynchronize());
-
-          #pragma omp critical
-          {
-            if(flag_opt==1){
-              DChi2_total_I_nu_0<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dphi, vars_gpu[i%num_gpus].device_dchi2, I, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }else{
-              DChi2_total_alpha<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dphi, vars_gpu[i%num_gpus].device_dchi2, I, fields[f].visibilities[i].freq, nu_0, noise_cut, N);
-            	gpuErrchk(cudaDeviceSynchronize());
-            }
-
-          }
+    else{
+        l = exp(-delta_chi2);
+        if(l > Random()){
+          printf("Delta chi2: %f\n", delta_chi2);
+          gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+          if(i%3 == 0)
+            float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);
+          accepted++;
+          continue;
         }
-      }
     }
   }
-
-  if(num_gpus == 1){
-    cudaSetDevice(selected);
-  }else{
-    cudaSetDevice(firstgpu);
-  }
-
-  DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dS, device_dS_alpha, N);
-  gpuErrchk(cudaDeviceSynchronize());
-
-  gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float2), device_dphi, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+  fclose(outfile);
+  cudaFree(temp);
+  cudaFree(states);
 
 }

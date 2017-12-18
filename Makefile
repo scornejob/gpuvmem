@@ -26,10 +26,10 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
+main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
-	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
+	@ nvcc build/*.o -o bin/mcmc $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
@@ -56,26 +56,6 @@ build/rngs.o: src/rngs.cu
 build/rvgs.o: src/rvgs.cu
 	@ echo "Building Random number generator 2"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/rvgs.cu -o build/rvgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
-
-build/f1dim.o: src/f1dim.cu
-	@ echo "Building f1dim"
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/f1dim.cu -o build/f1dim.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
-
-build/mnbrak.o: src/mnbrak.cu
-	@ echo "Building mnbrak"
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/mnbrak.cu -o build/mnbrak.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
-
-build/brent.o: src/brent.cu
-	@ echo "Building brent"
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/brent.cu -o build/brent.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
-
-build/linmin.o: src/linmin.cu
-	@ echo "Building linmin"
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/linmin.cu -o build/linmin.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
-
-build/frprmn.o: src/frprmn.cu
-	@ echo "Building frprmn"
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 cfits:
 	@ mkdir -p lib

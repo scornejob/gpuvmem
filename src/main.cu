@@ -28,9 +28,8 @@
 * -------------------------------------------------------------------------
 */
 
-#include "frprmn.cuh"
+#include "functions.cuh"
 #include "directioncosines.cuh"
-#include <time.h>
 
 long M, N, numVisibilities;
 int iter=0;
@@ -56,6 +55,7 @@ double ra, dec;
 freqData data;
 
 fitsfile *mod_in;
+fitsfile *mod_in_alpha;
 
 Field *fields;
 
@@ -110,6 +110,7 @@ __host__ int main(int argc, char **argv) {
 	char *msoutput = variables.output;
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
+  char *alpha_name = variables.alpha;
   out_image = variables.output_image;
   selected = variables.select;
   mempath = variables.path;
@@ -122,7 +123,6 @@ __host__ int main(int argc, char **argv) {
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
   nu_0 = variables.nu_0;
-  alpha_start = variables.alpha_start;
   eta = variables.eta;
   epsilon = variables.epsilon;
 
@@ -488,22 +488,31 @@ __host__ int main(int argc, char **argv) {
   long elementsImage = M*N;
 
   int statustau = 0;
+  int status_alpha = 0;
   float peak;
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
+  float *input_alpha = (float*)malloc(M*N*sizeof(float));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
+
+  fits_open_file(&mod_in_alpha, alpha_name, 0, &status_alpha);
+  if (status_alpha) {
+    fits_report_error(stderr, status_alpha); /* print error message */
+    exit(0);
+  }
+  fits_read_img(mod_in_alpha, TFLOAT, fpixel, elementsImage, &null, input_alpha, &anynull, &status_alpha);
 
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
-        host_2I[N*i+j].y = alpha_start;
+        host_2I[N*i+j].y = input_alpha[N*y+x];
         x--;
 		}
     x=M-1;
     y--;
 	}
-
+  free(input_alpha);
   free(input_Inu_0);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
@@ -701,33 +710,25 @@ __host__ int main(int argc, char **argv) {
 
 
 	//////////////////////////////////////////////////////Fletcher-Reeves Polak-Ribiere Minimization////////////////////////////////////////////////////////////////
-	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
+	printf("\n\nStarting MCMC\n\n");
 	float fret = 0.0;
 
-	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  float2 theta;
+  theta.x = minpix * fg_scale;
+  theta.y = 0.5E-3;
+  MCMC(device_2I, theta, it_maximum);
+	/*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_2I);
+  chiCuadrado(device_2I)*/;
   t = clock() - t;
   end = omp_get_wtime();
-  printf("Minimization ended successfully\n\n");
-  printf("Iterations: %d\n", iter);
-  printf("chi2: %f\n", final_chi2);
-  printf("0.5*chi2: %f\n", 0.5*final_chi2);
-  printf("Total visibilities: %d\n", total_visibilities);
-  printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
-  printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
-  printf("S: %f\n", final_H);
-  if(reg_term != 1){
-    printf("Normalized S: %f\n", final_H/(M*N));
-  }else{
-    printf("Normalized S: %f\n", final_H/(M*M*N*N));
-  }
-  printf("lambda*S: %f\n\n", lambda*final_H);
+  printf("MCMC ended successfully\n\n");
+
 	double time_taken = ((double)t)/CLOCKS_PER_SEC;
   double wall_time = end-start;
   printf("Total CPU time: %lf\n", time_taken);
@@ -758,13 +759,13 @@ __host__ int main(int argc, char **argv) {
     fclose(outfile);
   }
 	//Pass residuals to host
-	printf("Saving final image to disk\n");
+	/*printf("Saving final image to disk\n");
 	float2toImage(device_2I, mod_in, out_image, mempath, iter, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");
 	writeMS(msinput,msoutput,fields, data, random_probability, verbose_flag);
-	printf("Residuals saved.\n");
+	printf("Residuals saved.\n");*/
 
 	//Free device and host memory
 	printf("Free device and host memory\n");

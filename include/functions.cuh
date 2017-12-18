@@ -10,6 +10,9 @@
 #include <fcntl.h>
 #include <omp.h>
 #include <sys/stat.h>
+#include <curand.h>
+#include <curand_kernel.h>
+#include <time.h>
 #include "MSFITSIO.cuh"
 
 #define FLOAT_IMG   -32
@@ -53,6 +56,7 @@ typedef struct variables {
   char *path;
   char *output_image;
   char *multigpu;
+  char *alpha;
   int select;
   int blockSizeX;
   int blockSizeY;
@@ -65,7 +69,6 @@ typedef struct variables {
   float lambda;
   float minpix;
   float nu_0;
-  float alpha_start;
   float eta;
   float epsilon;
 } Vars;
@@ -116,13 +119,10 @@ __global__ void searchDirection(float2 *g, float2 *xi, float2 *h, long N);
 __global__ void newXi(float2 *g, float2 *xi, float2 *h, float gam, long N);
 __global__ void clip(cufftComplex *I, float *grad, float RMS, long N);
 __global__ void restartDPhi(float2 *dChi2, float *dS, long N);
-__global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N);
-__global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N);
-__global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N);
-__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
-__global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
 __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
+__global__ void random_init(unsigned int seed, curandState_t* states, long N);
+__host__ void MCMC(float2 *I, float2 theta, int iterations);
