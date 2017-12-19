@@ -1684,12 +1684,35 @@ __global__ void changeI(float2 *I, float2 *temp, float2 theta, curandState_t* st
 
     float2 nrandom;
 
-    nrandom.x= curand_normal(&states[N*i+j]) * theta.x;
+    nrandom.x = curand_normal(&states[N*i+j]) * theta.x;
     nrandom.y = curand_normal(&states[N*i+j]) * theta.y;
 
     temp[N*i+j].x = I[N*i+j].x + nrandom.x;
     temp[N*i+j].y = I[N*i+j].y + nrandom.y;
 
+}
+
+__global__ void sumI(float2 *total, float2 *total2, float2 *I, long N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  total[N*i+j].x += I[N*i+j].x;
+  total[N*i+j].y += I[N*i+j].y;
+
+  total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
+  total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+}
+
+__global__ void avgI(float2 *total, float2 *total2, int samples, long N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  total[N*i+j].x /= samples;
+  total[N*i+j].y /= samples;
+  //var_I_nu_0 = (total_I_nu_0_2 / samples) - (total_I_nu_0**2) #GET VARIANCE
+	//var_alpha = (total_alpha_2 / samples) - (total_alpha**2) #GET VARIANCE
+  total2[N*i+j].x = (total2[N*i+j].x / samples) - (total[N*i+j].x * total[N*i+j].x);
+  total2[N*i+j].y = (total2[N*i+j].y / samples) - (total[N*i+j].y * total[N*i+j].y);
 }
 
 __host__ float chiCuadrado(float2 *I)
@@ -1886,9 +1909,17 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
   cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
   float chi2_t_0, chi2_t_1;
   float delta_chi2 = 0.0;
-  float l = 0.0;
+  float p = 0.0;
+  float un_rand = 0.0;
   int accepted = 0;
-  float2 *temp;
+  float2 *temp, *total, *total2;
+  /**************** GPU MEMORY FOR TOTAL I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(total, 0, sizeof(float2)*M*N));
+  /**************** GPU MEMORY FOR TOTAL ^ 2 I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total2, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(total2, 0, sizeof(float2)*M*N));
+  /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(temp, 0, sizeof(float2)*M*N));
   SelectStream(0);
@@ -1903,32 +1934,51 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
 
     changeI<<<numBlocksNN, threadsPerBlockNN>>>(I, temp, theta, states, N);
     gpuErrchk(cudaDeviceSynchronize());
-    chi2_t_1 = chiCuadrado(I);
-    chi2_t_0 = chiCuadrado(temp);
-    fprintf(outfile, "%f\n", chi2_t_1);
-    delta_chi2 = chi2_t_1 - chi2_t_0;
+
+    sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+    gpuErrchk(cudaDeviceSynchronize());
+
+
+    chi2_t_0 = chiCuadrado(I);
+    chi2_t_1 = chiCuadrado(temp);
+    printf("chi2_t0: %f\n", chi2_t_0);
+    printf("chi2_t1: %f\n", chi2_t_1);
+    fprintf(outfile, "%f\n", chi2_t_0);
+    delta_chi2 = chi2_t_0 - chi2_t_1;
     if(delta_chi2 >= 0){
-      printf("Delta chi2: %f\n", delta_chi2);
+      printf("Acccepted Delta chi2: %f\n", delta_chi2);
       gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-      if(i%3 == 0)
-        float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);
+      /*if(print_images && i%3 == 0)
+        float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
       accepted++;
       continue;
     }
     else{
-        l = exp(-delta_chi2);
-        if(l > Random()){
-          printf("Delta chi2: %f\n", delta_chi2);
+        printf("Not Accepted Delta chi2: %f\n", delta_chi2);
+        //l = exp(-delta_chi2);
+        p = chi2_t_0 / chi2_t_1;
+        un_rand = Random();
+        if(un_rand >= p){
+          printf("P = %f > %f\n", p, un_rand);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-          if(i%3 == 0)
-            float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);
+          /*if(print_images && i%3 == 0)
+            float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
           accepted++;
           continue;
         }
     }
   }
+
+  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, iterations, N);
+  gpuErrchk(cudaDeviceSynchronize());
+
+  float2toImage(total, mod_in, out_image, mempath, 0, M, N, 1);
+  float2toImage(total2, mod_in, out_image, mempath, 1, M, N, 1);
+
   fclose(outfile);
   cudaFree(temp);
+  cudaFree(total);
+  cudaFree(total2);
   cudaFree(states);
 
 }
