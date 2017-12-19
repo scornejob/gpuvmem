@@ -105,7 +105,7 @@ __host__ void init_beam(int telescope)
   case 5:
     beam_fwhm = (9.0/60)*RPARCM*12/25;   /* radians VLA */
     beam_freq = 691.4;          /* GHz */
-    beam_cutoff = 20.0*RPARCM; /* radians */
+    beam_cutoff = 200.0*RPARCM; /* radians */
     break;
   case 6:
     beam_fwhm = 10.5*RPARCM;   /* radians SZA */
