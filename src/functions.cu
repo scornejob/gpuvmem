@@ -985,7 +985,7 @@ __host__ Vars getOptions(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if(variables.reg_term > 2){
+  if(variables.reg_term > 3){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1513,6 +1513,24 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
+__global__ void LVector(float *L, float *noise, float2 *I, long N, float noise_cut)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float Dx, Dy;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      Dx = I[N*i+(j-1)].x - 2 * I[N*i+j].x + I[N*i+(j+1)].x;
+      Dy = I[N*(i-1)+j].x - 2 * I[N*i+j].x + I[N*(i+1)+j].x;
+      L[N*i+j] = 0.5 * (Dx + Dy) * (Dx + Dy);
+    }else{
+      L[N*i+j] = I[N*i+j].x;
+    }
+  }
+}
+
 __global__ void LVectorAlpha(float *L, float *noise, float2 *I, long N, float noise_cut)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1708,6 +1726,27 @@ __global__ void DTV(float *dTV, float2 *I, float *noise, float noise_cut, float 
   }
 }
 
+__global__ void DL(float *dL, float2 *I, float *noise, float noise_cut, float lambda, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise[N*i+j] <= noise_cut){
+    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+      dL[N*i+j] = 20 * I[N*i+j].x -
+                  8 * I[N*(i+1)+j].x - 8 * I[N*i+(j+1)].x - 8 * I[N*(i-1)+j].x - 8 * I[N*i+(j-1)].x +
+                  2 * I[N*(i+1)+(j-1)].x + 2 * I[N*(i+1)+(j+1)].x + 2 * I[N*(i-1)+(j-1)].x + 2 * I[N*(i-1)+(j+1)].x +
+                  I[N*(i+2)+j].x + I[N*i+(j+2)].x + I[N*(i-2)+j].x + I[N*i+(j-2)].x;
+
+    }else{
+      dL[N*i+j] = 0.0;
+    }
+  }
+
+  dL[N*i+j] *= lambda;
+
+}
+
 __global__ void DLAlpha(float *dL, float2 *I, float *noise, float noise_cut, float epsilon, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1893,6 +1932,10 @@ __host__ float chiCuadrado(float2 *I)
         TVVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, I, N, noise_cut);
         gpuErrchk(cudaDeviceSynchronize());
         break;
+      case 3:
+        LVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, I, N, noise_cut);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
       default:
         printf("Selected prior is not defined\n");
         goToError();
@@ -2070,6 +2113,10 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
         break;
       case 2:
         DTV<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 3:
+        DL<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, N);
         gpuErrchk(cudaDeviceSynchronize());
         break;
       default:
