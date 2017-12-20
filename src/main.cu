@@ -704,13 +704,13 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
 
-	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   t = clock() - t;
   end = omp_get_wtime();
