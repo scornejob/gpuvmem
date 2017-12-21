@@ -525,6 +525,7 @@ __host__ int main(int argc, char **argv) {
   }else{
 	   cudaSetDevice(firstgpu);
   }
+  
 	gpuErrchk(cudaMalloc((void**)&device_2I, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(device_2I, 0, sizeof(float2)*M*N));
 
@@ -539,7 +540,6 @@ __host__ int main(int argc, char **argv) {
 	gpuErrchk(cudaMalloc((void**)&device_dphi, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(device_dphi, 0, sizeof(float2)*M*N));
 
-
 	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
 
@@ -551,8 +551,6 @@ __host__ int main(int argc, char **argv) {
 
   gpuErrchk(cudaMalloc((void**)&device_S_alpha, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_S_alpha, 0, sizeof(float)*M*N));
-
-
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);

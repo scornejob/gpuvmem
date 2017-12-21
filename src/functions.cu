@@ -1682,7 +1682,7 @@ __global__ void DQ(float *dQ, float2 *I, float *noise, float noise_cut, float la
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
+    if((i>0 && i<N-1) && (j>0 && j<N-1)){
       dQ[N*i+j] = 2 * (4 * I[N*i+j].x - (I[N*(i+1)+j].x + I[N*(i-1)+j].x + I[N*i+(j+1)].x + I[N*i+(j-1)].x));
     }else{
       dQ[N*i+j] = I[N*i+j].x;
@@ -1701,7 +1701,7 @@ __global__ void DTV(float *dTV, float2 *I, float *noise, float noise_cut, float 
   float dtv;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>0 && i<N) && (j>0 && j<N)){
+    if((i>0 && i<N-1) && (j>0 && j<N-1)){
       num0 = 2 * I[N*i+j].x - I[N*i+(j+1)].x - I[N*(i+1)+j].x;
       num1 = I[N*i+j].x - I[N*i+(j-1)].x;
       num2 = I[N*i+j].x - I[N*(i-1)+j].x;
@@ -1732,7 +1732,7 @@ __global__ void DL(float *dL, float2 *I, float *noise, float noise_cut, float la
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+    if((i>1 && i<N-2) && (j>1 && j<N-2)){
       dL[N*i+j] = 20 * I[N*i+j].x -
                   8 * I[N*(i+1)+j].x - 8 * I[N*i+(j+1)].x - 8 * I[N*(i-1)+j].x - 8 * I[N*i+(j-1)].x +
                   2 * I[N*(i+1)+(j-1)].x + 2 * I[N*(i+1)+(j+1)].x + 2 * I[N*(i-1)+(j-1)].x + 2 * I[N*(i-1)+(j+1)].x +
