@@ -1753,7 +1753,7 @@ __global__ void DLAlpha(float *dL, float2 *I, float *noise, float noise_cut, flo
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   if(noise[N*i+j] <= noise_cut){
-    if((i>1 && i<N-1) && (j>1 && j<N-1)){
+    if((i>1 && i<N-2) && (j>1 && j<N-2)){
       dL[N*i+j] = 20 * I[N*i+j].y -
                   8 * I[N*(i+1)+j].y - 8 * I[N*i+(j+1)].y - 8 * I[N*(i-1)+j].y - 8 * I[N*i+(j-1)].y +
                   2 * I[N*(i+1)+(j-1)].y + 2 * I[N*(i+1)+(j+1)].y + 2 * I[N*(i-1)+(j-1)].y + 2 * I[N*(i-1)+(j+1)].y +
