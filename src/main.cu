@@ -40,7 +40,7 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float2 *device_dphi, *device_2I;
-float *device_dS, *device_dS_alpha, *device_chi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
+float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon;
 
@@ -60,6 +60,8 @@ fitsfile *mod_in;
 Field *fields;
 
 VariablesPerField *vars_per_field;
+
+varsPerGPU *vars_gpu;
 
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
@@ -267,12 +269,12 @@ __host__ int main(int argc, char **argv) {
     		}
 			}
 	 	}
+    vars_gpu = (varsPerGPU*)malloc(num_gpus*sizeof(varsPerGPU));
   }
 
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
-  	vars_per_field[f].device_vars = (VPF*)malloc(data.total_frequencies*sizeof(VPF));
   }
 
   //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
@@ -375,16 +377,16 @@ __host__ int main(int argc, char **argv) {
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
+    gpuErrchk(cudaMalloc((void**)&device_dchi2, sizeof(float)*M*N));
+    gpuErrchk(cudaMemset(device_dchi2, 0, sizeof(float)*M*N));
+
+    gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+    gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+
     for(int f=0; f<data.nfields; f++){
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(cufftComplex)*M*N));
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(cufftComplex)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
-
-  			gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -400,18 +402,22 @@ __host__ int main(int argc, char **argv) {
   		}
     }
 	}else{
+
+    for(int g=0; g<num_gpus; g++){
+      cudaSetDevice((g%num_gpus) + firstgpu);
+      gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_dchi2, sizeof(float)*M*N));
+      gpuErrchk(cudaMemset(vars_gpu[g].device_dchi2, 0, sizeof(float)*M*N));
+
+      gpuErrchk(cudaMalloc(&vars_gpu[g].device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+      gpuErrchk(cudaMemset(vars_gpu[g].device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+    }
+
     for(int f=0; f<data.nfields; f++){
       cudaSetDevice(firstgpu);
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(cufftComplex)*M*N));
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(cufftComplex)*M*N));
   		for(int i=0; i < data.total_frequencies; i++){
   			cudaSetDevice((i%num_gpus) + firstgpu);
-
-  			gpuErrchk(cudaMalloc(&vars_per_field[f].device_vars[i].chi2, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].chi2, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
-
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].dchi2, sizeof(float)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].dchi2, 0, sizeof(float)*M*N));
 
   			gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
@@ -506,12 +512,11 @@ __host__ int main(int argc, char **argv) {
     gpuErrchk(cudaMalloc((void**)&device_Inu, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMalloc((void**)&device_V, sizeof(cufftComplex)*M*N));
 	}else{
-    for(int f = 0; f<data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-        gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].device_Inu, sizeof(cufftComplex)*M*N));
-  			gpuErrchk(cudaMalloc((void**)&vars_per_field[f].device_vars[i].device_V, sizeof(cufftComplex)*M*N));
-  		}
+    for(int g = 0; g<num_gpus; g++){
+  			cudaSetDevice((g%num_gpus) + firstgpu);
+        gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_Inu, sizeof(cufftComplex)*M*N));
+  			gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_V, sizeof(cufftComplex)*M*N));
+
     }
 	}
 
@@ -520,6 +525,7 @@ __host__ int main(int argc, char **argv) {
   }else{
 	   cudaSetDevice(firstgpu);
   }
+  
 	gpuErrchk(cudaMalloc((void**)&device_2I, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(device_2I, 0, sizeof(float2)*M*N));
 
@@ -534,7 +540,6 @@ __host__ int main(int argc, char **argv) {
 	gpuErrchk(cudaMalloc((void**)&device_dphi, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(device_dphi, 0, sizeof(float2)*M*N));
 
-
 	gpuErrchk(cudaMalloc((void**)&device_dS, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
 
@@ -547,20 +552,15 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMalloc((void**)&device_S_alpha, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_S_alpha, 0, sizeof(float)*M*N));
 
-
-
 	if(num_gpus == 1){
     cudaSetDevice(selected);
     gpuErrchk(cudaMemset(device_Inu, 0, sizeof(cufftComplex)*M*N));
 		gpuErrchk(cudaMemset(device_V, 0, sizeof(cufftComplex)*M*N));
 	}else{
-    for(int f = 0; f < data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_V, 0, sizeof(cufftComplex)*M*N));
-  			gpuErrchk(cudaMemset(vars_per_field[f].device_vars[i].device_Inu, 0, sizeof(cufftComplex)*M*N));
-
-  		}
+    for(int g = 0; g<num_gpus; g++){
+  			cudaSetDevice((g%num_gpus) + firstgpu);
+        gpuErrchk(cudaMemset(vars_gpu[g].device_V, 0, sizeof(cufftComplex)*M*N));
+  			gpuErrchk(cudaMemset(vars_gpu[g].device_Inu, 0, sizeof(cufftComplex)*M*N));
     }
 	}
 
@@ -574,14 +574,12 @@ __host__ int main(int argc, char **argv) {
 			return -1;
 		}
 	}else{
-    for(int f = 0; f < data.nfields; f++){
-  		for (int i = 0;  i < data.total_frequencies; i++) {
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			if ((cufftPlan2d(&vars_per_field[f].device_vars[i].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
-  				printf("cufft plan error\n");
-  				return -1;
-  			}
-  		}
+    for(int g = 0; g<num_gpus; g++){
+      cudaSetDevice((g%num_gpus) + firstgpu);
+      if ((cufftPlan2d(&vars_gpu[g].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
+        printf("cufft plan error\n");
+        return -1;
+      }
     }
 	}
 
@@ -704,13 +702,13 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
 
-	frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
-  frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   t = clock() - t;
   end = omp_get_wtime();
@@ -781,8 +779,14 @@ __host__ int main(int argc, char **argv) {
   		cudaFree(fields[f].device_visibilities[i].Vr);
   		cudaFree(fields[f].device_visibilities[i].Vo);
 
-  		cufftDestroy(vars_per_field[f].device_vars[i].plan);
   	}
+  }
+
+  if(num_gpus>1){
+    for(int g = 0; g<num_gpus; g++){
+        cudaSetDevice((g%num_gpus) + firstgpu);
+        cufftDestroy(vars_gpu[g].plan);
+    }
   }
 
   for(int f=0; f<data.nfields; f++){
@@ -802,13 +806,11 @@ __host__ int main(int argc, char **argv) {
 		cudaFree(device_V);
 		cudaFree(device_Inu);
 	}else{
-    for(int f=0; f<data.nfields;f++){
-  		for(int i=0; i<data.total_frequencies; i++){
-  			cudaSetDevice((i%num_gpus) + firstgpu);
-  			cudaFree(vars_per_field[f].device_vars[i].device_V);
-  			cudaFree(vars_per_field[f].device_vars[i].device_Inu);
+    for(int g = 0; g<num_gpus; g++){
+  			cudaSetDevice((g%num_gpus) + firstgpu);
+  			cudaFree(vars_gpu[g].device_V);
+  			cudaFree(vars_gpu[g].device_Inu);
   		}
-    }
 	}
   if(num_gpus == 1){
     cudaSetDevice(selected);
