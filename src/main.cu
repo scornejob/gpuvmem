@@ -716,7 +716,7 @@ __host__ int main(int argc, char **argv) {
   float2 theta;
   theta.x = minpix * fg_scale;
   theta.y = 2E-3;
-  MCMC(device_2I, theta, it_maximum);
+  MCMC(device_2I, theta, it_maximum, variables.burndown_steps);
 	/*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);

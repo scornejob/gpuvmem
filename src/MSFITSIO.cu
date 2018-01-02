@@ -1242,8 +1242,121 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
 
   free(alphaname);
   free(Inu_0_name);
+}
+
+__host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)
+{
+  fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
+	int statusI_nu_0 = 0, statusalpha = 0;
+	long fpixel = 1;
+	long elements = M*N;
+	char *Inu_0_name;
+  char *alphaname;
+  size_t needed_I_nu_0;
+  size_t needed_alpha;
+	long naxes[2]={M,N};
+	long naxis = 2;
+  char *alphaunit = "";
+  char *I_unit = "JY/PIXEL";
+
+  double2 *host_2Iout = (double2*)malloc(M*N*sizeof(double2));
+
+  gpuErrchk(cudaMemcpy2D(host_2Iout, sizeof(double2), I, sizeof(double2), sizeof(double2), M*N, cudaMemcpyDeviceToHost));
+
+  double *host_alpha = (double*)malloc(M*N*sizeof(double));
+  double *host_I_nu_0 = (double*)malloc(M*N*sizeof(double));
+
+  switch(option){
+    case 0:
+      needed_alpha = snprintf(NULL, 0, "!%s_alpha.fits", out_image) + 1;
+      alphaname = (char*)malloc(needed_alpha*sizeof(char));
+      snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha.fits", out_image);
+      break;
+    case 1:
+      needed_alpha = snprintf(NULL, 0, "!%salpha_%d.fits", mempath, iteration) + 1;
+      alphaname = (char*)malloc(needed_alpha*sizeof(char));
+      snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      exit(-1);
+  }
+
+  switch(option){
+    case 0:
+      needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0.fits", out_image) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);
+      break;
+    case 1:
+      needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits" , mempath, iteration) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
+      break;
+    case -1:
+      break;
+    default:
+      printf("Invalid case to FITS\n");
+      exit(-1);
+  }
 
 
+  fits_create_file(&fpointerI_nu_0, Inu_0_name, &statusI_nu_0);
+  fits_create_file(&fpointeralpha, alphaname, &statusalpha);
+
+  if (statusI_nu_0 || statusalpha) {
+    fits_report_error(stderr, statusI_nu_0);
+    fits_report_error(stderr, statusalpha);
+    exit(-1); /* print error message */
+  }
+
+  fits_copy_header(canvas, fpointerI_nu_0, &statusI_nu_0);
+  fits_copy_header(canvas, fpointeralpha, &statusalpha);
+
+  if (statusI_nu_0 || statusalpha) {
+    fits_report_error(stderr, statusI_nu_0);
+    fits_report_error(stderr, statusalpha);
+    exit(-1); /* print error message */
+  }
+
+  fits_update_key(fpointerI_nu_0, TSTRING, "BUNIT", I_unit, "Unit of measurement", &statusI_nu_0);
+  fits_update_key(fpointeralpha, TSTRING, "BUNIT", alphaunit, "Unit of measurement", &statusalpha);
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x;
+        host_alpha[N*(y-i)+(x-j)] = host_2Iout[N*i+j].y;
+		}
+	}
+
+  fits_write_img(fpointerI_nu_0, TDOUBLE, fpixel, elements, host_I_nu_0, &statusI_nu_0);
+  fits_write_img(fpointeralpha, TDOUBLE, fpixel, elements, host_alpha, &statusalpha);
+
+  if (statusI_nu_0 || statusalpha) {
+    fits_report_error(stderr, statusI_nu_0);
+    fits_report_error(stderr, statusalpha);
+    exit(-1);/* print error message */
+  }
+	fits_close_file(fpointerI_nu_0, &statusI_nu_0);
+  fits_close_file(fpointeralpha, &statusalpha);
+
+  if (statusI_nu_0 || statusalpha) {
+    fits_report_error(stderr, statusI_nu_0);
+    fits_report_error(stderr, statusalpha);
+    exit(-1); /* print error message */
+  }
+
+  free(host_I_nu_0);
+  free(host_alpha);
+
+  free(host_2Iout);
+
+  free(alphaname);
+  free(Inu_0_name);
 }
 
 __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)

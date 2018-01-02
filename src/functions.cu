@@ -777,6 +777,7 @@ __host__ void print_help() {
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
   printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
+  printf("    -B  --burndown_steps   Burndown iterations\n");
   printf("    -c  --copyright        Shows copyright conditions\n");
   printf("    -w  --warranty         Shows no warranty details\n");
   printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
@@ -827,7 +828,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:B:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -845,7 +846,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"lambda", 0, NULL, 'l' }, {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"eta", 0, NULL, 'e'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
-                                    {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
+                                    {"iterations", 0, NULL, 't'}, {"burndown_steps", 1, NULL, 'B'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
                                     {"epsilon", 0, NULL, 'E' }, {"alpha_start", 1, NULL, 'a' }, { NULL, 0, NULL, 0 }};
 
@@ -957,6 +958,9 @@ __host__ Vars getOptions(int argc, char **argv) {
       break;
     case 't':
       variables.it_max = atoi(optarg);
+      break;
+    case 'B':
+      variables.burndown_steps = atoi(optarg);
       break;
 		case '?':
 			print_help();
@@ -1692,7 +1696,7 @@ __global__ void changeI(float2 *I, float2 *temp, float2 theta, curandState_t* st
 
 }
 
-__global__ void sumI(float2 *total, float2 *total2, float2 *I, long N){
+__global__ void sumI(double2 *total, double2 *total2, float2 *I, long N){
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -1703,7 +1707,7 @@ __global__ void sumI(float2 *total, float2 *total2, float2 *I, long N){
   total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
-__global__ void avgI(float2 *total, float2 *total2, int samples, long N){
+__global__ void avgI(double2 *total, double2 *total2, int samples, long N){
   int j = threadIdx.x + blockDim.x * blockIdx.x;
   int i = threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -1903,7 +1907,7 @@ __host__ float chiCuadrado(float2 *I)
 }
 
 
-__host__ void MCMC(float2 *I, float2 theta, int iterations)
+__host__ void MCMC(float2 *I, float2 theta, int iterations, int burndown_steps)
 {
   curandState_t* states;
   cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
@@ -1912,13 +1916,14 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
   float p = 0.0;
   float un_rand = 0.0;
   int accepted = 0;
-  float2 *temp, *total, *total2;
+  float2 *temp;
+  double2 *total, *total2;
   /**************** GPU MEMORY FOR TOTAL I_nu_0 and alpha ***************/
-  gpuErrchk(cudaMalloc((void**)&total, sizeof(float2)*M*N));
-  gpuErrchk(cudaMemset(total, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMalloc((void**)&total, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total, 0, sizeof(double2)*M*N));
   /**************** GPU MEMORY FOR TOTAL ^ 2 I_nu_0 and alpha ***************/
-  gpuErrchk(cudaMalloc((void**)&total2, sizeof(float2)*M*N));
-  gpuErrchk(cudaMemset(total2, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMalloc((void**)&total2, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total2, 0, sizeof(double2)*M*N));
   /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(temp, 0, sizeof(float2)*M*N));
@@ -1935,17 +1940,18 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
     changeI<<<numBlocksNN, threadsPerBlockNN>>>(I, temp, theta, states, N);
     gpuErrchk(cudaDeviceSynchronize());
 
-    sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
-    gpuErrchk(cudaDeviceSynchronize());
-
+    if(i >= burndown_steps){
+      sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+      gpuErrchk(cudaDeviceSynchronize());
+    }
 
     chi2_t_0 = chiCuadrado(I);
     chi2_t_1 = chiCuadrado(temp);
     printf("chi2_t0: %f\n", chi2_t_0);
     printf("chi2_t1: %f\n", chi2_t_1);
     fprintf(outfile, "%f\n", chi2_t_0);
-    delta_chi2 = chi2_t_0 - chi2_t_1;
-    if(delta_chi2 >= 0){
+    delta_chi2 = chi2_t_1 - chi2_t_0;
+    if(delta_chi2 < 0){
       printf("Acccepted Delta chi2: %f\n", delta_chi2);
       gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
       /*if(print_images && i%3 == 0)
@@ -1956,9 +1962,9 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
     else{
         printf("Not Accepted Delta chi2: %f\n", delta_chi2);
         //l = exp(-delta_chi2);
-        p = chi2_t_0 / chi2_t_1;
+        //p = chi2_t_0 / chi2_t_1;
         un_rand = Random();
-        if(un_rand >= p){
+        if(-log(un_rand) >= delta_chi2){
           printf("P = %f > %f\n", p, un_rand);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
@@ -1969,11 +1975,11 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations)
     }
   }
 
-  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, iterations, N);
+  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, iterations-burndown_steps, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  float2toImage(total, mod_in, out_image, mempath, 0, M, N, 1);
-  float2toImage(total2, mod_in, out_image, mempath, 1, M, N, 1);
+  double2toImage(total, mod_in, out_image, mempath, 0, M, N, 1);
+  double2toImage(total2, mod_in, out_image, mempath, 1, M, N, 1);
 
   fclose(outfile);
   cudaFree(temp);

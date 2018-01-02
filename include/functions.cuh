@@ -62,6 +62,7 @@ typedef struct variables {
   int blockSizeY;
   int blockSizeV;
   int it_max;
+  int burndown_steps;
   int reg_term;
   float noise;
   float noise_cut;
@@ -125,4 +126,4 @@ __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
 __global__ void random_init(unsigned int seed, curandState_t* states, long N);
-__host__ void MCMC(float2 *I, float2 theta, int iterations);
+__host__ void MCMC(float2 *I, float2 theta, int iterations, int burndown_steps);
