@@ -1965,7 +1965,7 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations, int burndown_steps)
         //p = chi2_t_0 / chi2_t_1;
         un_rand = Random();
         if(-log(un_rand) >= delta_chi2){
-          printf("P = %f > %f\n", p, un_rand);
+          printf("P = %f >= %f\n", -log(un_rand), delta_chi2);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
             float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
