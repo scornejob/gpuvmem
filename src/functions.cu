@@ -1951,7 +1951,7 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations, int burndown_steps)
     printf("chi2_t1: %f\n", chi2_t_1);
     fprintf(outfile, "%f\n", chi2_t_0);
     delta_chi2 = chi2_t_1 - chi2_t_0;
-    if(delta_chi2 < 0){
+    if(delta_chi2 <= 0){
       printf("Acccepted Delta chi2: %f\n", delta_chi2);
       gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
       /*if(print_images && i%3 == 0)
@@ -1964,7 +1964,7 @@ __host__ void MCMC(float2 *I, float2 theta, int iterations, int burndown_steps)
         //l = exp(-delta_chi2);
         //p = chi2_t_0 / chi2_t_1;
         un_rand = Random();
-        if(-log(un_rand) >= delta_chi2){
+        if(-log(un_rand) > delta_chi2){
           printf("P = %f >= %f\n", -log(un_rand), delta_chi2);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
