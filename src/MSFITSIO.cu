@@ -532,7 +532,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
   bool flag;
   int spw, field;
   size_t needed;
-
+  printf("Starting loop\n");
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
