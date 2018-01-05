@@ -4,7 +4,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 {
    freqData freqsAndVisibilities;
    string dir = MS_name;
-   string query;
+   char *query;
    casa::Vector<double> pointing;
    casa::Table main_tab(dir);
    casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
@@ -54,38 +54,47 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
   casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
   freqsAndVisibilities.nstokes=n_corr(0);
 
-  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID");
-  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
-  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT");
-  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
-  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
-
   casa::Vector<float> weights;
   casa::Matrix<casa::Bool> flagCol;
 
   bool flag;
   int spw, field, counter;
+  size_t needed;
 
   for(int f=0; f<freqsAndVisibilities.nfields; f++){
     counter = 0;
     for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
-      for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-        for (int k=0; k < freqsAndVisibilities.nsamples; k++){
+      needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
+      query = (char*) malloc(needed*sizeof(char));
+      snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
+
+      casa::Table query_tab = casa::tableCommand(query);
+
+      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
+      casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
+      casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
+      casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+
+      for (int k=0; k < query_tab.nrow(); k++){
           flag=flag_col(k);
           field=field_id_col(k);
           spw=data_desc_id_col(k);
           flagCol=flag_data_col(k);
           weights=weight_col(k);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
-              if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                fields[f].numVisibilitiesPerFreq[counter]++;
+
+          for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
+            if(flag == false){
+              for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
+                if(flagCol(sto,j) == false && weights[sto] > 0.0){
+                  fields[f].numVisibilitiesPerFreq[counter+j]++;
               }
             }
-          }else continue;
+          }
         }
-        counter++;
       }
+      counter+=freqsAndVisibilities.channels[i];
+      free(query);
     }
   }
 
@@ -166,7 +175,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   char *error = 0;
   int g = 0, h = 0;
-  string query;
+  char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
@@ -178,14 +187,6 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  casa::ROArrayColumn<double> uvw_col(main_tab,"UVW");
-  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
-  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID");
-  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
-  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT");
-  casa::ROArrayColumn<casa::Complex> data_col(main_tab,"DATA");
-  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
-
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
   casa::Matrix<casa::Complex> dataCol;
@@ -193,6 +194,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   bool flag;
   int spw, field;
+  size_t needed;
 
   float u;
   SelectStream(0);
@@ -201,8 +203,20 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
-      for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < data.nsamples; k++){
+      needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
+      query = (char*) malloc(needed*sizeof(char));
+      snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
+
+      casa::Table query_tab = casa::tableCommand(query);
+
+      casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
+      casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
+      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
+      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
+      casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+      casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+      casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+      for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
           spw = data_desc_id_col(k);
@@ -210,26 +224,28 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto<data.nstokes; sto++) {
-              if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                fields[f].visibilities[g].u[h] = uvw[0];
-                fields[f].visibilities[g].v[h] = uvw[1];
-                u = Normal(0.0, 1.0);
-                fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
-                u = Normal(0.0, 1.0);
-                fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                fields[f].visibilities[g].weight[h] = weights[sto];
-                h++;
+          for(int j=0; j < data.channels[i]; j++){
+            if(flag == false){
+              for (int sto=0; sto<data.nstokes; sto++) {
+                if(flagCol(sto,j) == false && weights[sto] > 0.0){
+                  fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                  fields[f].visibilities[g+j].u[h] = uvw[0];
+                  fields[f].visibilities[g+j].v[h] = uvw[1];
+                  u = Normal(0.0, 1.0);
+                  fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                  u = Normal(0.0, 1.0);
+                  fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                  fields[f].visibilities[g+j].weight[h] = weights[sto];
+                  h++;
+                }
               }
             }
-          }else continue;
+          }
         }
         h=0;
-        g++;
+        g+=data.channels[i];
+        free(query);
       }
-    }
   }
 
 
@@ -263,7 +279,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 {
   char *error = 0;
   int g = 0, h = 0;
-  string query;
+  char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
@@ -275,14 +291,6 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  casa::ROArrayColumn<double> uvw_col(main_tab,"UVW");
-  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
-  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID");
-  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
-  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT");
-  casa::ROArrayColumn<casa::Complex> data_col(main_tab,"DATA");
-  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
-
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
   casa::Matrix<casa::Complex> dataCol;
@@ -290,6 +298,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
   bool flag;
   int spw, field;
+  size_t needed;
 
   float u;
   SelectStream(0);
@@ -297,8 +306,22 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
-      for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < data.nsamples; k++){
+      needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
+      query = (char*) malloc(needed*sizeof(char));
+      snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
+
+      casa::Table query_tab = casa::tableCommand(query);
+
+      casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
+      casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
+      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
+      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
+      casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+      casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+      casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+
+
+      for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
           spw = data_desc_id_col(k);
@@ -306,34 +329,36 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto < data.nstokes; sto++){
-              if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                u = Random();
-                if(u<random_probability){
-                  fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g].u[h] = uvw[0];
-                  fields[f].visibilities[g].v[h] = uvw[1];
-                  fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real();
-                  fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag();
-                  fields[f].visibilities[g].weight[h] = weights[sto];
-                  h++;
-                }else{
-                  fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g].u[h] = uvw[0];
-                  fields[f].visibilities[g].v[h] = uvw[1];
-                  fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real();
-                  fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag();
-                  fields[f].visibilities[g].weight[h] = 0.0;
-                  h++;
+          for(int j=0; j < data.channels[i]; j++){
+            if(flag == false){
+              for (int sto=0; sto < data.nstokes; sto++){
+                if(flagCol(sto,j) == false && weights[sto] > 0.0){
+                  u = Random();
+                  if(u<random_probability){
+                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[h] = uvw[0];
+                    fields[f].visibilities[g+j].v[h] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[h] = weights[sto];
+                    h++;
+                  }else{
+                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[h] = uvw[0];
+                    fields[f].visibilities[g+j].v[h] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[h] = 0.0;
+                    h++;
+                  }
                 }
               }
             }
-          }else continue;
+          }
         }
         h=0;
-        g++;
-      }
+        g+=data.channels[i];
+        free(query);
     }
   }
 
@@ -368,7 +393,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 {
   char *error = 0;
   int g = 0, h = 0;
-  string query;
+  char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
 
@@ -381,14 +406,6 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  casa::ROArrayColumn<double> uvw_col(main_tab,"UVW");
-  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
-  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID");
-  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
-  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT");
-  casa::ROArrayColumn<casa::Complex> data_col(main_tab,"DATA");
-  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
-
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
   casa::Matrix<casa::Complex> dataCol;
@@ -396,6 +413,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 
   bool flag;
   int spw, field;
+  size_t needed;
 
   float u;
   float nu;
@@ -404,8 +422,22 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
-      for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < data.nsamples; k++){
+      needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
+      query = (char*) malloc(needed*sizeof(char));
+      snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
+
+      casa::Table query_tab = casa::tableCommand(query);
+
+      casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
+      casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
+      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
+      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
+      casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+      casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+      casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+
+
+        for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
           spw = data_desc_id_col(k);
@@ -413,36 +445,38 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto < data.nstokes; sto++){
-              if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                u = Random();
-                if(u<random_probability){
-                  fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g].u[h] = uvw[0];
-                  fields[f].visibilities[g].v[h] = uvw[1];
-                  nu = Normal(0.0, 1.0);
-                  fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
-                  nu = Normal(0.0, 1.0);
-                  fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                  fields[f].visibilities[g].weight[h] = weights[sto];
-                  h++;
-                }else{
-                  fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g].u[h] = uvw[0];
-                  fields[f].visibilities[g].v[h] = uvw[1];
-                  fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real();
-                  fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag();
-                  fields[f].visibilities[g].weight[h] = 0.0;
-                  h++;
+          for(int j=0; j < data.channels[i]; j++){
+            if(flag == false){
+              for (int sto=0; sto < data.nstokes; sto++){
+                if(flagCol(sto,j) == false && weights[sto] > 0.0){
+                  u = Random();
+                  if(u<random_probability){
+                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[h] = uvw[0];
+                    fields[f].visibilities[g+j].v[h] = uvw[1];
+                    nu = Normal(0.0, 1.0);
+                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                    nu = Normal(0.0, 1.0);
+                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                    fields[f].visibilities[g+j].weight[h] = weights[sto];
+                    h++;
+                  }else{
+                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[h] = uvw[0];
+                    fields[f].visibilities[g+j].v[h] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[h] = 0.0;
+                    h++;
+                  }
                 }
               }
             }
-          }else continue;
+          }
         }
         h=0;
-        g++;
-      }
+        g+=data.channels[i];
+        free(query);
     }
   }
 
@@ -479,7 +513,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   char *error = 0;
   int g = 0, h = 0;
-  string query;
+  char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
 
@@ -492,26 +526,33 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-  casa::ROArrayColumn<double> uvw_col(main_tab,"UVW");
-  casa::ROScalarColumn<bool> flag_col(main_tab,"FLAG_ROW");
-  casa::ROScalarColumn<int> data_desc_id_col(main_tab,"DATA_DESC_ID");
-  casa::ROScalarColumn<int> field_id_col(main_tab,"FIELD_ID");
-  casa::ROArrayColumn<float> weight_col(main_tab,"WEIGHT");
-  casa::ROArrayColumn<casa::Complex> data_col(main_tab,"DATA");
-  casa::ROArrayColumn<bool> flag_data_col(main_tab,"FLAG");
-
   casa::Vector<float> weights;
   casa::Vector<double> uvw;
   casa::Matrix<casa::Complex> dataCol;
   casa::Matrix<casa::Bool> flagCol;
   bool flag;
   int spw, field;
+  size_t needed;
 
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
-      for(int j=0; j < data.channels[i]; j++){
-        for (int k=0; k < data.nsamples; k++){
+      needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
+      query = (char*) malloc(needed*sizeof(char));
+      snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
+
+      casa::Table query_tab = casa::tableCommand(query);
+
+      casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
+      casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
+      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
+      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
+      casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+      casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+      casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+
+
+        for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
           spw = data_desc_id_col(k);
@@ -519,24 +560,26 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          if(field == f && spw == i && flag == false){
-            for (int sto=0; sto < data.nstokes; sto++) {
-              if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                fields[f].visibilities[g].stokes[h] = polarizations[sto];
-                fields[f].visibilities[g].u[h] = uvw[0];
-                fields[f].visibilities[g].v[h] = uvw[1];
-                fields[f].visibilities[g].Vo[h].x = dataCol(sto,j).real();
-                fields[f].visibilities[g].Vo[h].y = dataCol(sto,j).imag();
-                fields[f].visibilities[g].weight[h] = weights[sto];
-                h++;
+          for(int j=0; j < data.channels[i]; j++){
+            if(flag == false){
+              for (int sto=0; sto < data.nstokes; sto++) {
+                if(flagCol(sto,j) == false && weights[sto] > 0.0){
+                  fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
+                  fields[f].visibilities[g+j].u[h] = uvw[0];
+                  fields[f].visibilities[g+j].v[h] = uvw[1];
+                  fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
+                  fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
+                  fields[f].visibilities[g+j].weight[h] = weights[sto];
+                  h++;
+                }
               }
             }
-          }else continue;
+          }
         }
         h=0;
-        g++;
+        g+=data.channels[i];
+        free(query);
       }
-    }
   }
 
 
