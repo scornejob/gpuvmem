@@ -4,7 +4,7 @@
 
 
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields)
+__host__ freqData countVisibilities_ORIGINAL(char * MS_name, Field *&fields)
 {
    freqData freqsAndVisibilities;
    string dir = MS_name;
@@ -157,7 +157,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
 
 
-__host__ freqData countVisibilities_NEW(char * MS_name, Field *&fields)
+__host__ freqData countVisibilities(char * MS_name, Field *&fields)
 {
    freqData freqsAndVisibilities;
    string dir = MS_name;
@@ -688,7 +688,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 }
 
 
-__host__ void readMS(char *MS_name, Field *fields, freqData data)
+__host__ void readMS_ORIGINAL(char *MS_name, Field *fields, freqData data)
 {
 
   char *error = 0;
@@ -832,7 +832,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
 
 
-__host__ void readMS_NEW(char *MS_name, Field *fields, freqData data)
+__host__ void readMS(char *MS_name, Field *fields, freqData data)
 {
 
   
