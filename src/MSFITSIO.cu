@@ -82,16 +82,15 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
           spw=data_desc_id_col(k);
           flagCol=flag_data_col(k);
           weights=weight_col(k);
-
-          for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
-            if(flag == false){
+          if(flag == false){
+            for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
               for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   fields[f].numVisibilitiesPerFreq[counter+j]++;
               }
             }
           }
-        }
+        }else continue;
       }
       counter+=freqsAndVisibilities.channels[i];
       free(query);
@@ -224,8 +223,8 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          for(int j=0; j < data.channels[i]; j++){
-            if(flag == false){
+          if(flag == false){
+            for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto<data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
@@ -240,7 +239,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
                 }
               }
             }
-          }
+          }else continue;
         }
         h=0;
         g+=data.channels[i];
@@ -329,8 +328,8 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          for(int j=0; j < data.channels[i]; j++){
-            if(flag == false){
+          if(flag == false){
+            for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto < data.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
@@ -354,7 +353,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                 }
               }
             }
-          }
+          }else continue;
         }
         h=0;
         g+=data.channels[i];
@@ -445,8 +444,8 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          for(int j=0; j < data.channels[i]; j++){
-            if(flag == false){
+          if(flag == false){
+            for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto < data.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
@@ -472,7 +471,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                 }
               }
             }
-          }
+          }else continue;
         }
         h=0;
         g+=data.channels[i];
@@ -560,8 +559,8 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
-          for(int j=0; j < data.channels[i]; j++){
-            if(flag == false){
+          if(flag == false){
+            for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto < data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
@@ -574,7 +573,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
                 }
               }
             }
-          }
+          }else continue;
         }
         h=0;
         g+=data.channels[i];
