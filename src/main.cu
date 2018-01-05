@@ -638,17 +638,19 @@ __host__ int main(int argc, char **argv) {
   }
 
   for(int f=0; f<data.nfields; f++){
-    if(num_gpus == 1){
-      cudaSetDevice(selected);
-    	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, fields[f].valid_frequencies, N);
-    	gpuErrchk(cudaDeviceSynchronize());
-  	}else{
-      cudaSetDevice(firstgpu);
-    	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, fields[f].valid_frequencies, N);
-    	gpuErrchk(cudaDeviceSynchronize());
-  	}
-    if(print_images)
-      fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
+    if(fields[f].valid_frequencies > 0){
+      if(num_gpus == 1){
+        cudaSetDevice(selected);
+      	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, fields[f].valid_frequencies, N);
+      	gpuErrchk(cudaDeviceSynchronize());
+    	}else{
+        cudaSetDevice(firstgpu);
+      	mean_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, fields[f].valid_frequencies, N);
+      	gpuErrchk(cudaDeviceSynchronize());
+    	}
+      if(print_images)
+        fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
+    }
   }
 
   if(num_gpus == 1){
