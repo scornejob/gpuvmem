@@ -36,6 +36,8 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
     freqsAndVisibilities.channels[i] = n_chan_freq(i);
   }
 
+  // We consider all chans .. The data will be processed this way later.
+
   int total_frequencies = 0;
   for(int i=0; i <freqsAndVisibilities.n_internal_frequencies; i++){
     for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
@@ -58,28 +60,27 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
   casa::Matrix<casa::Bool> flagCol;
 
   bool flag;
-  int spw, field, counter;
+  int counter;
   size_t needed;
+
+  // Iteration through all fields
 
   for(int f=0; f<freqsAndVisibilities.nfields; f++){
     counter = 0;
     for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++){
+      // Query for data with forced IF and FIELD
       needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f) + 1;
       query = (char*) malloc(needed*sizeof(char));
       snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d", MS_name, i ,f);
 
       casa::Table query_tab = casa::tableCommand(query);
 
-      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
       casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
       casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
       casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
       for (int k=0; k < query_tab.nrow(); k++){
           flag=flag_col(k);
-          field=field_id_col(k);
-          spw=data_desc_id_col(k);
           flagCol=flag_data_col(k);
           weights=weight_col(k);
           if(flag == false){
@@ -192,7 +193,6 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
   casa::Matrix<casa::Bool> flagCol;
 
   bool flag;
-  int spw, field;
   size_t needed;
 
   float u;
@@ -210,16 +210,12 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
       casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
       casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
-      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
-      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
       casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
       casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
       casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
       for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
-          spw = data_desc_id_col(k);
-          field = field_id_col(k);
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
@@ -296,7 +292,6 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
   casa::Matrix<casa::Bool> flagCol;
 
   bool flag;
-  int spw, field;
   size_t needed;
 
   float u;
@@ -313,18 +308,13 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
       casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
       casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
-      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
-      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
       casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
       casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
       casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
-
       for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
-          spw = data_desc_id_col(k);
-          field = field_id_col(k);
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
@@ -411,7 +401,6 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
   casa::Matrix<casa::Bool> flagCol;
 
   bool flag;
-  int spw, field;
   size_t needed;
 
   float u;
@@ -429,18 +418,13 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 
       casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
       casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
-      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
-      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
       casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
       casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
       casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
-
-        for (int k=0; k < query_tab.nrow(); k++){
+      for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
-          spw = data_desc_id_col(k);
-          field = field_id_col(k);
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
@@ -530,9 +514,8 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
   casa::Matrix<casa::Complex> dataCol;
   casa::Matrix<casa::Bool> flagCol;
   bool flag;
-  int spw, field;
   size_t needed;
-  printf("Starting loop\n");
+
   for(int f=0; f<data.nfields; f++){
     g=0;
     for(int i=0; i < data.n_internal_frequencies; i++){
@@ -544,18 +527,13 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
       casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
       casa::ROScalarColumn<bool> flag_col(query_tab,"FLAG_ROW");
-      casa::ROScalarColumn<int> data_desc_id_col(query_tab,"DATA_DESC_ID");
-      casa::ROScalarColumn<int> field_id_col(query_tab,"FIELD_ID");
       casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
       casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
       casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
-
-        for (int k=0; k < query_tab.nrow(); k++){
+      for (int k=0; k < query_tab.nrow(); k++){
           uvw = uvw_col(k);
           flag = flag_col(k);
-          spw = data_desc_id_col(k);
-          field = field_id_col(k);
           dataCol = data_col(k);
           flagCol = flag_data_col(k);
           weights = weight_col(k);
