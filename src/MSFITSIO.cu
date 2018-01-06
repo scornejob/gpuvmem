@@ -175,6 +175,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   char *error = 0;
   int g = 0, h = 0;
+  long c;
   char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
@@ -194,6 +195,12 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   bool flag;
   size_t needed;
+
+  for(int f=0; f < data.nfields; f++){
+    for(int i = 0; i < data.total_frequencies; i++){
+      fields[f].numVisibilitiesPerFreq[i] = 0;
+    }
+  }
 
   float u;
   SelectStream(0);
@@ -223,21 +230,21 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
             for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto<data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                  fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g+j].u[h] = uvw[0];
-                  fields[f].visibilities[g+j].v[h] = uvw[1];
+                  c = fields[f].numVisibilitiesPerFreq[g+j];
+                  fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                  fields[f].visibilities[g+j].u[c] = uvw[0];
+                  fields[f].visibilities[g+j].v[c] = uvw[1];
                   u = Normal(0.0, 1.0);
-                  fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                  fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                   u = Normal(0.0, 1.0);
-                  fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                  fields[f].visibilities[g+j].weight[h] = weights[sto];
-                  h++;
+                  fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                  fields[f].visibilities[g+j].weight[c] = weights[sto];
+                  fields[f].numVisibilitiesPerFreq[g+j]++;
                 }
               }
             }
           }else continue;
         }
-        h=0;
         g+=data.channels[i];
         free(query);
       }
@@ -274,6 +281,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 {
   char *error = 0;
   int g = 0, h = 0;
+  long c;
   char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
@@ -293,6 +301,12 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
   bool flag;
   size_t needed;
+
+  for(int f=0; f < data.nfields; f++){
+    for(int i = 0; i < data.total_frequencies; i++){
+      fields[f].numVisibilitiesPerFreq[i] = 0;
+    }
+  }
 
   float u;
   SelectStream(0);
@@ -324,28 +338,29 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
                   if(u<random_probability){
-                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                    fields[f].visibilities[g+j].u[h] = uvw[0];
-                    fields[f].visibilities[g+j].v[h] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[h] = weights[sto];
-                    h++;
+                    c = fields[f].numVisibilitiesPerFreq[g+j];
+                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[c] = uvw[0];
+                    fields[f].visibilities[g+j].v[c] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[c] = weights[sto];
+                    fields[f].numVisibilitiesPerFreq[g+j]++;
                   }else{
-                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                    fields[f].visibilities[g+j].u[h] = uvw[0];
-                    fields[f].visibilities[g+j].v[h] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[h] = 0.0;
-                    h++;
+                    c = fields[f].numVisibilitiesPerFreq[g+j];
+                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[c] = uvw[0];
+                    fields[f].visibilities[g+j].v[c] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[c] = 0.0;
+                    fields[f].numVisibilitiesPerFreq[g+j]++;
                   }
                 }
               }
             }
           }else continue;
         }
-        h=0;
         g+=data.channels[i];
         free(query);
     }
@@ -382,6 +397,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 {
   char *error = 0;
   int g = 0, h = 0;
+  long c;
   char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
@@ -402,6 +418,12 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 
   bool flag;
   size_t needed;
+
+  for(int f=0; f < data.nfields; f++){
+    for(int i = 0; i < data.total_frequencies; i++){
+      fields[f].numVisibilitiesPerFreq[i] = 0;
+    }
+  }
 
   float u;
   float nu;
@@ -434,30 +456,31 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
                   if(u<random_probability){
-                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                    fields[f].visibilities[g+j].u[h] = uvw[0];
-                    fields[f].visibilities[g+j].v[h] = uvw[1];
+                    c = fields[f].numVisibilitiesPerFreq[g+j];
+                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[c] = uvw[0];
+                    fields[f].visibilities[g+j].v[c] = uvw[1];
                     nu = Normal(0.0, 1.0);
-                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                     nu = Normal(0.0, 1.0);
-                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                    fields[f].visibilities[g+j].weight[h] = weights[sto];
-                    h++;
+                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                    fields[f].visibilities[g+j].weight[c] = weights[sto];
+                    fields[f].numVisibilitiesPerFreq[g+j]++;
                   }else{
-                    fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                    fields[f].visibilities[g+j].u[h] = uvw[0];
-                    fields[f].visibilities[g+j].v[h] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[h] = 0.0;
-                    h++;
+                    c = fields[f].numVisibilitiesPerFreq[g+j];
+                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                    fields[f].visibilities[g+j].u[c] = uvw[0];
+                    fields[f].visibilities[g+j].v[c] = uvw[1];
+                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j].weight[c] = 0.0;
+                    fields[f].numVisibilitiesPerFreq[g+j]++;
                   }
                 }
               }
             }
           }else continue;
         }
-        h=0;
         g+=data.channels[i];
         free(query);
     }
@@ -496,6 +519,7 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   char *error = 0;
   int g = 0, h = 0;
+  long c;
   char *query;
   string dir = MS_name;
   casa::Table main_tab(dir);
@@ -515,6 +539,12 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
   casa::Matrix<casa::Bool> flagCol;
   bool flag;
   size_t needed;
+
+  for(int f=0; f < data.nfields; f++){
+    for(int i = 0; i < data.total_frequencies; i++){
+      fields[f].numVisibilitiesPerFreq[i] = 0;
+    }
+  }
 
   for(int f=0; f<data.nfields; f++){
     g=0;
@@ -541,19 +571,19 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
             for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto < data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                  fields[f].visibilities[g+j].stokes[h] = polarizations[sto];
-                  fields[f].visibilities[g+j].u[h] = uvw[0];
-                  fields[f].visibilities[g+j].v[h] = uvw[1];
-                  fields[f].visibilities[g+j].Vo[h].x = dataCol(sto,j).real();
-                  fields[f].visibilities[g+j].Vo[h].y = dataCol(sto,j).imag();
-                  fields[f].visibilities[g+j].weight[h] = weights[sto];
-                  h++;
+                  c = fields[f].numVisibilitiesPerFreq[g+j];
+                  fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
+                  fields[f].visibilities[g+j].u[c] = uvw[0];
+                  fields[f].visibilities[g+j].v[c] = uvw[1];
+                  fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
+                  fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
+                  fields[f].visibilities[g+j].weight[c] = weights[sto];
+                  fields[f].numVisibilitiesPerFreq[g+j]++;
                 }
               }
             }
           }else continue;
         }
-        h=0;
         g+=data.channels[i];
         free(query);
       }
