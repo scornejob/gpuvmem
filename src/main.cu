@@ -489,7 +489,7 @@ __host__ int main(int argc, char **argv) {
 
   int statustau = 0;
   int status_alpha = 0;
-  float peak;
+
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   float *input_alpha = (float*)malloc(M*N*sizeof(float));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
@@ -512,8 +512,7 @@ __host__ int main(int argc, char **argv) {
     x=M-1;
     y--;
 	}
-  free(input_alpha);
-  free(input_Inu_0);
+
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){
@@ -713,10 +712,33 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting MCMC\n\n");
 	float fret = 0.0;
 
-  float2 theta;
-  theta.x = minpix * fg_scale;
-  theta.y = 2E-3;
-  MCMC(device_2I, theta, it_maximum, variables.burndown_steps);
+  float2 theta_init;
+  theta_init.x = minpix * fg_scale / (M);
+  float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
+  theta_init.y = peak_alpha / (100 * M);
+  free(input_alpha);
+  free(input_Inu_0);
+
+  float2 *theta_device;
+  float2 *theta_host = (float2*) malloc((M*N)*sizeof(float2));
+  for(int i=0;i<M;i++){
+		for(int j=0;j<N;j++){
+      theta_host[N*i+j].x = theta_init.x;
+      theta_host[N*i+j].y = theta_init.y;
+    }
+  }
+
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+	   cudaSetDevice(firstgpu);
+  }
+
+  gpuErrchk(cudaMalloc((void**)&theta_device, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(theta_device, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
+
+  MCMC(device_2I, theta_device, it_maximum, variables.burndown_steps);
 	/*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
