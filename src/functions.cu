@@ -1688,8 +1688,8 @@ __global__ void calculateTheta(float2 *theta, curandState_t* states, double2 *to
     float2 random_number;
     float2 stddev, avg;
 
-    avg.x = total[N*i+j].x /= samples;
-    avg.y = total[N*i+j].y /= samples;
+    avg.x = total[N*i+j].x / samples;
+    avg.y = total[N*i+j].y / samples;
 
     stddev.x = (2.38/(N*sqrtf(2))) * sqrtf((total2[N*i+j].x / samples) - (avg.x * avg.x));
     stddev.y = (2.38/(N*sqrtf(2))) * sqrtf((total2[N*i+j].y / samples) - (avg.y * avg.y));
