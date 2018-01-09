@@ -1696,6 +1696,9 @@ __global__ void calculateTheta(float2 *theta, curandState_t* states, double2 *to
 
     random_number.x = curand_normal(&states[N*i+j]) * stddev.x;
     random_number.y = curand_normal(&states[N*i+j]) * stddev.y;
+
+    theta[N*i+j].x =  random_number.y;
+    theta[N*i+j].x =  random_number.y;
 }
 
 __global__ void changeI(float2 *I, float2 *temp, float2 *theta, curandState_t* states, long N)
