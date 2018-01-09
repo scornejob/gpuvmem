@@ -1972,10 +1972,10 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 
     printf("--------------Iteration %d-----------\n", i);
 
-    if(i>0){
-      calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
-      gpuErrchk(cudaDeviceSynchronize());
-    }
+    //if(i>0){
+    //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
+    //  gpuErrchk(cudaDeviceSynchronize());
+    //}
 
     changeI<<<numBlocksNN, threadsPerBlockNN>>>(I, temp, theta, states, N);
     gpuErrchk(cudaDeviceSynchronize());
