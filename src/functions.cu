@@ -1937,6 +1937,7 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
   float p = 0.0;
   float un_rand = 0.0;
   int accepted = 0;
+  int accepted_afterburndown = 0;
   float2 *temp;
   double2 *total_out, *total2_out;
   double2 *total, *total2;
@@ -1972,20 +1973,13 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
     printf("--------------Iteration %d-----------\n", i);
 
     if(i>0){
-      calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, i+1, N);
+      calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted, N);
       gpuErrchk(cudaDeviceSynchronize());
     }
 
     changeI<<<numBlocksNN, threadsPerBlockNN>>>(I, temp, theta, states, N);
     gpuErrchk(cudaDeviceSynchronize());
 
-    if(i >= burndown_steps){
-      sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
-      gpuErrchk(cudaDeviceSynchronize());
-    }
-
-    sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
-    gpuErrchk(cudaDeviceSynchronize());
 
     chi2_t_0 = chiCuadrado(I);
     chi2_t_1 = chiCuadrado(temp);
@@ -1998,8 +1992,16 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
       gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
       /*if(print_images && i%3 == 0)
         float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+      if(i >= burndown_steps){
+        sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+        gpuErrchk(cudaDeviceSynchronize());
+      }
+
+      sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+      gpuErrchk(cudaDeviceSynchronize());
       accepted++;
-      continue;
+      if(i >= burndown_steps)
+        accepted_afterburndown++;
     }
     else{
         printf("Not Accepted Delta chi2: %f\n", delta_chi2);
@@ -2011,13 +2013,21 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
             float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+          if(i >= burndown_steps){
+            sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+            gpuErrchk(cudaDeviceSynchronize());
+          }
+
+          sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+          gpuErrchk(cudaDeviceSynchronize());
           accepted++;
-          continue;
+          if(i >= burndown_steps)
+            accepted_afterburndown++;
         }
     }
   }
 
-  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, iterations-burndown_steps, N);
+  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
