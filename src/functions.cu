@@ -1995,13 +1995,13 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
       if(i >= burndown_steps){
         sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
         gpuErrchk(cudaDeviceSynchronize());
+        accepted_afterburndown++;
       }
 
       sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
       gpuErrchk(cudaDeviceSynchronize());
       accepted++;
-      if(i >= burndown_steps)
-        accepted_afterburndown++;
+
     }
     else{
         printf("Not Accepted Delta chi2: %f\n", delta_chi2);
@@ -2016,18 +2016,18 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
           if(i >= burndown_steps){
             sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
             gpuErrchk(cudaDeviceSynchronize());
+            accepted_afterburndown++;
           }
 
           sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
           gpuErrchk(cudaDeviceSynchronize());
           accepted++;
-          if(i >= burndown_steps)
-            accepted_afterburndown++;
+
         }
     }
   }
 
-  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted, N);
+  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
