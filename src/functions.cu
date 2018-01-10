@@ -1389,7 +1389,7 @@ __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cu
   I[N*i+j].y = 0;
 }
 
-__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float fg_scale, float eta)
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float alpha_start, float fg_scale, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1401,6 +1401,8 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
     else{
       I[N*i+j].x = -1.0 * eta * minpix * fg_scale;
     }
+
+    I[N*i+j].y = alpha_start;
 
   }
 
@@ -1914,7 +1916,7 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, fg_scale, eta);
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, fg_scale, eta);
   gpuErrchk(cudaDeviceSynchronize());
 
 
