@@ -110,7 +110,8 @@ __host__ int main(int argc, char **argv) {
 	char *msoutput = variables.output;
   char *inputdat = variables.inputdat;
 	char *modinput = variables.modin;
-  char *alpha_name = variables.alpha;
+  char *alpha_name = variables.alpha_name;
+  alpha_start = variables.alpha_value;
   out_image = variables.output_image;
   selected = variables.select;
   mempath = variables.path;

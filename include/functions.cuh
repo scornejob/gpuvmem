@@ -56,7 +56,7 @@ typedef struct variables {
   char *path;
   char *output_image;
   char *multigpu;
-  char *alpha;
+  char *alpha_name;
   int select;
   int blockSizeX;
   int blockSizeY;
@@ -72,6 +72,7 @@ typedef struct variables {
   float nu_0;
   float eta;
   float epsilon;
+  float alpha_value;
 } Vars;
 
 __host__ void goToError();
