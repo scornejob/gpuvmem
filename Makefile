@@ -29,7 +29,7 @@ endif
 main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
-	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
+	@ nvcc build/*.o -o bin/gpumfs $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
