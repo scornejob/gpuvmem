@@ -1824,9 +1824,6 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
   if(noise[N*i+j] <= noise_cut){
     dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0 * 0.0f;
     dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha;
-  }else{
-    dchi2_total[N*i+j].x += 0.0f;
-    dchi2_total[N*i+j].y += 0.0f;
   }
 }
 
@@ -1852,9 +1849,6 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
   if(noise[N*i+j] <= noise_cut){
     dchi2_total[N*i+j].x += dchi2[N*i+j] * dI_nu_0;
     dchi2_total[N*i+j].y += dchi2[N*i+j] * dalpha * 0.0f;
-  }else{
-    dchi2_total[N*i+j].x += 0.0f;
-    dchi2_total[N*i+j].y += 0.0f;
   }
 }
 
