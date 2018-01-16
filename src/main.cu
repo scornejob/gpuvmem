@@ -706,10 +706,13 @@ __host__ int main(int argc, char **argv) {
 
 	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
+  fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
+  fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
+  fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   t = clock() - t;
