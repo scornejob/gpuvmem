@@ -1178,7 +1178,7 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
   free(name);
 }
 
-__host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)
+__host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, float fg_scale, long M, long N, int option)
 {
   fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
 	int statusI_nu_0 = 0, statusalpha = 0;
@@ -1262,7 +1262,7 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x;
+        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x * fg_scale;
         host_alpha[N*(y-i)+(x-j)] = host_2Iout[N*i+j].y;
 		}
 	}

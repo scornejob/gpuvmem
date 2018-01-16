@@ -482,21 +482,12 @@ __host__ int main(int argc, char **argv) {
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
-  int anynull;
-  long fpixel = 1;
-  float null = 0.;
-  long elementsImage = M*N;
-
-  int statustau = 0;
-  float peak;
-  float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
-  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
 
   int x = M-1;
   int y = N-1;
 	for(int i=0;i<M;i++){
 		for(int j=0;j<N;j++){
-		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
+		    host_2I[N*i+j].x = MINPIX;  // I_nu
         host_2I[N*i+j].y = alpha_start;
         x--;
 		}
@@ -504,7 +495,6 @@ __host__ int main(int argc, char **argv) {
     y--;
 	}
 
-  free(input_Inu_0);
 	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 
 	if(num_gpus == 1){
@@ -762,7 +752,7 @@ __host__ int main(int argc, char **argv) {
   }
 	//Pass residuals to host
 	printf("Saving final image to disk\n");
-	float2toImage(device_2I, mod_in, out_image, mempath, iter, M, N, 0);
+	float2toImage(device_2I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");
