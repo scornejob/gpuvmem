@@ -696,7 +696,7 @@ __host__ int main(int argc, char **argv) {
 
 	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
-  fret = 0.0;
+  /*fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   fret = 0.0;
@@ -704,7 +704,7 @@ __host__ int main(int argc, char **argv) {
   chiCuadrado(device_2I);
   fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-  chiCuadrado(device_2I);
+  chiCuadrado(device_2I);*/
   t = clock() - t;
   end = omp_get_wtime();
   printf("Minimization ended successfully\n\n");
