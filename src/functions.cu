@@ -1826,11 +1826,7 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
   alpha = I[N*i+j].y;
 
   dI_nu_0 = powf(nudiv, alpha);
-  if(I_nu_0 > 2.0){
-    dalpha = dI_nu_0 * I_nu_0 * fg_scale * logf(nudiv);
-  }else{
-    dalpha = 0.0;
-  }
+  dalpha = dI_nu_0 * I_nu_0 * fg_scale * logf(nudiv);
 
   /*if (i==242 & j==277)
     printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
