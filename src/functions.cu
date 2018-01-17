@@ -970,7 +970,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || variables.alpha_start == 0.0) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1) {
         print_help();
         exit(EXIT_FAILURE);
   }
