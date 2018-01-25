@@ -121,7 +121,8 @@ __host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*),
       FREEALL
       return;
     }
-    gam = dgg/gg;
+    gam = fmax(0.0, dgg/gg);
+
     //g=-xi
     //xi=h=g+gam*h;
     newXi<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, gam, N);
