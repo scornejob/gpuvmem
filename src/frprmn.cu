@@ -121,7 +121,7 @@ __host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*),
       FREEALL
       return;
     }
-    gam = fmax(0.0, dgg/gg);
+    gam = fmax(0.0f, dgg/gg);
 
     //g=-xi
     //xi=h=g+gam*h;
