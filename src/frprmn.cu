@@ -250,7 +250,7 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
       FREEALL
       return;
     }
-    gam = dgg/gg;
+    gam = fmax(0.0f, dgg/gg);
     //printf("Gamma = %f\n", gam);
     //g=-xi
     //xi=h=g+gam*h;
