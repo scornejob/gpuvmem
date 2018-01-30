@@ -11,6 +11,9 @@
 	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
   for more information please contact leemis@math.wm.edu
 
+  Additionally, this program uses some NVIDIA routines whose copyright is held
+  by NVIDIA end user license agreement (EULA).
+
   For the original parts of this code, the following license applies:
 
   This program is free software: you can redistribute it and/or modify
@@ -25,6 +28,7 @@
 
   You should have received a copy of the GNU General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
+* -------------------------------------------------------------------------
 * -------------------------------------------------------------------------
  * This is an ANSI C library for multi-stream random number generation.
  * The use of this library is recommended as a replacement for the ANSI C

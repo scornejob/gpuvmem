@@ -6,10 +6,13 @@
   copyright is held by the NR authors. If NR routines are included,
   you are required to comply with the licensing set forth there.
 
-  Part of the program also relies on an an ANSI C library for multi-stream
-  random number generation from the related Prentice-Hall textbook
-  Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
+	Part of the program also relies on an an ANSI C library for multi-stream
+	random number generation from the related Prentice-Hall textbook
+	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
   for more information please contact leemis@math.wm.edu
+
+  Additionally, this program uses some NVIDIA routines whose copyright is held
+  by NVIDIA end user license agreement (EULA).
 
   For the original parts of this code, the following license applies:
 

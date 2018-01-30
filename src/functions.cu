@@ -11,6 +11,9 @@
 	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
   for more information please contact leemis@math.wm.edu
 
+  Additionally, this program uses some NVIDIA routines whose copyright is held
+  by NVIDIA end user license agreement (EULA).
+
   For the original parts of this code, the following license applies:
 
   This program is free software: you can redistribute it and/or modify
@@ -29,6 +32,7 @@
 */
 #include "functions.cuh"
 
+namespace cg = cooperative_groups;
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
@@ -60,6 +64,42 @@ extern int flag_opt;
 extern VariablesPerField *vars_per_field;
 
 extern varsPerGPU *vars_gpu;
+
+// Utility class used to avoid linker errors with extern
+// unsized shared memory arrays with templated type
+template<class T>
+struct SharedMemory
+{
+    __device__ inline operator       T *()
+    {
+        extern __shared__ int __smem[];
+        return (T *)__smem;
+    }
+
+    __device__ inline operator const T *() const
+    {
+        extern __shared__ int __smem[];
+        return (T *)__smem;
+    }
+};
+
+// specialize for double to avoid unaligned memory
+// access compile errors
+template<>
+struct SharedMemory<double>
+{
+    __device__ inline operator       double *()
+    {
+        extern __shared__ double __smem_d[];
+        return (double *)__smem_d;
+    }
+
+    __device__ inline operator const double *() const
+    {
+        extern __shared__ double __smem_d[];
+        return (double *)__smem_d;
+    }
+};
 
 __host__ void goToError()
 {
@@ -997,148 +1037,276 @@ __host__ Vars getOptions(int argc, char **argv) {
 	return variables;
 }
 
-template <bool nIsPow2>
-__global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n)
-{
-    extern __shared__ float sdata[];
 
-    // perform first level of reduction,
-    // reading from global memory, writing to shared memory
-    unsigned int tid = threadIdx.x;
-    unsigned int blockSize = blockDim.x;
-    unsigned int i = blockIdx.x*blockSize*2 + threadIdx.x;
-    unsigned int gridSize = blockSize*2*gridDim.x;
-
-    float mySum = 0.f;
-
-    // we reduce multiple elements per thread.  The number is determined by the
-    // number of active thread blocks (via gridDim).  More blocks will result
-    // in a larger gridSize and therefore fewer elements per thread
-    while (i < n)
-    {
-        mySum += g_idata[i];
-
-        // ensure we don't read out of bounds -- this is optimized away for powerOf2 sized arrays
-        if (nIsPow2 || i + blockSize < n)
-            mySum += g_idata[i+blockSize];
-
-        i += gridSize;
-    }
-
-    // each thread puts its local sum into shared memory
-    sdata[tid] = mySum;
-    __syncthreads();
-
-
-    // do reduction in shared mem
-    if ((blockSize >= 512) && (tid < 256))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid + 256];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >= 256) &&(tid < 128))
-    {
-            sdata[tid] = mySum = mySum + sdata[tid + 128];
-    }
-
-     __syncthreads();
-
-    if ((blockSize >= 128) && (tid <  64))
-    {
-       sdata[tid] = mySum = mySum + sdata[tid +  64];
-    }
-
-    __syncthreads();
-
-#if (__CUDA_ARCH__ >= 300 )
-    if ( tid < 32 )
-    {
-        // Fetch final intermediate sum from 2nd warp
-        if (blockSize >=  64) mySum += sdata[tid + 32];
-        // Reduce final warp using shuffle
-        for (int offset = warpSize/2; offset > 0; offset /= 2)
-        {
-            mySum += __shfl_down(mySum, offset);
-        }
-    }
-#else
-    // fully unroll reduction within a single warp
-    if ((blockSize >=  64) && (tid < 32))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid + 32];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >=  32) && (tid < 16))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid + 16];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >=  16) && (tid <  8))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid +  8];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >=   8) && (tid <  4))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid +  4];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >=   4) && (tid <  2))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid +  2];
-    }
-
-    __syncthreads();
-
-    if ((blockSize >=   2) && ( tid <  1))
-    {
-        sdata[tid] = mySum = mySum + sdata[tid +  1];
-    }
-
-    __syncthreads();
+#ifndef MIN
+#define MIN(x,y) ((x < y) ? x : y)
 #endif
 
-    // write result for this block to global mem
-    if (tid == 0) g_odata[blockIdx.x] = mySum;
+__host__ void getNumBlocksAndThreads(int n, int maxBlocks, int maxThreads, int &blocks, int &threads)
+{
+
+    //get device capability, to avoid block/grid size exceed the upper bound
+    cudaDeviceProp prop;
+    int device;
+    gpuErrchk(cudaGetDevice(&device));
+    gpuErrchk(cudaGetDeviceProperties(&prop, device));
+
+
+    threads = (n < maxThreads*2) ? NearestPowerOf2((n + 1)/ 2) : maxThreads;
+    blocks = (n + (threads * 2 - 1)) / (threads * 2);
+
+    if (blocks > prop.maxGridSize[0])
+    {
+        printf("Grid size <%d> exceeds the device capability <%d>, set block size as %d (original %d)\n",
+               blocks, prop.maxGridSize[0], threads*2, threads);
+
+        blocks /= 2;
+        threads *= 2;
+    }
+
+    blocks = MIN(maxBlocks, blocks);
+}
+
+template <class T, unsigned int blockSize, bool nIsPow2>
+__global__ void deviceReduceKernel(T *g_idata, T *g_odata, unsigned int n)
+{
+  // Handle to thread block group
+  cg::thread_block cta = cg::this_thread_block();
+  T *sdata = SharedMemory<T>();
+
+  // perform first level of reduction,
+  // reading from global memory, writing to shared memory
+  unsigned int tid = threadIdx.x;
+  unsigned int i = blockIdx.x*blockSize*2 + threadIdx.x;
+  unsigned int gridSize = blockSize*2*gridDim.x;
+
+  T mySum = 0;
+
+  // we reduce multiple elements per thread.  The number is determined by the
+  // number of active thread blocks (via gridDim).  More blocks will result
+  // in a larger gridSize and therefore fewer elements per thread
+  while (i < n)
+  {
+      mySum += g_idata[i];
+
+      // ensure we don't read out of bounds -- this is optimized away for powerOf2 sized arrays
+      if (nIsPow2 || i + blockSize < n)
+          mySum += g_idata[i+blockSize];
+
+      i += gridSize;
+  }
+
+  // each thread puts its local sum into shared memory
+  sdata[tid] = mySum;
+  cg::sync(cta);
+
+
+  // do reduction in shared mem
+  if ((blockSize >= 512) && (tid < 256))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid + 256];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >= 256) &&(tid < 128))
+  {
+          sdata[tid] = mySum = mySum + sdata[tid + 128];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >= 128) && (tid <  64))
+  {
+     sdata[tid] = mySum = mySum + sdata[tid +  64];
+  }
+
+  cg::sync(cta);
+
+#if (__CUDA_ARCH__ >= 300 )
+  if ( tid < 32 )
+  {
+      cg::coalesced_group active = cg::coalesced_threads();
+
+      // Fetch final intermediate sum from 2nd warp
+      if (blockSize >=  64) mySum += sdata[tid + 32];
+      // Reduce final warp using shuffle
+      for (int offset = warpSize/2; offset > 0; offset /= 2)
+      {
+           mySum += active.shfl_down(mySum, offset);
+      }
+  }
+#else
+  // fully unroll reduction within a single warp
+  if ((blockSize >=  64) && (tid < 32))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid + 32];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >=  32) && (tid < 16))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid + 16];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >=  16) && (tid <  8))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid +  8];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >=   8) && (tid <  4))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid +  4];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >=   4) && (tid <  2))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid +  2];
+  }
+
+  cg::sync(cta);
+
+  if ((blockSize >=   2) && ( tid <  1))
+  {
+      sdata[tid] = mySum = mySum + sdata[tid +  1];
+  }
+
+  cg::sync(cta);
+#endif
+
+  // write result for this block to global mem
+  if (tid == 0) g_odata[blockIdx.x] = mySum;
 }
 
 
 
 
-
-__host__ float deviceReduce(float *in, long N)
+template <class T>
+__host__ T deviceReduce(T *in, long N)
 {
-  float *device_out;
-  gpuErrchk(cudaMalloc(&device_out, sizeof(float)*1024));
-  gpuErrchk(cudaMemset(device_out, 0, sizeof(float)*1024));
+  T *device_out;
 
-  int threads = 512;
-  int blocks = min((int(NearestPowerOf2(N)) + threads - 1) / threads, 1024);
-  int smemSize = (threads <= 32) ? 2 * threads * sizeof(float) : threads * sizeof(float);
+  int maxThreads = 256;
+  int maxBlocks = NearestPowerOf2(N)/maxThreads;
+
+  int threads = 0;
+  int blocks = 0;
+
+  getNumBlocksAndThreads(N, maxBlocks, maxThreads, blocks, threads);
+
+  //printf("N %d, threads: %d, blocks %d\n", N, threads, blocks);
+  //threads = maxThreads;
+  //blocks = NearestPowerOf2(N)/threads;
+
+  gpuErrchk(cudaMalloc(&device_out, sizeof(T)*blocks));
+  gpuErrchk(cudaMemset(device_out, 0, sizeof(T)*blocks));
+
+  int smemSize = (threads <= 32) ? 2 * threads * sizeof(T) : threads * sizeof(T);
 
   bool isPower2 = isPow2(N);
+
+  dim3 dimBlock(threads, 1, 1);
+  dim3 dimGrid(blocks, 1, 1);
+
   if(isPower2){
-    deviceReduceKernel<true><<<blocks, threads, smemSize>>>(in, device_out, N);
-    gpuErrchk(cudaDeviceSynchronize());
+    switch (threads){
+      case 512:
+        deviceReduceKernel<T, 512, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 256:
+        deviceReduceKernel<T, 256, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 128:
+        deviceReduceKernel<T, 128, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 64:
+        deviceReduceKernel<T, 64, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 32:
+        deviceReduceKernel<T, 32, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 16:
+        deviceReduceKernel<T, 16, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 8:
+        deviceReduceKernel<T, 8, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 4:
+        deviceReduceKernel<T, 4, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 2:
+        deviceReduceKernel<T, 2, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 1:
+        deviceReduceKernel<T, 1, true><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+    }
   }else{
-    deviceReduceKernel<false><<<blocks, threads, smemSize>>>(in, device_out, N);
-    gpuErrchk(cudaDeviceSynchronize());
+    switch (threads){
+      case 512:
+        deviceReduceKernel<T, 512, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 256:
+        deviceReduceKernel<T, 256, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 128:
+        deviceReduceKernel<T, 128, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 64:
+        deviceReduceKernel<T, 64, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 32:
+        deviceReduceKernel<T, 32, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 16:
+        deviceReduceKernel<T, 16, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 8:
+        deviceReduceKernel<T, 8, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 4:
+        deviceReduceKernel<T, 4, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 2:
+        deviceReduceKernel<T, 2, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+      case 1:
+        deviceReduceKernel<T, 1, false><<<dimGrid, dimBlock, smemSize>>>(in, device_out, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        break;
+    }
   }
 
-  float *h_odata = (float *) malloc(blocks*sizeof(float));
-  float sum = 0.0;
+  T *h_odata = (T *) malloc(blocks*sizeof(T));
+  T sum = 0;
 
-  gpuErrchk(cudaMemcpy(h_odata, device_out, blocks * sizeof(float),cudaMemcpyDeviceToHost));
+  gpuErrchk(cudaMemcpy(h_odata, device_out, blocks * sizeof(T),cudaMemcpyDeviceToHost));
   for (int i=0; i<blocks; i++)
   {
     sum += h_odata[i];
@@ -1235,34 +1403,18 @@ __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, 
     int j = threadIdx.x + blockDim.x * blockIdx.x;
     int i = threadIdx.y + blockDim.y * blockIdx.y;
 
+    float atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
-    float dx = DELTAX * 60.0;
-    float dy = DELTAY * 60.0;
-    float x = (j - xobs) * dx;
-    float y = (i - yobs) * dy;
-    float arc = RPARCM*sqrtf(x*x+y*y);
-    float c = 4.0*logf(2.0);
-    float a = (beam_fwhm*beam_freq/(freq*1e-9));
-    float r = arc/a;
-    float atten = expf(-c*r*r);
-
-    if(arc <= beam_cutoff){
-      image[N*i+j].x = image[N*i+j].x * fg_scale * atten;
-      //image[N*i+j].x = image[N*i+j].x * atten;
-      image[N*i+j].y = 0.0;
-    }else{
-      image[N*i+j].x = 0.0;
-      image[N*i+j].y = 0.0;
-    }
-
-
+    image[N*i+j].x = image[N*i+j].x * fg_scale * atten;
+    //image[N*i+j].x = image[N*i+j].x * atten;
+    image[N*i+j].y = 0.0;
 }
 
 
 /*--------------------------------------------------------------------
  * Phase rotate the visibility data in "image" to refer phase to point
  * (x,y) instead of (0,0).
- * Multiply pixel V(i,j) by exp(-2 pi i (x/ni + y/nj))
+ * Multiply pixel V(i,j) by exp(2 pi i (x/ni + y/nj))
  *--------------------------------------------------------------------*/
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs)
 {
@@ -1967,9 +2119,9 @@ __host__ float chiCuadrado(float2 *I)
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
         	gpuErrchk(cudaDeviceSynchronize());
 
-        	//REDUCTIONS
+        	//REDUCTION
         	//chi2
-        	resultchi2  += deviceReduce(device_chi2, fields[f].numVisibilitiesPerFreq[i]);
+          resultchi2 += deviceReduce<float>(device_chi2, fields[f].numVisibilitiesPerFreq[i]);
         }
       }
     }
@@ -2026,13 +2178,13 @@ __host__ float chiCuadrado(float2 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
 
-          partial_chi2 = deviceReduce(vars_gpu[i%num_gpus].device_chi2, fields[f].numVisibilitiesPerFreq[i]);
+          partial_chi2 = deviceReduce<float>(vars_gpu[i%num_gpus].device_chi2, fields[f].numVisibilitiesPerFreq[i]);
 
-        	//REDUCTIONS
+        	//REDUCTION
         	//chi2
           #pragma omp critical
           {
-            resultchi2  += partial_chi2;
+            resultchi2 += partial_chi2;
           }
         }
       }
@@ -2045,10 +2197,10 @@ __host__ float chiCuadrado(float2 *I)
     cudaSetDevice(firstgpu);
   }
 
-  resultS = deviceReduce(device_S, M*N);
+  resultS = deviceReduce<float>(device_S, M*N);
 
   if(epsilon){
-    resultS_alpha = deviceReduce(device_S_alpha, M*N);
+    resultS_alpha = deviceReduce<float>(device_S_alpha, M*N);
   }
 
   resultPhi = (0.5 * resultchi2) + (lambda * resultS) + (epsilon * resultS_alpha);

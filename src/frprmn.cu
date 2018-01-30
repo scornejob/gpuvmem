@@ -11,6 +11,9 @@
 	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
   for more information please contact leemis@math.wm.edu
 
+  Additionally, this program uses some NVIDIA routines whose copyright is held
+  by NVIDIA end user license agreement (EULA).
+
   For the original parts of this code, the following license applies:
 
   This program is free software: you can redistribute it and/or modify
@@ -114,8 +117,8 @@ __host__ void frprmn(float2 *p, float ftol, float *fret, float (*func)(float2*),
     getGGandDGG<<<numBlocksNN, threadsPerBlockNN>>>(device_gg_vector, device_dgg_vector, xi, device_g, N);
   	gpuErrchk(cudaDeviceSynchronize());
     ////getSums (Reductions) of gg dgg
-    gg = deviceReduce(device_gg_vector, M*N);
-    dgg = deviceReduce(device_dgg_vector, M*N);
+    gg = deviceReduce<float>(device_gg_vector, M*N);
+    dgg = deviceReduce<float>(device_dgg_vector, M*N);
     if(gg == 0.0){
       printf("Exit due to gg = 0\n");
       FREEALL
