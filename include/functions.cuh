@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "MSFITSIO.cuh"
+#include <cooperative_groups.h>
 
 
 #define FLOAT_IMG   -32
@@ -77,7 +78,8 @@ __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(cufftComplex *I);
 __host__ void dchiCuadrado(cufftComplex *I, float *dxi2);
 __host__ void clipping(cufftComplex *I, int iterations);
-__host__ float deviceReduce(float *in, long N);
+template <class T>
+__host__ T deviceReduce(T *in, long N);
 
 
 

@@ -11,6 +11,9 @@
 	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
   for more information please contact leemis@math.wm.edu
 
+  Additionally, this program uses some NVIDIA routines whose copyright is held
+  by NVIDIA end user license agreement (EULA).
+  
   For the original parts of this code, the following license applies:
 
   This program is free software: you can redistribute it and/or modify
@@ -98,7 +101,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
   normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pgc, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  normPGC = deviceReduce(device_normVector, M*N);
+  normPGC = deviceReduce<float>(device_normVector, M*N);
   i=1;
   while(normPGC > ARMIJOTOLERANCE && i <= it_maximum){
     start = omp_get_wtime();
@@ -119,7 +122,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
     normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pl, N);
     gpuErrchk(cudaDeviceSynchronize());
 
-    normPL = deviceReduce(device_normVector, M*N);
+    normPL = deviceReduce<float>(device_normVector, M*N);
 
     fgoal = fc * normPL *(ALPHA/lambda2);
     iarm = 0;
@@ -139,7 +142,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
       normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pl, N);
       gpuErrchk(cudaDeviceSynchronize());
 
-      normPL = deviceReduce(device_normVector, M*N);
+      normPL = deviceReduce<float>(device_normVector, M*N);
       iarm++;
       if(iarm>10){
         break;
@@ -165,7 +168,7 @@ __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*d
     normVectorCalculation<<<numBlocksNN, threadsPerBlockNN>>>(device_normVector, device_pgc, N);
     gpuErrchk(cudaDeviceSynchronize());
 
-    normPGC = deviceReduce(device_normVector, M*N);
+    normPGC = deviceReduce<float>(device_normVector, M*N);
     i++;
     end = omp_get_wtime();
     double wall_time = end-start;
@@ -243,8 +246,8 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
     getGandDGG<<<numBlocksNN, threadsPerBlockNN>>>(device_gg_vector, device_dgg_vector, xi, device_g, N);
   	gpuErrchk(cudaDeviceSynchronize());
     ////getSums (Reductions) of gg dgg
-    gg = deviceReduce(device_gg_vector, M*N);
-    dgg = deviceReduce(device_dgg_vector, M*N);
+    gg = deviceReduce<float>(device_gg_vector, M*N);
+    dgg = deviceReduce<float>(device_dgg_vector, M*N);
     if(gg == 0.0){
       printf("Exit due to gg = 0\n");
       FREEALL
