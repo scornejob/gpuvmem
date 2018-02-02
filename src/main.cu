@@ -45,7 +45,7 @@ cufftComplex *device_V, *device_Inu;
 float2 *device_dphi, *device_2I;
 float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
-float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon;
+float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon, threshold;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -128,6 +128,7 @@ __host__ int main(int argc, char **argv) {
   alpha_start = variables.alpha_start;
   eta = variables.eta;
   epsilon = variables.epsilon;
+  threshold = variables.threshold * 5.0;
 
   multigpu = 0;
   firstgpu = -1;
@@ -697,16 +698,16 @@ __host__ int main(int argc, char **argv) {
 	printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
 	float fret = 0.0;
 
-	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
-  chiCuadrado(device_2I);
-  fret = 0.0;
-  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+	frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
   chiCuadrado(device_2I);
   fret = 0.0;
   frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   fret = 0.0;
-  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 2);
+  chiCuadrado(device_2I);
+  fret = 0.0;
+  frprmn(device_2I, ftol, &fret, chiCuadrado, dchiCuadrado, 3);
   chiCuadrado(device_2I);
   t = clock() - t;
   end = omp_get_wtime();

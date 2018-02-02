@@ -69,6 +69,7 @@ typedef struct variables {
   float alpha_start;
   float eta;
   float epsilon;
+  float threshold;
 } Vars;
 
 __host__ void goToError();
