@@ -41,7 +41,7 @@ cufftComplex *device_V, *device_Inu;
 float2 *device_dphi, *device_2I;
 float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
-float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon;
+float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cutoff, alpha_start, eta, epsilon, *host_noise_image;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -687,7 +687,7 @@ __host__ int main(int argc, char **argv) {
     fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
 
 
-	float *host_noise_image = (float*)malloc(M*N*sizeof(float));
+	host_noise_image = (float*)malloc(M*N*sizeof(float));
 	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
 	for(int i=0; i<M; i++){
 		for(int j=0; j<N; j++){
@@ -703,7 +703,7 @@ __host__ int main(int argc, char **argv) {
 	   printf("fg_scale = %e\n", fg_scale);
      printf("noise_jypix = %e\n", noise_jypix);
   }
-	free(host_noise_image);
+
   cudaFree(device_weight_image);
   for(int f=0; f<data.nfields; f++){
     cudaFree(vars_per_field[f].atten_image);
@@ -874,6 +874,7 @@ __host__ int main(int argc, char **argv) {
 	free(msinput);
 	free(msoutput);
 	free(modinput);
+  free(host_noise_image);
 
   closeCanvas(mod_in);
 

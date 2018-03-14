@@ -44,7 +44,7 @@ minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff, *host_noise_image;
 extern double ra, dec;
 
 extern freqData data;
@@ -1438,7 +1438,7 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
       I[N*i+j].x = -1.0 * eta * minpix * fg_scale;
     }
 
-    I[N*i+j].y = alpha_start;
+    I[N*i+j].y = 0.0f;
 
   }
 
@@ -2132,65 +2132,66 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
   for(int i = 0; i< iterations; i++){
     for(int j = 0; j < N*N; j++){
+      if(host_noise_image[j] < noise_cut){
+        printf("--------------Iteration %d-----------\n", i);
+        printf("Changing pixel %d = %d\n", j, pixels[j]);
 
-      printf("--------------Iteration %d-----------\n", i);
-      printf("Changing pixel %d = %d\n", j, pixels[j]);
+        //if(i>0){
+        //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
+        //  gpuErrchk(cudaDeviceSynchronize());
+        //}
 
-      //if(i>0){
-      //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
-      //  gpuErrchk(cudaDeviceSynchronize());
-      //}
-
-      changeGibbs<<<1, 1>>>(I, temp, theta, states, pixels[j]);
-      gpuErrchk(cudaDeviceSynchronize());
-
-
-      chi2_t_0 = chiCuadrado(I);
-      chi2_t_1 = chiCuadrado(temp);
-      printf("chi2_t0: %f\n", chi2_t_0);
-      printf("chi2_t1: %f\n", chi2_t_1);
-      fprintf(outfile, "%f\n", chi2_t_0);
-      delta_chi2 = chi2_t_1 - chi2_t_0;
-      if(delta_chi2 <= 0){
-        printf("Acccepted Delta chi2: %f\n", delta_chi2);
-        gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-        /*if(print_images && i%3 == 0)
-          float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-        if(i >= burndown_steps){
-          sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
-          gpuErrchk(cudaDeviceSynchronize());
-          accepted_afterburndown++;
-          continue;
-        }
-
-        sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+        changeGibbs<<<1, 1>>>(I, temp, theta, states, pixels[j]);
         gpuErrchk(cudaDeviceSynchronize());
-        accepted++;
-        continue;
 
-      }
-      else{
-          printf("Not Accepted Delta chi2: %f\n", delta_chi2);
-          //l = exp(-delta_chi2);
-          //p = chi2_t_0 / chi2_t_1;
-          un_rand = Random();
-          if(-log(un_rand) > delta_chi2){
-            printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
-            gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-            /*if(print_images && i%3 == 0)
-              float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-            if(i >= burndown_steps){
-              sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
-              gpuErrchk(cudaDeviceSynchronize());
-              accepted_afterburndown++;
-              continue;
-            }
 
-            sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+        chi2_t_0 = chiCuadrado(I);
+        chi2_t_1 = chiCuadrado(temp);
+        printf("chi2_t0: %f\n", chi2_t_0);
+        printf("chi2_t1: %f\n", chi2_t_1);
+        fprintf(outfile, "%f\n", chi2_t_0);
+        delta_chi2 = chi2_t_1 - chi2_t_0;
+        if(delta_chi2 <= 0){
+          printf("Acccepted Delta chi2: %f\n", delta_chi2);
+          gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+          /*if(print_images && i%3 == 0)
+            float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+          if(i >= burndown_steps){
+            sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
             gpuErrchk(cudaDeviceSynchronize());
-            accepted++;
+            accepted_afterburndown++;
             continue;
+          }
 
+          sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+          gpuErrchk(cudaDeviceSynchronize());
+          accepted++;
+          continue;
+
+        }
+        else{
+            printf("Not Accepted Delta chi2: %f\n", delta_chi2);
+            //l = exp(-delta_chi2);
+            //p = chi2_t_0 / chi2_t_1;
+            un_rand = Random();
+            if(-log(un_rand) > delta_chi2){
+              printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
+              gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+              /*if(print_images && i%3 == 0)
+                float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+              if(i >= burndown_steps){
+                sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+                gpuErrchk(cudaDeviceSynchronize());
+                accepted_afterburndown++;
+                continue;
+              }
+
+              sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+              gpuErrchk(cudaDeviceSynchronize());
+              accepted++;
+              continue;
+
+            }
           }
       }
     }
