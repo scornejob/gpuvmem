@@ -46,7 +46,7 @@ float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cut
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding = 0, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
@@ -273,6 +273,8 @@ __host__ int main(int argc, char **argv) {
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
+    if(gridding)
+      fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   }
 
   //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
@@ -358,6 +360,14 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vr, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
+        if(gridding){
+          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].u, sizeof(float)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].v, sizeof(float)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vo, sizeof(cufftComplex)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].weight, sizeof(float)*M*N));
+          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vr, sizeof(cufftComplex)*M*N));
+        }
   		}
     }
 	}else{
@@ -370,6 +380,14 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vr, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
+        if(gridding){
+          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].u, sizeof(float)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].v, sizeof(float)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vo, sizeof(cufftComplex)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].weight, sizeof(float)*M*N));
+          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N));
+    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vr, sizeof(cufftComplex)*M*N));
+        }
   		}
     }
 	}
@@ -380,8 +398,14 @@ __host__ int main(int argc, char **argv) {
     gpuErrchk(cudaMalloc((void**)&device_dchi2, sizeof(float)*M*N));
     gpuErrchk(cudaMemset(device_dchi2, 0, sizeof(float)*M*N));
 
-    gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
-    gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+    if(gridding){
+      gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*M*N));
+      gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*M*N));
+    }else{
+      gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+      gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+    }
+
     for(int f=0; f<data.nfields; f++){
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(float)*M*N));
       gpuErrchk(cudaMemset(vars_per_field[f].atten_image, 0, sizeof(float)*M*N));

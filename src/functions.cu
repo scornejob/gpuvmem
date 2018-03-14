@@ -32,7 +32,7 @@
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images;
+status_mod_in, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images, gridding;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_I, *device_V, *device_fg_image, *device_image;
@@ -779,6 +779,7 @@ __host__ void print_help() {
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --print-images     Prints images per iteration\n");
+  printf("        --gridding         Use gridding to decrease the number of visibilities\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -831,6 +832,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"clipping", 0, &clip_flag, 1},
                                     {"apply-noise", 0, &apply_noise, 1},
                                     {"print-images", 0, &print_images, 1},
+                                    {"gridding", 0, &gridding, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -1131,6 +1133,50 @@ __host__ float deviceReduce(float *in, long N)
   cudaFree(device_out);
   free(h_odata);
 	return sum;
+}
+
+__global__ void do_gridding(float *u, float *v, cufftComplex *Vo, cufftComplex *Vo_g, float *w, float *w_g, int* count, float deltau, float deltav, int visibilities, int M, int N)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if(i < visibilities)
+	{
+		int k, j;
+		j = ceilf(u[i]/deltau + M/2);
+		k = ceilf(N/2 - v[i]/deltav);
+
+		if (k < M && j < N)
+		{
+
+			atomicAdd(&Vo_g[N*k+j].x, Vo[i].x);
+			atomicAdd(&Vo_g[N*k+j].y, Vo[i].y);
+      atomicAdd(&w_g[N*k+j], (1.0/w[i]));
+      atomicAdd(&count[N*k*j], 1);
+		}
+	}
+}
+
+__global__ void calculateCoordinates(float *u_g, float *v_g, float deltau, float deltav, int M, int N)
+{
+	int j = blockDim.x * blockIdx.x + threadIdx.x;
+  int i = blockDim.y * blockIdx.y + threadIdx.y;
+
+  u_g[N*i+j] = j*deltau - (N/2)*deltau;
+  v_g[N*i+j] = i*deltau - (N/2)*deltav;
+}
+
+__global__ void calculateAvgVar(cufftComplex *V_g, float *w_g, int *count, int M, int N)
+{
+	int j = blockDim.x * blockIdx.x + threadIdx.x;
+  int i = blockDim.y * blockIdx.y + threadIdx.y;
+
+  int counter = count[N*i+j];
+  if(counter > 0){
+    V_g[N*i+j].x = V_g[N*i+j].x / counter;
+    V_g[N*i+j].y = V_g[N*i+j].y / counter;
+    w_g[N*i+j] = counter / w_g[N*i+j];
+  }else{
+    w_g[N*i+j] = 0.0;
+  }
 }
 
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities)
