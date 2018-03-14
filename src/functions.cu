@@ -850,12 +850,12 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.noise_cut = -1;
   variables.minpix = -1;
   variables.reg_term = 0;
-  variables.alpha = "NULL";
+  variables.alpha_name = "NULL";
   variables.eta = -1.0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:B:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:B:A:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -875,7 +875,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"burndown_steps", 1, NULL, 'B'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
-                                    {"epsilon", 0, NULL, 'E' }, {"alpha_start", 1, NULL, 'a' }, { NULL, 0, NULL, 0 }};
+                                    {"epsilon", 0, NULL, 'E' }, {"alpha_name", 1, NULL, 'a' }, {"alpha_value", 1, NULL, 'A' },
+                                    { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -942,8 +943,11 @@ __host__ Vars getOptions(int argc, char **argv) {
       variables.nu_0 = atof(optarg);
       break;
     case 'a':
-      variables.alpha = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-      strcpy(variables.alpha, optarg);
+      variables.alpha_name = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+      strcpy(variables.alpha_name, optarg);
+      break;
+    case 'A':
+      variables.alpha_value = atof(optarg);
       break;
     case 'n':
       variables.noise = atof(optarg);
@@ -1002,7 +1006,7 @@ __host__ Vars getOptions(int argc, char **argv) {
 
   if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
      strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || strcmp(strip(variables.alpha, " "),"") == 0) {
+     strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0 || variables.nu_0 == -1 || strcmp(strip(variables.alpha_name, " "),"") == 0) {
         print_help();
         exit(EXIT_FAILURE);
   }
@@ -1421,7 +1425,7 @@ __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cu
   I[N*i+j].y = 0;
 }
 
-__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float fg_scale, float eta)
+__global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float alpha_start, float fg_scale, float eta)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1433,6 +1437,8 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
     else{
       I[N*i+j].x = -1.0 * eta * minpix * fg_scale;
     }
+
+    I[N*i+j].y = alpha_start;
 
   }
 
@@ -1801,7 +1807,7 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, fg_scale, eta);
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, fg_scale, eta);
   gpuErrchk(cudaDeviceSynchronize());
 
 
