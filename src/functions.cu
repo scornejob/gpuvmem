@@ -55,7 +55,7 @@ extern fitsfile *mod_in;
 
 extern Field *fields;
 
-extern int flag_opt;
+extern int flag_opt, *pixels;
 
 extern VariablesPerField *vars_per_field;
 
@@ -803,6 +803,33 @@ __host__ char *strip(const char *string, const char *chars)
   return newstr;
 }
 
+void swap (int *a, int *b)
+{
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void randomize(int arr[], int n)
+{
+    // Use a different seed value so that we don't get same
+    // result each time we run this program
+    SelectStream(0);
+    PutSeed(-1);
+
+    // Start from the last element and swap one by one. We don't
+    // need to run for the first element that's why i > 0
+    for (int i = n-1; i > 0; i--)
+    {
+        // Pick a random index from 0 to i
+
+        int j = Uniform(0.0, (float)i);
+
+        // Swap arr[i] with the element at random index
+        swap(&arr[i], &arr[j]);
+    }
+}
+
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
   variables.multigpu = "NULL";
@@ -1252,7 +1279,7 @@ __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, 
     float atten = expf(-c*r*r);
 
     if(arc <= beam_cutoff){
-      image[N*i+j].x = image[N*i+j].x * fg_scale * atten;
+      image[N*i+j].x = image[N*i+j].x * atten;
       //image[N*i+j].x = image[N*i+j].x * atten;
       image[N*i+j].y = 0.0;
     }else{
@@ -1662,7 +1689,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 
   nudiv_pow_alpha = powf(nudiv, alpha);
 
-  I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha / fg_scale;
+  I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha;
 
   if(I_nu[N*i+j].x < -1.0*eta*minpix){
     I_nu[N*i+j].x = -1.0*eta*minpix;
@@ -1713,6 +1740,18 @@ __global__ void changeI(float2 *I, float2 *temp, float2 *theta, curandState_t* s
 
     temp[N*i+j].x = I[N*i+j].x + nrandom.x;
     temp[N*i+j].y = I[N*i+j].y + nrandom.y;
+
+}
+
+__global__ void changeGibbs(float2 *I, float2 *temp, float2 *theta, curandState_t* states, int idx)
+{
+      float2 nrandom;
+
+      nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
+      nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+
+      temp[idx].x = I[idx].x + nrandom.x;
+      temp[idx].y = I[idx].y + nrandom.y;
 
 }
 
@@ -2025,6 +2064,131 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 
         }
     }
+  }
+
+  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
+  gpuErrchk(cudaDeviceSynchronize());
+
+  double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
+  double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);
+
+  fclose(outfile);
+  cudaFree(temp);
+  cudaFree(total);
+  cudaFree(total2);
+  cudaFree(states);
+
+}
+
+
+__host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps)
+{
+  curandState_t *states, *states2;
+  cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
+  cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
+  float chi2_t_0, chi2_t_1;
+  float delta_chi2 = 0.0;
+  float p = 0.0;
+  float un_rand = 0.0;
+  int accepted = 0;
+  int accepted_afterburndown = 0;
+  float2 *temp;
+  double2 *total_out, *total2_out;
+  double2 *total, *total2;
+
+  /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total_out, 0, sizeof(double2)*M*N));
+  /**************** GPU MEMORY FOR TOTAL OUT ^ 2 I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total2_out, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total2_out, 0, sizeof(double2)*M*N));
+
+  /**************** GPU MEMORY FOR TOTAL I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total, 0, sizeof(double2)*M*N));
+  /**************** GPU MEMORY FOR TOTAL ^ 2 I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&total2, sizeof(double2)*M*N));
+  gpuErrchk(cudaMemset(total2, 0, sizeof(double2)*M*N));
+
+
+  /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
+  gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(temp, 0, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+  SelectStream(0);
+  PutSeed(-1);
+  random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states, N);
+  gpuErrchk(cudaDeviceSynchronize());
+  random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states2, N);
+  gpuErrchk(cudaDeviceSynchronize());
+  FILE *outfile = fopen("chi2.txt", "w");
+  randomize(pixels, N*N);
+
+  for(int i = 0; i< iterations; i++){
+    for(int j = 0; j < N*N; j++){
+
+      printf("--------------Iteration %d-----------\n", i);
+      printf("Changing pixel %d = %d\n", j, pixels[j]);
+
+      //if(i>0){
+      //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
+      //  gpuErrchk(cudaDeviceSynchronize());
+      //}
+
+      changeGibbs<<<1, 1>>>(I, temp, theta, states, pixels[j]);
+      gpuErrchk(cudaDeviceSynchronize());
+
+
+      chi2_t_0 = chiCuadrado(I);
+      chi2_t_1 = chiCuadrado(temp);
+      printf("chi2_t0: %f\n", chi2_t_0);
+      printf("chi2_t1: %f\n", chi2_t_1);
+      fprintf(outfile, "%f\n", chi2_t_0);
+      delta_chi2 = chi2_t_1 - chi2_t_0;
+      if(delta_chi2 <= 0){
+        printf("Acccepted Delta chi2: %f\n", delta_chi2);
+        gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+        /*if(print_images && i%3 == 0)
+          float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+        if(i >= burndown_steps){
+          sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+          gpuErrchk(cudaDeviceSynchronize());
+          accepted_afterburndown++;
+          continue;
+        }
+
+        sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        accepted++;
+        continue;
+
+      }
+      else{
+          printf("Not Accepted Delta chi2: %f\n", delta_chi2);
+          //l = exp(-delta_chi2);
+          //p = chi2_t_0 / chi2_t_1;
+          un_rand = Random();
+          if(-log(un_rand) > delta_chi2){
+            printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
+            gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+            /*if(print_images && i%3 == 0)
+              float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+            if(i >= burndown_steps){
+              sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+              gpuErrchk(cudaDeviceSynchronize());
+              accepted_afterburndown++;
+              continue;
+            }
+
+            sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
+            gpuErrchk(cudaDeviceSynchronize());
+            accepted++;
+            continue;
+
+          }
+      }
+    }
+    randomize(pixels, N*N);
   }
 
   avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);

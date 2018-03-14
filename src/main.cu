@@ -47,7 +47,7 @@ dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, it_maximum, status_mod_in;
-int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
+int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -492,6 +492,7 @@ __host__ int main(int argc, char **argv) {
 
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   float *input_alpha = (float*)malloc(M*N*sizeof(float));
+  pixels = (int*)malloc(M*N*sizeof(int));
   fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
 
   fits_open_file(&mod_in_alpha, alpha_name, 0, &status_alpha);
@@ -507,6 +508,7 @@ __host__ int main(int argc, char **argv) {
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
         host_2I[N*i+j].y = input_alpha[N*y+x];
+        pixels[N*i+j] = N*i+j;
         x--;
 		}
     x=M-1;
@@ -713,9 +715,9 @@ __host__ int main(int argc, char **argv) {
 	float fret = 0.0;
 
   float2 theta_init;
-  theta_init.x = minpix * fg_scale / (M);
+  theta_init.x = minpix * fg_scale;
   float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
-  theta_init.y = peak_alpha / (100 * M);
+  theta_init.y = peak_alpha / 100;
   free(input_alpha);
   free(input_Inu_0);
 
@@ -738,7 +740,7 @@ __host__ int main(int argc, char **argv) {
   gpuErrchk(cudaMemset(theta_device, 0, sizeof(float2)*M*N));
   gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
-  MCMC(device_2I, theta_device, it_maximum, variables.burndown_steps);
+  MCMC_Gibbs(device_2I, theta_device, it_maximum, variables.burndown_steps);
 	/*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
   chiCuadrado(device_2I);
   frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);

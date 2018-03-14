@@ -127,3 +127,4 @@ __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
 __global__ void random_init(unsigned int seed, curandState_t* states, long N);
 __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps);
+__host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps);

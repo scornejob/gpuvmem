@@ -1,0 +1,243 @@
+2018-03-12 20:37:40	INFO	casa::::	---
+2018-03-12 20:37:40	INFO	casa::::	CASA Version 5.0.34 (DEV r34)
+2018-03-12 20:37:40	INFO	casa::::	  Tagged on: 2016-10-07 01:05:31 UTC
+2018-03-12 20:38:18	INFO	plotms::::	
+2018-03-12 20:38:18	INFO	plotms::::+	##########################################
+2018-03-12 20:38:18	INFO	plotms::::+	##### Begin Task: plotms             #####
+2018-03-12 20:38:18	INFO	plotms::::	plotms(vis="co65_out.ms",gridrows=1,gridcols=1,rowindex=0,colindex=0,
+2018-03-12 20:38:18	INFO	plotms::::+	        plotindex=0,xaxis="",xdatacolumn="",yaxis=('', []),ydatacolumn="",
+2018-03-12 20:38:18	INFO	plotms::::+	        yaxislocation="",selectdata=True,field="",spw="",timerange="",
+2018-03-12 20:38:18	INFO	plotms::::+	        uvrange="",antenna="",scan="",correlation="",array="",
+2018-03-12 20:38:18	INFO	plotms::::+	        observation="",intent="",feed="",msselect="",averagedata=True,
+2018-03-12 20:38:18	INFO	plotms::::+	        avgchannel="",avgtime="",avgscan=False,avgfield=False,avgbaseline=False,
+2018-03-12 20:38:18	INFO	plotms::::+	        avgantenna=False,avgspw=False,scalar=False,transform=True,freqframe="",
+2018-03-12 20:38:18	INFO	plotms::::+	        restfreq="",veldef="RADIO",shift=[0.0, 0.0],extendflag=False,extcorr=False,
+2018-03-12 20:38:18	INFO	plotms::::+	        extchannel=False,iteraxis="",xselfscale=False,yselfscale=False,xsharedaxis=False,
+2018-03-12 20:38:18	INFO	plotms::::+	        ysharedaxis=False,customsymbol=False,symbolshape="autoscaling",symbolsize=2,symbolcolor="0000ff",
+2018-03-12 20:38:18	INFO	plotms::::+	        symbolfill="fill",symboloutline=False,coloraxis="",customflaggedsymbol=False,flaggedsymbolshape="circle",
+2018-03-12 20:38:18	INFO	plotms::::+	        flaggedsymbolsize=2,flaggedsymbolcolor="ff0000",flaggedsymbolfill="fill",flaggedsymboloutline=False,plotrange=[],
+2018-03-12 20:38:18	INFO	plotms::::+	        title="",titlefont=0,xlabel="",xaxisfont=0,ylabel="",
+2018-03-12 20:38:18	INFO	plotms::::+	        yaxisfont=0,showmajorgrid=False,majorwidth=1,majorstyle="",majorcolor="B0B0B0",
+2018-03-12 20:38:18	INFO	plotms::::+	        showminorgrid=False,minorwidth=1,minorstyle="",minorcolor="D0D0D0",showlegend=False,
+2018-03-12 20:38:18	INFO	plotms::::+	        legendposition="",plotfile="",expformat="",exprange="",highres=False,
+2018-03-12 20:38:18	INFO	plotms::::+	        dpi=-1,width=-1,height=-1,overwrite=False,showgui=True,
+2018-03-12 20:38:18	INFO	plotms::::+	        clearplots=True,callib=[''])
+2018-03-12 20:38:18	INFO	PlotMS::params_changed	Updating: REDRAW, MSDATA, CACHE, AXES, CANVAS, DISPLAY, ITERATION, LOG, PLOTMS_OPTIONS.
+2018-03-12 20:38:18	INFO	PlotMS::load_cache	Clearing the existing plotms cache.
+2018-03-12 20:38:18	INFO	PlotMS::load_cache	Clearing the existing plotms cache.
+2018-03-12 20:38:19	INFO	PlotMS::params_changed	Updating: REDRAW, MSDATA, CACHE, AXES, CANVAS, DISPLAY, ITERATION, LOG, PLOTMS_OPTIONS.
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	Clearing the existing plotms cache.
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	START     Current memory usage: 11876.4 kilobytes.
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:38:19	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. Time(2)...
+2018-03-12 20:38:19	INFO	plotms::::	Plot file 
+2018-03-12 20:38:19	INFO	plotms::::	##### End Task: plotms               #####
+2018-03-12 20:38:19	INFO	plotms::::+	##########################################
+2018-03-12 20:38:22	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:38:22	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.00294005 GB of memory (12.1508 bytes/point).
+2018-03-12 20:38:22	INFO	PlotMS::load_cache+	This is 0.0364967% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:38:22	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:38:23	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:38:23	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:38:23	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:38:23	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:38:23	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:38:23	INFO	PlotMS::load_cache+	Time: 4.84541e+09-4.84549e+09 (unflagged); 4.84541e+09-4.84549e+09 (flagged).
+2018-03-12 20:38:23	INFO	PlotMS::load_cache+	Amp: 0.00551249-2.74521 (unflagged); 0-178.387(flagged).
+2018-03-12 20:38:23	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:38:19	INFO	PlotMS::load_cache	END       Time: +4 seconds.  Memory: +18249.5 kilobytes.
+2018-03-12 20:38:46	INFO	PlotMS::params_changed	Updating: REDRAW, CACHE.
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	START     Current memory usage: 30379 kilobytes.
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:38:46	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. UVdist(28)...
+2018-03-12 20:38:49	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:38:49	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.0039079 GB of memory (16.1508 bytes/point).
+2018-03-12 20:38:49	INFO	PlotMS::load_cache+	This is 0.0485114% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:38:50	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:38:50	INFO	PlotMS::load_cache+	UVdist: 18.959-378.668 (unflagged); 19.1334-378.668 (flagged).
+2018-03-12 20:38:50	INFO	PlotMS::load_cache+	Amp: 0.00551249-2.74521 (unflagged); 0-178.387(flagged).
+2018-03-12 20:38:50	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:38:46	INFO	PlotMS::load_cache	END       Time: +3 seconds.  Memory: +1148.16 kilobytes.
+2018-03-12 20:39:39	INFO	plotms::::	
+2018-03-12 20:39:39	INFO	plotms::::+	##########################################
+2018-03-12 20:39:39	INFO	plotms::::+	##### Begin Task: plotms             #####
+2018-03-12 20:39:39	INFO	plotms::::	plotms(vis="co65.ms",gridrows=1,gridcols=1,rowindex=0,colindex=0,
+2018-03-12 20:39:39	INFO	plotms::::+	        plotindex=0,xaxis="",xdatacolumn="",yaxis=('', []),ydatacolumn="",
+2018-03-12 20:39:39	INFO	plotms::::+	        yaxislocation="",selectdata=True,field="",spw="",timerange="",
+2018-03-12 20:39:39	INFO	plotms::::+	        uvrange="",antenna="",scan="",correlation="",array="",
+2018-03-12 20:39:39	INFO	plotms::::+	        observation="",intent="",feed="",msselect="",averagedata=True,
+2018-03-12 20:39:39	INFO	plotms::::+	        avgchannel="",avgtime="",avgscan=False,avgfield=False,avgbaseline=False,
+2018-03-12 20:39:39	INFO	plotms::::+	        avgantenna=False,avgspw=False,scalar=False,transform=True,freqframe="",
+2018-03-12 20:39:39	INFO	plotms::::+	        restfreq="",veldef="RADIO",shift=[0.0, 0.0],extendflag=False,extcorr=False,
+2018-03-12 20:39:39	INFO	plotms::::+	        extchannel=False,iteraxis="",xselfscale=False,yselfscale=False,xsharedaxis=False,
+2018-03-12 20:39:39	INFO	plotms::::+	        ysharedaxis=False,customsymbol=False,symbolshape="autoscaling",symbolsize=2,symbolcolor="0000ff",
+2018-03-12 20:39:39	INFO	plotms::::+	        symbolfill="fill",symboloutline=False,coloraxis="",customflaggedsymbol=False,flaggedsymbolshape="circle",
+2018-03-12 20:39:39	INFO	plotms::::+	        flaggedsymbolsize=2,flaggedsymbolcolor="ff0000",flaggedsymbolfill="fill",flaggedsymboloutline=False,plotrange=[],
+2018-03-12 20:39:39	INFO	plotms::::+	        title="",titlefont=0,xlabel="",xaxisfont=0,ylabel="",
+2018-03-12 20:39:39	INFO	plotms::::+	        yaxisfont=0,showmajorgrid=False,majorwidth=1,majorstyle="",majorcolor="B0B0B0",
+2018-03-12 20:39:39	INFO	plotms::::+	        showminorgrid=False,minorwidth=1,minorstyle="",minorcolor="D0D0D0",showlegend=False,
+2018-03-12 20:39:39	INFO	plotms::::+	        legendposition="",plotfile="",expformat="",exprange="",highres=False,
+2018-03-12 20:39:39	INFO	plotms::::+	        dpi=-1,width=-1,height=-1,overwrite=False,showgui=True,
+2018-03-12 20:39:39	INFO	plotms::::+	        clearplots=True,callib=[''])
+2018-03-12 20:39:39	INFO	PlotMS::params_changed	Updating: REDRAW, MSDATA, CACHE, AXES, CANVAS, DISPLAY, ITERATION, LOG, PLOTMS_OPTIONS.
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	Clearing the existing plotms cache.
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	START     Current memory usage: 16265.5 kilobytes.
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:39:39	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. Time(2)...
+2018-03-12 20:39:39	INFO	plotms::::	Plot file 
+2018-03-12 20:39:39	INFO	plotms::::	##### End Task: plotms               #####
+2018-03-12 20:39:39	INFO	plotms::::+	##########################################
+2018-03-12 20:39:42	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:39:42	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.00294005 GB of memory (12.1508 bytes/point).
+2018-03-12 20:39:42	INFO	PlotMS::load_cache+	This is 0.0364967% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:39:42	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:39:43	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:39:43	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:39:43	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:39:43	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:39:43	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:39:43	INFO	PlotMS::load_cache+	Time: 4.84541e+09-4.84549e+09 (unflagged); 4.84541e+09-4.84549e+09 (flagged).
+2018-03-12 20:39:43	INFO	PlotMS::load_cache+	Amp: 0.048145-133.662 (unflagged); 0-178.387(flagged).
+2018-03-12 20:39:43	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:39:39	INFO	PlotMS::load_cache	END       Time: +4 seconds.  Memory: +15655.1 kilobytes.
+2018-03-12 20:39:52	INFO	PlotMS::params_changed	Updating: REDRAW, CACHE.
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	START     Current memory usage: 30836.5 kilobytes.
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:39:52	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. UVdist(28)...
+2018-03-12 20:39:55	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:39:55	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.0039079 GB of memory (16.1508 bytes/point).
+2018-03-12 20:39:55	INFO	PlotMS::load_cache+	This is 0.0485114% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:39:55	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:39:56	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:39:56	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:39:56	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:39:56	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:39:56	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:39:56	INFO	PlotMS::load_cache+	UVdist: 18.959-378.668 (unflagged); 19.1334-378.668 (flagged).
+2018-03-12 20:39:56	INFO	PlotMS::load_cache+	Amp: 0.048145-133.662 (unflagged); 0-178.387(flagged).
+2018-03-12 20:39:56	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:39:52	INFO	PlotMS::load_cache	END       Time: +3 seconds.  Memory: +1072.38 kilobytes.
+2018-03-12 20:43:38	INFO	plotms::::	
+2018-03-12 20:43:38	INFO	plotms::::+	##########################################
+2018-03-12 20:43:38	INFO	plotms::::+	##### Begin Task: plotms             #####
+2018-03-12 20:43:38	INFO	plotms::::	plotms(vis="co65_out.ms",gridrows=1,gridcols=1,rowindex=0,colindex=0,
+2018-03-12 20:43:38	INFO	plotms::::+	        plotindex=0,xaxis="",xdatacolumn="",yaxis=('', []),ydatacolumn="",
+2018-03-12 20:43:38	INFO	plotms::::+	        yaxislocation="",selectdata=True,field="",spw="",timerange="",
+2018-03-12 20:43:38	INFO	plotms::::+	        uvrange="",antenna="",scan="",correlation="",array="",
+2018-03-12 20:43:38	INFO	plotms::::+	        observation="",intent="",feed="",msselect="",averagedata=True,
+2018-03-12 20:43:38	INFO	plotms::::+	        avgchannel="",avgtime="",avgscan=False,avgfield=False,avgbaseline=False,
+2018-03-12 20:43:38	INFO	plotms::::+	        avgantenna=False,avgspw=False,scalar=False,transform=True,freqframe="",
+2018-03-12 20:43:38	INFO	plotms::::+	        restfreq="",veldef="RADIO",shift=[0.0, 0.0],extendflag=False,extcorr=False,
+2018-03-12 20:43:38	INFO	plotms::::+	        extchannel=False,iteraxis="",xselfscale=False,yselfscale=False,xsharedaxis=False,
+2018-03-12 20:43:38	INFO	plotms::::+	        ysharedaxis=False,customsymbol=False,symbolshape="autoscaling",symbolsize=2,symbolcolor="0000ff",
+2018-03-12 20:43:38	INFO	plotms::::+	        symbolfill="fill",symboloutline=False,coloraxis="",customflaggedsymbol=False,flaggedsymbolshape="circle",
+2018-03-12 20:43:38	INFO	plotms::::+	        flaggedsymbolsize=2,flaggedsymbolcolor="ff0000",flaggedsymbolfill="fill",flaggedsymboloutline=False,plotrange=[],
+2018-03-12 20:43:38	INFO	plotms::::+	        title="",titlefont=0,xlabel="",xaxisfont=0,ylabel="",
+2018-03-12 20:43:38	INFO	plotms::::+	        yaxisfont=0,showmajorgrid=False,majorwidth=1,majorstyle="",majorcolor="B0B0B0",
+2018-03-12 20:43:38	INFO	plotms::::+	        showminorgrid=False,minorwidth=1,minorstyle="",minorcolor="D0D0D0",showlegend=False,
+2018-03-12 20:43:38	INFO	plotms::::+	        legendposition="",plotfile="",expformat="",exprange="",highres=False,
+2018-03-12 20:43:38	INFO	plotms::::+	        dpi=-1,width=-1,height=-1,overwrite=False,showgui=True,
+2018-03-12 20:43:38	INFO	plotms::::+	        clearplots=True,callib=[''])
+2018-03-12 20:43:38	INFO	PlotMS::params_changed	Updating: REDRAW, MSDATA, CACHE, AXES, CANVAS, DISPLAY, ITERATION, LOG, PLOTMS_OPTIONS.
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	Clearing the existing plotms cache.
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	START     Current memory usage: 12943.8 kilobytes.
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:43:38	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. Time(2)...
+2018-03-12 20:43:38	INFO	plotms::::	Plot file 
+2018-03-12 20:43:38	INFO	plotms::::	##### End Task: plotms               #####
+2018-03-12 20:43:38	INFO	plotms::::+	##########################################
+2018-03-12 20:43:41	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:43:41	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.00294005 GB of memory (12.1508 bytes/point).
+2018-03-12 20:43:41	INFO	PlotMS::load_cache+	This is 0.0364967% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:43:41	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:43:42	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:43:42	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:43:42	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:43:42	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:43:42	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:43:42	INFO	PlotMS::load_cache+	Time: 4.84541e+09-4.84549e+09 (unflagged); 4.84541e+09-4.84549e+09 (flagged).
+2018-03-12 20:43:42	INFO	PlotMS::load_cache+	Amp: 0.00551249-2.74521 (unflagged); 0-178.387(flagged).
+2018-03-12 20:43:42	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:43:38	INFO	PlotMS::load_cache	END       Time: +3 seconds.  Memory: +17044 kilobytes.
+2018-03-12 20:43:55	INFO	PlotMS::params_changed	Updating: REDRAW, CACHE.
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	START     Current memory usage: 29440.1 kilobytes.
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	Plot Data Transformations:
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 Frame      = 
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 VelDef     = RADIO
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 RestFreq   = 0 MHz
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 dX         = 0 arcsec
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 dY         = 0 arcsec
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 formStokes = false
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	Data Averaging: None.
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	Plot Data Calibration:
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 Use Calibration    = 0
+2018-03-12 20:43:55	INFO	PlotMS::load_cache+	 Calibration Library   = 
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	Caching for the new plot: Amp(17) vs. UVdist(28)...
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Data selection will yield a total of 241964 plottable points (flagged and unflagged).
+2018-03-12 20:43:58	INFO	PlotMS::load_cache+	The plotms cache will require an estimated 0.0039079 GB of memory (16.1508 bytes/point).
+2018-03-12 20:43:58	INFO	PlotMS::load_cache+	This is 0.0485114% of the memory avail. to CASA (total=8.05564 GB).
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Loading chunks......
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Generating the plot mask.
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	refTime = 2012/06/03/00:00:00.0
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Finished loading.
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Setting up iteration indexing (if necessary), and calculating plot ranges.
+2018-03-12 20:43:58	INFO	PlotMS::load_cache	Global ranges:
+2018-03-12 20:43:58	INFO	PlotMS::load_cache+	UVdist: 18.959-378.668 (unflagged); 19.1334-378.668 (flagged).
+2018-03-12 20:43:58	INFO	PlotMS::load_cache+	Amp: 0.00551249-2.74521 (unflagged); 0-178.387(flagged).
+2018-03-12 20:43:58	INFO	PlotMS::plot	Plotting 107494 unflagged points.
+2018-03-12 20:43:55	INFO	PlotMS::load_cache	END       Time: +3 seconds.  Memory: +1122.48 kilobytes.
