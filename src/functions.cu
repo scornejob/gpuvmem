@@ -843,6 +843,7 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.blockSizeV = -1;
   variables.nu_0 = -1;
   variables.it_max = 500;
+  variables.burndown_steps = 0;
   variables.noise = -1;
   variables.epsilon = 0.0;
   variables.lambda = -1;
