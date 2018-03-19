@@ -38,6 +38,7 @@ typedef struct varsPerGPU{
   cufftHandle plan;
   cufftComplex *device_image;
   cufftComplex *device_V;
+  int *count;
 }varsPerGPU;
 
 typedef struct variablesPerField{

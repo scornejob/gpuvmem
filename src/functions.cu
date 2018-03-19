@@ -1309,8 +1309,8 @@ __global__ void do_gridding(float *u, float *v, cufftComplex *Vo, cufftComplex *
 	if(i < visibilities)
 	{
 		int k, j;
-		j = ceilf(u[i]/deltau + M/2);
-		k = ceilf(N/2 - v[i]/deltav);
+		j = roundf(u[i]/deltau + M/2);
+		k = roundf(v[i]/deltav + N/2);
 
 		if (k < M && j < N)
 		{
@@ -1329,7 +1329,7 @@ __global__ void calculateCoordinates(float *u_g, float *v_g, float deltau, float
   int i = blockDim.y * blockIdx.y + threadIdx.y;
 
   u_g[N*i+j] = j*deltau - (N/2)*deltau;
-  v_g[N*i+j] = i*deltau - (N/2)*deltav;
+  v_g[N*i+j] = i*deltav - (N/2)*deltav;
 }
 
 __global__ void calculateAvgVar(cufftComplex *V_g, float *w_g, int *count, int M, int N)
