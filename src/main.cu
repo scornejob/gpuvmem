@@ -49,7 +49,7 @@ float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cut
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding = 0, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
@@ -124,6 +124,7 @@ __host__ int main(int argc, char **argv) {
   random_probability = variables.randoms;
   reg_term = variables.reg_term;
   eta = variables.eta;
+  gridding = variables.gridding;
 
   multigpu = 0;
   firstgpu = -1;
@@ -275,9 +276,8 @@ __host__ int main(int argc, char **argv) {
 
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
+    fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
-    if(gridding)
-      fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   }
 
   //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
@@ -288,8 +288,26 @@ __host__ int main(int argc, char **argv) {
   		fields[f].visibilities[i].v = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
   		fields[f].visibilities[i].weight = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
   		fields[f].visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
-      fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
-      total_visibilities += fields[f].numVisibilitiesPerFreq[i];
+
+      if(gridding){
+    		fields[f].gridded_visibilities[i].u = (float*)malloc(M*N*sizeof(float));
+    		fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
+    		fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));
+    		fields[f].gridded_visibilities[i].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+        fields[f].gridded_visibilities[i].count = (int*)malloc(M*N*sizeof(int));
+        fields[f].visibilities[i].Vm = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+
+        memset(fields[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
+        memset(fields[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
+        memset(fields[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
+        memset(fields[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
+        memset(fields[f].gridded_visibilities[i].count, 0, M*N*sizeof(int));
+        memset(fields[f].visibilities[i].Vm, 0, M*N*sizeof(cufftComplex));
+        total_visibilities += M*N;
+      }else{
+          fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+          total_visibilities += fields[f].numVisibilitiesPerFreq[i];
+      }
   	}
   }
 
@@ -311,6 +329,19 @@ __host__ int main(int argc, char **argv) {
      readMS(msinput, fields, data);
   }
 
+
+float deltax = RPDEG*DELTAX; //radians
+float deltay = RPDEG*DELTAY; //radians
+deltau = 1.0 / (M * deltax);
+deltav = 1.0 / (N * deltay);
+
+if(gridding){
+  omp_set_num_threads(gridding);
+  do_gridding(fields, data, deltau, deltav, M, N);
+  omp_set_num_threads(num_gpus);
+}
+
+  float sum_weights = calculateNoise(fields, data, total_visibilities, variables.blockSizeV);
   if(verbose_flag){
     printf("MS File Successfully Read\n");
     if(beam_noise == -1){
@@ -318,40 +349,6 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
-  //Declaring block size and number of blocks for visibilities
-  float sum_inverse_weight = 0.0;
-  float sum_weights = 0.0;
-  for(int f=0; f<data.nfields; f++){
-  	for(int i=0; i< data.total_frequencies; i++){
-      //Calculating beam noise
-      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-        if(fields[f].visibilities[i].weight[j] > 0.0){
-          sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
-          sum_weights += fields[f].visibilities[i].weight[j];
-        }
-      }
-
-  		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
-  		long UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
-      fields[f].visibilities[i].threadsPerBlockUV = variables.blockSizeV;
-  		fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
-    }
-  }
-
-  if(verbose_flag){
-      float aux_noise = sqrt(sum_inverse_weight)/total_visibilities;
-      printf("Calculated NOISE %e\n", aux_noise);
-      printf("Using canvas NOISE anyway...\n");
-      printf("Canvas NOISE = %e\n", beam_noise);
-  }
-
-  if(beam_noise == -1){
-      beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
-      if(verbose_flag){
-        printf("No NOISE value detected in canvas...\n");
-        printf("Using NOISE: %e ...\n", beam_noise);
-      }
-  }
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -363,14 +360,6 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vr, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
-        if(gridding){
-          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].u, sizeof(float)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].v, sizeof(float)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vo, sizeof(cufftComplex)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].weight, sizeof(float)*M*N));
-          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vr, sizeof(cufftComplex)*M*N));
-        }
   		}
     }
 	}else{
@@ -383,14 +372,6 @@ __host__ int main(int argc, char **argv) {
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
   			gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vr, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
-        if(gridding){
-          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].u, sizeof(float)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].v, sizeof(float)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vo, sizeof(cufftComplex)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].weight, sizeof(float)*M*N));
-          gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N));
-    			gpuErrchk(cudaMalloc(&fields[f].gridded_visibilities[i].Vr, sizeof(cufftComplex)*M*N));
-        }
   		}
     }
 	}
@@ -479,13 +460,6 @@ __host__ int main(int argc, char **argv) {
   }else{
     MINPIX = minpix;
   }
-
-	float deltax = RPDEG*DELTAX; //radians
-	float deltay = RPDEG*DELTAY; //radians
-	deltau = 1.0 / (M * deltax);
-	deltav = 1.0 / (N * deltay);
-
-
 
 	cufftComplex *host_I = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////

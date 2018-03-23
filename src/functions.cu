@@ -858,10 +858,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.minpix = -1;
   variables.reg_term = 0;
   variables.eta = -1.0;
+  variables.gridding = 0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:e:p:P:X:Y:V:t:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:e:p:P:X:Y:V:t:g:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -881,7 +882,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"eta", 0, NULL, 'e'},
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
-                                    {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' },{ NULL, 0, NULL, 0 }};
+                                    {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' }, {"gridding", 0, NULL, 'g' }, { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
 		printf(
@@ -982,6 +983,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 't':
       variables.it_max = atoi(optarg);
       break;
+    case 'g':
+      variables.gridding = atoi(optarg);
+      break;
 		case '?':
 			print_help();
 			exit(EXIT_FAILURE);
@@ -1011,6 +1015,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 
   if(variables.randoms > 1.0){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
+  if(variables.gridding < 0){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1303,7 +1312,140 @@ __host__ T deviceReduce(T *in, long N)
 	return sum;
 }
 
-__global__ void do_gridding(float *u, float *v, cufftComplex *Vo, cufftComplex *Vo_g, float *w, float *w_g, int* count, float deltau, float deltav, int visibilities, int M, int N)
+__host__ void do_gridding(Field *fields, freqData data, float deltau, float deltav, int M, int N)
+{
+  for(int f=0; f<data.nfields; f++){
+  	for(int i=0; i < data.total_frequencies; i++){
+
+      #pragma omp parallel for schedule(static,1)
+      for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
+        int k,j;
+        float u,v;
+        cufftComplex Vo;
+
+        u  = fields[f].visibilities[i].u[z];
+        v =  fields[f].visibilities[i].v[z];
+        Vo = fields[f].visibilities[i].Vo[z];
+
+        //Correct scale and apply hermitian symmetry (it will be applied afterwards)
+        if(u < 0.0){
+          u *= -1.0;
+          v *= -1.0;
+          Vo.y *= -1.0;
+        }
+
+        u *= fields[f].visibilities[i].freq / LIGHTSPEED;
+        v *= fields[f].visibilities[i].freq / LIGHTSPEED;
+
+        j = roundf(u/deltau + M/2);
+    		k = roundf(v/deltav + N/2);
+
+        if(k < M && j<N){
+          #pragma omp critical
+          {
+            fields[f].gridded_visibilities[i].Vo[N*k+j].x += Vo.x;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y += Vo.y;
+            fields[f].gridded_visibilities[i].weight[N*k+j] += 1.0 / fields[f].visibilities[i].weight[z];
+            fields[f].gridded_visibilities[i].count[N*k+j]++;
+          }
+        }
+
+        if(fields[f].visibilities[i].u[z] < 0.0){
+          fields[f].gridded_visibilities[i].Vo[N*k+j].y += -1.0;
+        }
+      }
+
+
+      #pragma omp parallel for schedule(static,1)
+      for(int k=0; k<M; k++){
+        for(int j=0; j<N; j++){
+          float deltau_meters = deltau * (LIGHTSPEED/fields[f].visibilities[i].freq);
+          float deltav_meters = deltav * (LIGHTSPEED/fields[f].visibilities[i].freq);
+          fields[f].gridded_visibilities[i].u[N*k+j] = j*deltau_meters - (N/2)*deltau_meters;
+          fields[f].gridded_visibilities[i].v[N*k+j] = k*deltav_meters - (N/2)*deltav_meters;
+
+          int counter = fields[f].gridded_visibilities[i].count[N*k+j];
+          if(counter > 0){
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y = fields[f].gridded_visibilities[i].Vo[N*k+j].y / counter;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].x = fields[f].gridded_visibilities[i].Vo[N*k+j].x / counter;
+            fields[f].gridded_visibilities[i].weight[N*k+j] = counter / fields[f].gridded_visibilities[i].weight[N*k+j];
+          }else{
+            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
+          }
+        }
+      }
+
+      fields[f].visibilities[i].u = (float*)realloc(fields[f].visibilities[i].u, M*N*sizeof(float));
+      fields[f].visibilities[i].v = (float*)realloc(fields[f].visibilities[i].v, M*N*sizeof(float));
+
+      fields[f].visibilities[i].Vo = (cufftComplex*)realloc(fields[f].visibilities[i].Vo, M*N*sizeof(cufftComplex));
+
+      fields[f].visibilities[i].weight = (float*)realloc(fields[f].visibilities[i].weight, M*N*sizeof(float));
+
+      memcpy(fields[f].visibilities[i].u, fields[f].gridded_visibilities[i].u, M*N*sizeof(float));
+
+      memcpy(fields[f].visibilities[i].v, fields[f].gridded_visibilities[i].v, M*N*sizeof(float));
+
+      memcpy(fields[f].visibilities[i].Vo, fields[f].gridded_visibilities[i].Vo, M*N*sizeof(cufftComplex));
+
+      memcpy(fields[f].visibilities[i].weight, fields[f].gridded_visibilities[i].weight, M*N*sizeof(float));
+
+
+      free(fields[f].gridded_visibilities[i].u);
+      free(fields[f].gridded_visibilities[i].v);
+      free(fields[f].gridded_visibilities[i].Vo);
+      free(fields[f].gridded_visibilities[i].weight);
+      free(fields[f].gridded_visibilities[i].count);
+
+      fields[f].numVisibilitiesPerFreq[i] = M*N;
+
+    }
+  }
+}
+
+__host__ float calculateNoise(Field *fields, freqData data, int total_visibilities, int blockSizeV)
+{
+  //Declaring block size and number of blocks for visibilities
+  float sum_inverse_weight = 0.0;
+  float sum_weights = 0.0;
+  long UVpow2;
+
+  for(int f=0; f<data.nfields; f++){
+  	for(int i=0; i< data.total_frequencies; i++){
+      //Calculating beam noise
+      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
+        if(fields[f].visibilities[i].weight[j] > 0.0){
+          sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+          sum_weights += fields[f].visibilities[i].weight[j];
+        }
+      }
+
+  		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
+  		UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
+      fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
+  		fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
+    }
+  }
+
+
+  if(verbose_flag){
+      float aux_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      printf("Calculated NOISE %e\n", aux_noise);
+      printf("Using canvas NOISE anyway...\n");
+      printf("Canvas NOISE = %e\n", beam_noise);
+  }
+
+  if(beam_noise == -1){
+      beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      if(verbose_flag){
+        printf("No NOISE value detected in canvas...\n");
+        printf("Using NOISE: %e ...\n", beam_noise);
+      }
+  }
+
+  return sum_weights;
+}
+/*__global__ void do_gridding(float *u, float *v, cufftComplex *Vo, cufftComplex *Vo_g, float *w, float *w_g, int* count, float deltau, float deltav, int visibilities, int M, int N)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if(i < visibilities)
@@ -1345,7 +1487,7 @@ __global__ void calculateAvgVar(cufftComplex *V_g, float *w_g, int *count, int M
   }else{
     w_g[N*i+j] = 0.0;
   }
-}
+}*/
 
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities)
 {
@@ -2020,11 +2162,17 @@ __host__ float chiCuadrado(cufftComplex *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          if(!gridding){
+            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+        	   gpuErrchk(cudaDeviceSynchronize());
 
-          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-          gpuErrchk(cudaDeviceSynchronize());
+             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+             gpuErrchk(cudaDeviceSynchronize());
+          }else{
+            residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, device_V, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+            gpuErrchk(cudaDeviceSynchronize());
+
+          }
 
         	////chi 2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
@@ -2069,11 +2217,16 @@ __host__ float chiCuadrado(cufftComplex *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          if(!gridding){
+            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+        	   gpuErrchk(cudaDeviceSynchronize());
 
-          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-          gpuErrchk(cudaDeviceSynchronize());
+             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+             gpuErrchk(cudaDeviceSynchronize());
+          }else{
+            residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+            gpuErrchk(cudaDeviceSynchronize());
+          }
 
         	////chi2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_gpu[i%num_gpus].device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
