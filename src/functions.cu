@@ -1332,8 +1332,9 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
         Vx[i] *= -1.0;
         Vo[i].y *= -1.0;
       }
-      Ux[i] = (Ux[i] * freq) / LIGHTSPEED;
-      Vx[i] = (Vx[i] * freq) / LIGHTSPEED;
+
+      Ux[i] *= freq / LIGHTSPEED;
+      Vx[i] *= freq / LIGHTSPEED;
   }
 }
 
@@ -1411,7 +1412,7 @@ __global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, 
 
     float atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
-    image[N*i+j].x = image[N*i+j].x * fg_scale * atten;
+    image[N*i+j].x = image[N*i+j].x * atten * fg_scale;
     //image[N*i+j].x = image[N*i+j].x * atten;
     image[N*i+j].y = 0.0;
 }
@@ -1962,7 +1963,7 @@ __global__ void DChi2_total_alpha(float *noise, float2 *dchi2_total, float *dchi
   alpha = I[N*i+j].y;
 
   dI_nu_0 = powf(nudiv, alpha);
-  dalpha = dI_nu_0 * I_nu_0 * fg_scale * logf(nudiv);
+  dalpha = I_nu_0 * dI_nu_0 * fg_scale * logf(nudiv);
   /*if (i==242 & j==277)
     printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
 
@@ -1990,7 +1991,7 @@ __global__ void DChi2_total_I_nu_0(float *noise, float2 *dchi2_total, float *dch
   alpha = I[N*i+j].y;
 
   dI_nu_0 = powf(nudiv, alpha);
-  dalpha = dI_nu_0 * I_nu_0 * fg_scale * logf(nudiv);
+  dalpha = I_nu_0 * dI_nu_0 * fg_scale * logf(nudiv);
 
   /*if (i==242 & j==277)
     printf("nu : %e, dalpha : %e\n", nu, dalpha);*/
@@ -2059,14 +2060,13 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  if(epsilon){
-    LVectorAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_S_alpha, device_noise_image, I, N, noise_cut);
-    gpuErrchk(cudaDeviceSynchronize());
-  }
-
   clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, eta, threshold, flag_opt);
   gpuErrchk(cudaDeviceSynchronize());
 
+  if(iter>0 && epsilon){
+    LVectorAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_S_alpha, device_noise_image, I, N, noise_cut);
+    gpuErrchk(cudaDeviceSynchronize());
+  }
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){
@@ -2253,7 +2253,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_dS_alpha, 0, sizeof(float)*M*N));
 
-  if(iter>0 && lambda!=0.0 && flag_opt==1){
+  if(iter>0 && lambda!=0.0 && flag_opt%2==0){
     switch(reg_term){
       case 0:
         DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, eta, N);
@@ -2278,7 +2278,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
     }
   }
 
-  if(epsilon && flag_opt != 1){
+  if(epsilon && flag_opt%2!=0){
     DLAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_dS_alpha, I, device_noise_image, noise_cut, epsilon, N);
     gpuErrchk(cudaDeviceSynchronize());
   }
