@@ -175,9 +175,9 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
     exit(0);
   }
 
-  //if(status_noise){
-  c_vars.beam_noise = b_noise_aux;
-  //}
+  if(status_noise){
+    c_vars.beam_noise = b_noise_aux;
+  }
 
   c_vars.beam_bmaj = c_vars.beam_bmaj/-c_vars.DELTAX;
   c_vars.beam_bmin = c_vars.beam_bmin/-c_vars.DELTAX;
