@@ -1312,21 +1312,94 @@ __host__ T deviceReduce(T *in, long N)
 	return sum;
 }
 
+template <typename T, typename C>
+__host__
+void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
+{
+    // 2D Slice & 1D Line
+    int sLine = N;
+    int sSlice = M * N;
+
+    // Transformations Equations
+    int sEq1 = (sSlice + sLine) / 2;
+    int sEq2 = (sSlice - sLine) / 2;
+
+    for(int i = 0; i < M; i++){
+      for(int j = 0; j < N; j++){
+        // Thread Index (2D)
+        int xIndex =  j;
+        int yIndex = i;
+
+        // Thread Index Converted into 1D Index
+        int index = (yIndex * N) + xIndex;
+
+        T regTemp;
+        C uTemp;
+        C vTemp;
+        C wTemp;
+
+        if (xIndex < N / 2)
+        {
+          if (yIndex < M / 2)
+          {
+            regTemp = data[index];
+            uTemp = u[index];
+            vTemp = v[index];
+            wTemp = w[index];
+
+            // First Quad
+            data[index] = data[index + sEq1];
+            u[index] = u[index + sEq1];
+            v[index] = v[index + sEq1];
+            w[index] = w[index + sEq1];
+
+            // Third Quad
+            data[index + sEq1] = regTemp;
+            u[index + sEq1] = uTemp;
+            v[index + sEq1] = vTemp;
+            w[index + sEq1] = wTemp;
+          }
+        }
+        else
+        {
+          if (yIndex < M / 2)
+          {
+            regTemp = data[index];
+            uTemp = u[index];
+            vTemp = v[index];
+            wTemp = w[index];
+
+            // Second Quad
+            data[index] = data[index + sEq2];
+            v[index] = u[index + sEq2];
+            u[index] = v[index + sEq2];
+            w[index] = w[index + sEq2];
+
+            // Fourth Quad
+            data[index + sEq2] = regTemp;
+            u[index + sEq2] = uTemp;
+            v[index + sEq2] = vTemp;
+            w[index + sEq2] = wTemp;
+          }
+        }
+      }
+    }
+}
+
 __host__ void do_gridding(Field *fields, freqData data, float deltau, float deltav, int M, int N)
 {
   for(int f=0; f<data.nfields; f++){
   	for(int i=0; i < data.total_frequencies; i++){
-
       #pragma omp parallel for schedule(static,1)
       for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
         int k,j;
-        float u,v;
+        float u, v, w;
         cufftComplex Vo;
 
         u  = fields[f].visibilities[i].u[z];
         v =  fields[f].visibilities[i].v[z];
         Vo = fields[f].visibilities[i].Vo[z];
-
+        w = fields[f].visibilities[i].weight[z];
         //Correct scale and apply hermitian symmetry (it will be applied afterwards)
         if(u < 0.0){
           u *= -1.0;
@@ -1337,40 +1410,41 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
         u *= fields[f].visibilities[i].freq / LIGHTSPEED;
         v *= fields[f].visibilities[i].freq / LIGHTSPEED;
 
-        j = roundf(u/deltau + M/2);
-    		k = roundf(v/deltav + N/2);
+        j = roundf(u/fabsf(deltau) + N/2);
+    		k = roundf(v/fabsf(deltav) + M/2);
 
-        if(k < M && j<N){
-          #pragma omp critical
-          {
-            fields[f].gridded_visibilities[i].Vo[N*k+j].x += Vo.x;
-            fields[f].gridded_visibilities[i].Vo[N*k+j].y += Vo.y;
-            fields[f].gridded_visibilities[i].weight[N*k+j] += 1.0 / fields[f].visibilities[i].weight[z];
-            fields[f].gridded_visibilities[i].count[N*k+j]++;
+        #pragma omp critical
+        {
+          if(k < M && j < N){
+              fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
+              fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
+              fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+              //fields[f].gridded_visibilities[i].count[N*k+j]++;
           }
         }
-
-        if(fields[f].visibilities[i].u[z] < 0.0){
-          fields[f].gridded_visibilities[i].Vo[N*k+j].y += -1.0;
-        }
       }
-
 
       #pragma omp parallel for schedule(static,1)
       for(int k=0; k<M; k++){
         for(int j=0; j<N; j++){
-          float deltau_meters = deltau * (LIGHTSPEED/fields[f].visibilities[i].freq);
-          float deltav_meters = deltav * (LIGHTSPEED/fields[f].visibilities[i].freq);
-          fields[f].gridded_visibilities[i].u[N*k+j] = j*deltau_meters - (N/2)*deltau_meters;
-          fields[f].gridded_visibilities[i].v[N*k+j] = k*deltav_meters - (N/2)*deltav_meters;
+          float deltau_meters = fabsf(deltau) * (LIGHTSPEED/fields[f].visibilities[i].freq);
+          float deltav_meters = fabsf(deltav) * (LIGHTSPEED/fields[f].visibilities[i].freq);
 
-          int counter = fields[f].gridded_visibilities[i].count[N*k+j];
-          if(counter > 0){
-            fields[f].gridded_visibilities[i].Vo[N*k+j].y = fields[f].gridded_visibilities[i].Vo[N*k+j].y / counter;
-            fields[f].gridded_visibilities[i].Vo[N*k+j].x = fields[f].gridded_visibilities[i].Vo[N*k+j].x / counter;
-            fields[f].gridded_visibilities[i].weight[N*k+j] = counter / fields[f].gridded_visibilities[i].weight[N*k+j];
+          float u_meters = (j - (N/2)) * deltau_meters;
+          float v_meters = (k - (M/2)) * deltav_meters;
+
+          fields[f].gridded_visibilities[i].u[N*k+j] = u_meters;
+          fields[f].gridded_visibilities[i].v[N*k+j] = v_meters;
+
+          //int counter = fields[f].gridded_visibilities[i].count[N*k+j];
+          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
+          if(weight > 0.0){
+            fields[f].gridded_visibilities[i].Vo[N*k+j].x /= fields[f].gridded_visibilities[i].weight[N*k+j];
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y /= fields[f].gridded_visibilities[i].weight[N*k+j];
+            //fields[f].gridded_visibilities[i].weight[N*k+j] = (counter*counter) / fields[f].gridded_visibilities[i].weight[N*k+j];
+            //fields[f].gridded_visibilities[i].weight[N*k+j] = 1;
           }else{
-            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
+            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0;
           }
         }
       }
@@ -1390,6 +1464,7 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
 
       memcpy(fields[f].visibilities[i].weight, fields[f].gridded_visibilities[i].weight, M*N*sizeof(float));
 
+      //fftShift_2D<cufftComplex, float>(fields[f].visibilities[i].Vo, fields[f].visibilities[i].weight, fields[f].visibilities[i].u, fields[f].visibilities[i].v, M, N);
 
       free(fields[f].gridded_visibilities[i].u);
       free(fields[f].gridded_visibilities[i].v);
@@ -1397,7 +1472,8 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
       free(fields[f].gridded_visibilities[i].weight);
       free(fields[f].gridded_visibilities[i].count);
 
-      fields[f].numVisibilitiesPerFreq[i] = M*N;
+      if(fields[f].numVisibilitiesPerFreq[i] > 0)
+        fields[f].numVisibilitiesPerFreq[i] = M*N;
 
     }
   }
@@ -1499,8 +1575,8 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
         Vx[i] *= -1.0;
         Vo[i].y *= -1.0;
       }
-      Ux[i] = (Ux[i] * freq) / LIGHTSPEED;
-      Vx[i] = (Vx[i] * freq) / LIGHTSPEED;
+      Ux[i] *= freq / LIGHTSPEED;
+      Vx[i] *= freq / LIGHTSPEED;
   }
 }
 
@@ -2162,17 +2238,17 @@ __host__ float chiCuadrado(cufftComplex *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          if(!gridding){
-            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	   gpuErrchk(cudaDeviceSynchronize());
+          //if(!gridding){
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+        	gpuErrchk(cudaDeviceSynchronize());
 
-             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-             gpuErrchk(cudaDeviceSynchronize());
-          }else{
+          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
+          /*}else{
             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, device_V, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
             gpuErrchk(cudaDeviceSynchronize());
 
-          }
+          }*/
 
         	////chi 2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
@@ -2217,16 +2293,16 @@ __host__ float chiCuadrado(cufftComplex *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          if(!gridding){
-            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	   gpuErrchk(cudaDeviceSynchronize());
+          //if(!gridding){
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+        	gpuErrchk(cudaDeviceSynchronize());
 
-             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-             gpuErrchk(cudaDeviceSynchronize());
-          }else{
+          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+          gpuErrchk(cudaDeviceSynchronize());
+        /*  }else{
             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
             gpuErrchk(cudaDeviceSynchronize());
-          }
+          }*/
 
         	////chi2 VECTOR
         	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(vars_gpu[i%num_gpus].device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
