@@ -1883,7 +1883,11 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 	int i = threadIdx.x + blockDim.x * blockIdx.x;
 
 	if (i < numVisibilities){
-		chi2[i] =  w[i] * ((Vr[i].x * Vr[i].x) + (Vr[i].y * Vr[i].y));
+    if(w[i] > 0.0){
+		    chi2[i] =  w[i] * ((Vr[i].x * Vr[i].x) + (Vr[i].y * Vr[i].y));
+    }else{
+        chi2[i] = 0.0f;
+    }
 	}
 
 }
@@ -2092,15 +2096,19 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
   float dchi2 = 0.0;
   if(noise[N*i+j] <= noise_cut){
   	for(int v=0; v<numVisibilities; v++){
-      Ukv = x * U[v];
-  		Vkv = y * V[v];
-      #if (__CUDA_ARCH__ >= 300 )
-        sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
-      #else
-        cosk = cospif(2.0*(Ukv+Vkv));
-        sink = sinpif(2.0*(Ukv+Vkv));
-      #endif
-      dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
+      if(w[v] > 0.0){ //This IF is false only when we use gridding.
+        Ukv = x * U[v];
+    		Vkv = y * V[v];
+        #if (__CUDA_ARCH__ >= 300 )
+          sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
+        #else
+          cosk = cospif(2.0*(Ukv+Vkv));
+          sink = sinpif(2.0*(Ukv+Vkv));
+        #endif
+        dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
+      }else{
+        dchi2 += 0.0;
+      }
   	}
 
   dchi2 *= fg_scale * atten;
