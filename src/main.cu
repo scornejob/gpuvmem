@@ -294,14 +294,12 @@ __host__ int main(int argc, char **argv) {
     		fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
     		fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));
     		fields[f].gridded_visibilities[i].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-        fields[f].gridded_visibilities[i].count = (int*)malloc(M*N*sizeof(int));
         fields[f].visibilities[i].Vm = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 
         memset(fields[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
-        memset(fields[f].gridded_visibilities[i].count, 0, M*N*sizeof(int));
         memset(fields[f].visibilities[i].Vm, 0, M*N*sizeof(cufftComplex));
         total_visibilities += M*N;
       }else{

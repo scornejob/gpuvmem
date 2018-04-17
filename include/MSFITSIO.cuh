@@ -67,7 +67,6 @@ typedef struct observedVisibilities{
   long numVisibilities;
 
   int *stokes;
-  int *count;
   int threadsPerBlockUV;
   int numBlocksUV;
 }Vis;

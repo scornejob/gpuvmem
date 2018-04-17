@@ -1419,7 +1419,6 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
               fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
               fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
               fields[f].gridded_visibilities[i].weight[N*k+j] += w;
-              //fields[f].gridded_visibilities[i].count[N*k+j]++;
           }
         }
       }
@@ -1436,7 +1435,6 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
           fields[f].gridded_visibilities[i].u[N*k+j] = u_meters;
           fields[f].gridded_visibilities[i].v[N*k+j] = v_meters;
 
-          //int counter = fields[f].gridded_visibilities[i].count[N*k+j];
           float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
           if(weight > 0.0){
             fields[f].gridded_visibilities[i].Vo[N*k+j].x /= fields[f].gridded_visibilities[i].weight[N*k+j];
@@ -1470,7 +1468,6 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
       free(fields[f].gridded_visibilities[i].v);
       free(fields[f].gridded_visibilities[i].Vo);
       free(fields[f].gridded_visibilities[i].weight);
-      free(fields[f].gridded_visibilities[i].count);
 
       if(fields[f].numVisibilitiesPerFreq[i] > 0)
         fields[f].numVisibilitiesPerFreq[i] = M*N;
