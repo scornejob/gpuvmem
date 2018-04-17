@@ -743,13 +743,21 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
             for (int sto=0; sto< data.nstokes; sto++){
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false && weights[sto] > 0.0){
-                comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
-                comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
-                dataCol[j][sto] = comp;
-                if(random_probability != 1.0)
+                if(h < fields[f].numVisibilitiesPerFreq[g]){
+                  comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
+                  comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
+                  dataCol[j][sto] = comp;
                   weights[sto] = fields[f].visibilities[g].weight[h];
 
-                h++;
+                  h++;
+               }else{
+                 comp.real() = 0.0f;
+                 comp.imag() = 0.0f;
+                 dataCol[j][sto] = comp;
+                 weights[sto] = 0.0f;
+
+                 h++;
+               }
               }
             }
             row.put(k);
