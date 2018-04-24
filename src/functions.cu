@@ -2068,7 +2068,7 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
-  if(iter>0 && lambda!=0.0){
+  if(iter>0 && lambda){
     switch(reg_term){
       case 0:
         SVector<<<numBlocksNN, threadsPerBlockNN>>>(device_S, device_noise_image, I, N, noise_cut, MINPIX, eta);
@@ -2214,11 +2214,11 @@ __host__ float chiCuadrado(float2 *I)
     cudaSetDevice(firstgpu);
   }
 
-  resultS = deviceReduce<float>(device_S, M*N);
+  if(lambda && iter > 0)
+    resultS = deviceReduce<float>(device_S, M*N);
 
-  if(epsilon){
+  if(epsilon && iter > 0)
     resultS_alpha = deviceReduce<float>(device_S_alpha, M*N);
-  }
 
   resultPhi = (0.5 * resultchi2) + (lambda * resultS) + (epsilon * resultS_alpha);
 
@@ -2253,7 +2253,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   gpuErrchk(cudaMemset(device_dS, 0, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_dS_alpha, 0, sizeof(float)*M*N));
 
-  if(iter>0 && lambda!=0.0 && flag_opt%2==0){
+  if(iter>0 && lambda && flag_opt%2==0){
     switch(reg_term){
       case 0:
         DS<<<numBlocksNN, threadsPerBlockNN>>>(device_dS, I, device_noise_image, noise_cut, lambda, MINPIX, eta, N);
