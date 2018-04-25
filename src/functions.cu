@@ -1562,7 +1562,7 @@ __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, f
     }
     I[N*i+j].y = 0.0f;
   }else{
-    if(I[N*i+j].x < threshold){
+    if(I[N*i+j].x < threshold && schedule > 0){
       I[N*i+j].y = 0.0f;
     }
   }
