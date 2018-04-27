@@ -16,7 +16,7 @@ make
 ```
 # Usage
 
-Create your mod_in_0.fits with difmap or CASA.
+Create your canvas or mod_in_0.fits with difmap or CASA, typically we use a FITS CASA CLEAN image of the desired object.
 Create your input.dat file with the following data and change the parameters if you want:
 
 ```
@@ -81,7 +81,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 
 Remember to create the mem folder to save the FITS images
 
-#FIXES
+# FIXES
 
 We have fixed the Makefile and now you can compile gpuvmem using the new version of casacore.
 
