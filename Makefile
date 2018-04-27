@@ -2,12 +2,12 @@
 # by Miguel Cárcamo
 
 CUFFTFLAG = -lcufft
-CFLAGS = -D_FORCE_INLINES -c -w -O3 -Xptxas -O3 
+CFLAGS = -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
 INC_DIRS = -Iinclude -I/usr/local/include/casacore/
-CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms
+CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
 LDFLAGS = -lcuda -lcudart
 FOPENFLAG = -Xcompiler -fopenmp -lgomp
-CCFLAG = -lstdc++ 
+CCFLAG = -lstdc++
 # Gencode arguments
 SMS ?= 30 35 37 50 52
 
