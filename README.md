@@ -82,6 +82,10 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 
 Remember to create the mem folder to save the FITS images
 
+#FIXES
+
+We have fixed the Makefile and now you can compile gpuvmem using the new version of casacore.
+
 # RESTORING YOUR IMAGE
 
 Usage:
