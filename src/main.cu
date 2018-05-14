@@ -294,17 +294,13 @@ __host__ int main(int argc, char **argv) {
     		fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
     		fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));
     		fields[f].gridded_visibilities[i].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-        fields[f].visibilities[i].Vm = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 
         memset(fields[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
         memset(fields[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
-        memset(fields[f].visibilities[i].Vm, 0, M*N*sizeof(cufftComplex));
-        total_visibilities += M*N;
       }else{
           fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
-          total_visibilities += fields[f].numVisibilitiesPerFreq[i];
       }
   	}
   }
@@ -335,7 +331,7 @@ deltav = 1.0 / (N * deltay);
 
 if(gridding){
   omp_set_num_threads(gridding);
-  do_gridding(fields, data, deltau, deltav, M, N);
+  do_gridding(fields, &data, deltau, deltav, M, N, &total_visibilities);
   omp_set_num_threads(num_gpus);
 }
 
@@ -380,13 +376,9 @@ if(gridding){
     gpuErrchk(cudaMalloc((void**)&device_dchi2, sizeof(float)*M*N));
     gpuErrchk(cudaMemset(device_dchi2, 0, sizeof(float)*M*N));
 
-    if(gridding){
-      gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*M*N));
-      gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*M*N));
-    }else{
-      gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
-      gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
-    }
+    gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel));
+    gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel));
+
 
     for(int f=0; f<data.nfields; f++){
       gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(float)*M*N));

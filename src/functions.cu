@@ -1386,10 +1386,10 @@ void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
     }
 }
 
-__host__ void do_gridding(Field *fields, freqData data, float deltau, float deltav, int M, int N)
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
 {
-  for(int f=0; f<data.nfields; f++){
-  	for(int i=0; i < data.total_frequencies; i++){
+  for(int f=0; f<data->nfields; f++){
+  	for(int i=0; i < data->total_frequencies; i++){
       #pragma omp parallel for schedule(static,1)
       for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
         int k,j;
@@ -1423,6 +1423,7 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
         }
       }
 
+      int visCounter = 0;
       #pragma omp parallel for schedule(static,1)
       for(int k=0; k<M; k++){
         for(int j=0; j<N; j++){
@@ -1436,44 +1437,65 @@ __host__ void do_gridding(Field *fields, freqData data, float deltau, float delt
           fields[f].gridded_visibilities[i].v[N*k+j] = v_meters;
 
           float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
-          if(weight > 0.0){
-            fields[f].gridded_visibilities[i].Vo[N*k+j].x /= fields[f].gridded_visibilities[i].weight[N*k+j];
-            fields[f].gridded_visibilities[i].Vo[N*k+j].y /= fields[f].gridded_visibilities[i].weight[N*k+j];
-            //fields[f].gridded_visibilities[i].weight[N*k+j] = (counter*counter) / fields[f].gridded_visibilities[i].weight[N*k+j];
-            //fields[f].gridded_visibilities[i].weight[N*k+j] = 1;
+          if(weight > 0.0f){
+            fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
+            #pragma omp critical
+            {
+                visCounter++;
+            }
           }else{
-            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0;
+            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
           }
         }
       }
 
-      fields[f].visibilities[i].u = (float*)realloc(fields[f].visibilities[i].u, M*N*sizeof(float));
-      fields[f].visibilities[i].v = (float*)realloc(fields[f].visibilities[i].v, M*N*sizeof(float));
+      fields[f].visibilities[i].u = (float*)realloc(fields[f].visibilities[i].u, visCounter*sizeof(float));
+      fields[f].visibilities[i].v = (float*)realloc(fields[f].visibilities[i].v, visCounter*sizeof(float));
 
-      fields[f].visibilities[i].Vo = (cufftComplex*)realloc(fields[f].visibilities[i].Vo, M*N*sizeof(cufftComplex));
+      fields[f].visibilities[i].Vo = (cufftComplex*)realloc(fields[f].visibilities[i].Vo, visCounter*sizeof(cufftComplex));
 
-      fields[f].visibilities[i].weight = (float*)realloc(fields[f].visibilities[i].weight, M*N*sizeof(float));
+      fields[f].visibilities[i].Vm = (cufftComplex*)malloc(visCounter*sizeof(cufftComplex));
+      memset(fields[f].visibilities[i].Vm, 0, visCounter*sizeof(cufftComplex));
 
-      memcpy(fields[f].visibilities[i].u, fields[f].gridded_visibilities[i].u, M*N*sizeof(float));
+      fields[f].visibilities[i].weight = (float*)realloc(fields[f].visibilities[i].weight, visCounter*sizeof(float));
 
-      memcpy(fields[f].visibilities[i].v, fields[f].gridded_visibilities[i].v, M*N*sizeof(float));
-
-      memcpy(fields[f].visibilities[i].Vo, fields[f].gridded_visibilities[i].Vo, M*N*sizeof(cufftComplex));
-
-      memcpy(fields[f].visibilities[i].weight, fields[f].gridded_visibilities[i].weight, M*N*sizeof(float));
-
-      //fftShift_2D<cufftComplex, float>(fields[f].visibilities[i].Vo, fields[f].visibilities[i].weight, fields[f].visibilities[i].u, fields[f].visibilities[i].v, M, N);
+      int l = 0;
+      for(int k=0; k<M; k++){
+        for(int j=0; j<N; j++){
+          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
+          if(weight > 0.0f){
+            fields[f].visibilities[i].u[l] = fields[f].gridded_visibilities[i].u[N*k+j];
+            fields[f].visibilities[i].v[l] = fields[f].gridded_visibilities[i].v[N*k+j];
+            fields[f].visibilities[i].Vo[l].x = fields[f].gridded_visibilities[i].Vo[N*k+j].x;
+            fields[f].visibilities[i].Vo[l].y = fields[f].gridded_visibilities[i].Vo[N*k+j].y;
+            fields[f].visibilities[i].weight[l] = fields[f].gridded_visibilities[i].weight[N*k+j];
+            l++;
+          }
+        }
+      }
 
       free(fields[f].gridded_visibilities[i].u);
       free(fields[f].gridded_visibilities[i].v);
       free(fields[f].gridded_visibilities[i].Vo);
       free(fields[f].gridded_visibilities[i].weight);
 
-      if(fields[f].numVisibilitiesPerFreq[i] > 0)
-        fields[f].numVisibilitiesPerFreq[i] = M*N;
-
+      if(fields[f].numVisibilitiesPerFreq[i] > 0){
+        fields[f].numVisibilitiesPerFreq[i] = visCounter;
+        *total_visibilities += visCounter;
+      }
     }
   }
+
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < data->nfields; f++){
+    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+data->total_frequencies);
+    if(local_max > max){
+      max = local_max;
+    }
+  }
+  data->max_number_visibilities_in_channel = max;
 }
 
 __host__ float calculateNoise(Field *fields, freqData data, int total_visibilities, int blockSizeV)
