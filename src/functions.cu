@@ -813,6 +813,7 @@ __host__ void print_help() {
   printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
   printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
   printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
+  printf("    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)\n");
   printf("    -c  --copyright        Shows copyright conditions\n");
   printf("    -w  --warranty         Shows no warranty details\n");
   printf("        --xcorr            Run gpuvmem with cross-correlation\n");
@@ -820,7 +821,6 @@ __host__ void print_help() {
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --print-images     Prints images per iteration\n");
-  printf("        --gridding         Use gridding to decrease the number of visibilities\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -874,7 +874,6 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"clipping", 0, &clip_flag, 1},
                                     {"apply-noise", 0, &apply_noise, 1},
                                     {"print-images", 0, &print_images, 1},
-                                    {"gridding", 0, &gridding, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -2115,7 +2114,6 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
   float dchi2 = 0.0;
   if(noise[N*i+j] <= noise_cut){
   	for(int v=0; v<numVisibilities; v++){
-      if(w[v] > 0.0){ //This IF is false only when we use gridding.
         Ukv = x * U[v];
     		Vkv = y * V[v];
         #if (__CUDA_ARCH__ >= 300 )
@@ -2125,9 +2123,6 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
           sink = sinpif(2.0*(Ukv+Vkv));
         #endif
         dchi2 += w[v]*((Vr[v].x * cosk) - (Vr[v].y * sink));
-      }else{
-        dchi2 += 0.0;
-      }
   	}
 
   dchi2 *= fg_scale * atten;
