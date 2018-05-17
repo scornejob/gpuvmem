@@ -49,7 +49,6 @@ typedef struct variables {
   char *output;
   char *inputdat;
   char *modin;
-  char *Tin;
   char *ofile;
   char *path;
   char *output_image;
@@ -61,6 +60,7 @@ typedef struct variables {
   int it_max;
   int reg_term;
   float noise;
+  int gridding;
   float noise_cut;
   float randoms;
   float lambda;
@@ -78,6 +78,8 @@ __host__ void readInputDat(char *file);
 __host__ void init_beam(int telescope);
 __host__ void print_help();
 __host__ char *strip(const char *string, const char *chars);
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities);
+__host__ float calculateNoise(Field *fields, freqData data, int total_visibilities, int blockSizeV);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float2 *I);
 __host__ void dchiCuadrado(float2 *I, float2 *dxi2);
