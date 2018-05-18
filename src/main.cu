@@ -743,7 +743,7 @@ __host__ int main(int argc, char **argv) {
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");
-	writeMS(msinput,msoutput,fields, data, random_probability, verbose_flag);
+	writeMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
 	printf("Residuals saved.\n");
 
 	//Free device and host memory

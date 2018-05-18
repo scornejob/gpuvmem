@@ -749,12 +749,8 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
                   comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
                   dataCol[j][sto] = comp;
                   weights[sto] = fields[f].visibilities[g].weight[h];
-
                   h++;
                }else{
-                 comp.real() = 0.0f;
-                 comp.imag() = 0.0f;
-                 dataCol[j][sto] = comp;
                  weights[sto] = 0.0f;
 
                  h++;

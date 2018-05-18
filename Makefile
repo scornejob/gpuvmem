@@ -38,7 +38,7 @@ build/main.o: src/main.cu
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/main.cu -o build/main.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/MSFITSIO.o: src/MSFITSIO.cu
-	@ echo "Building Main"
+	@ echo "Building MSFITSIO"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/MSFITSIO.cu -o build/MSFITSIO.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/functions.o: src/functions.cu
