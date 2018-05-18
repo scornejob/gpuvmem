@@ -1803,14 +1803,13 @@ __host__ float chiCuadrado(float2 *I)
     gpuErrchk(cudaDeviceSynchronize());
   }
 
+  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, fg_scale, eta);
+  gpuErrchk(cudaDeviceSynchronize());
+
   if(epsilon){
     LVectorAlpha<<<numBlocksNN, threadsPerBlockNN>>>(device_S_alpha, device_noise_image, I, N, noise_cut);
     gpuErrchk(cudaDeviceSynchronize());
   }
-
-  clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, fg_scale, eta);
-  gpuErrchk(cudaDeviceSynchronize());
-
 
   if(iter>0 && lambda!=0.0){
     switch(reg_term){

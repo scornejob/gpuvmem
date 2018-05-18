@@ -718,7 +718,7 @@ __host__ int main(int argc, char **argv) {
   float2 theta_init;
   theta_init.x = minpix * fg_scale;
   float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
-  theta_init.y = peak_alpha / 100;
+  theta_init.y = peak_alpha / 1000;
   free(input_alpha);
   free(input_Inu_0);
 
