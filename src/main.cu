@@ -276,6 +276,7 @@ __host__ int main(int argc, char **argv) {
 
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
+    fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   }
 
