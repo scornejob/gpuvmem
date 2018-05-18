@@ -279,6 +279,7 @@ __host__ int main(int argc, char **argv) {
 
   for(int f=0; f<data.nfields; f++){
   	fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
+    fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   	fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
   }
 
@@ -308,7 +309,6 @@ __host__ int main(int argc, char **argv) {
   }
 
 
-
   if(verbose_flag){
 	   printf("Reading visibilities and FITS input files...\n");
   }
@@ -327,14 +327,13 @@ __host__ int main(int argc, char **argv) {
   float deltay = RPDEG*DELTAY; //radians
   deltau = 1.0 / (M * deltax);
   deltav = 1.0 / (N * deltay);
-
   if(gridding){
     omp_set_num_threads(gridding);
     do_gridding(fields, &data, deltau, deltav, M, N, &total_visibilities);
     omp_set_num_threads(num_gpus);
   }
 
-   float sum_weights = calculateNoise(fields, data, total_visibilities, variables.blockSizeV);
+   float sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
    if(verbose_flag){
      printf("MS File Successfully Read\n");
      if(beam_noise == -1){
