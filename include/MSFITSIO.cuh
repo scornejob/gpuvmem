@@ -78,7 +78,9 @@ typedef struct field{
   long *numVisibilitiesPerFreq;
   Vis *visibilities;
   Vis *device_visibilities;
+  Vis *gridded_visibilities;
 }Field;
+
 
 typedef struct canvas_variables{
   float DELTAX, DELTAY;

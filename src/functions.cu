@@ -769,6 +769,7 @@ __host__ void print_help() {
   printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
   printf("    -l  --lambda           Lambda Regularization Parameter (Optional)\n");
   printf("    -E  --epsilon          Epsilon Regularization Parameter (Optional)\n");
+  printf("    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)\n");
   printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
   printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
   printf("    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)\n");
@@ -833,7 +834,6 @@ void randomize(int arr[], int n)
 __host__ Vars getOptions(int argc, char **argv) {
 	Vars variables;
   variables.multigpu = "NULL";
-  variables.Tin = "NULL";
   variables.ofile = "NULL";
   variables.path = "mem/";
   variables.output_image = "mod_out";
@@ -853,10 +853,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   variables.reg_term = 0;
   variables.alpha_name = "NULL";
   variables.eta = -1.0;
+  variables.gridding = 0;
 
 
 	long next_op;
-	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:B:A:";
+	const char* const short_op = "hcwi:o:O:I:m:x:n:N:l:r:f:M:s:p:P:X:Y:V:t:F:a:e:E:B:A:g:";
 
 	const struct option long_op[] = { //Flag for help, copyright and warranty
                                     {"help", 0, NULL, 'h' },
@@ -876,7 +877,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                                     {"iterations", 0, NULL, 't'}, {"burndown_steps", 1, NULL, 'B'}, {"noise-cut", 0, NULL, 'N' }, {"minpix", 0, NULL, 'x' },
                                     {"randoms", 0, NULL, 'r' }, {"nu_0", 1, NULL, 'F' }, {"file", 0, NULL, 'f' },
-                                    {"epsilon", 0, NULL, 'E' }, {"alpha_name", 1, NULL, 'a' }, {"alpha_value", 1, NULL, 'A' },
+                                    {"epsilon", 0, NULL, 'E' }, {"alpha_name", 1, NULL, 'a' }, {"alpha_value", 1, NULL, 'A' }, {"gridding", 0, NULL, 'g' },
                                     { NULL, 0, NULL, 0 }};
 
 	if (argc == 1) {
@@ -994,6 +995,9 @@ __host__ Vars getOptions(int argc, char **argv) {
     case 'B':
       variables.burndown_steps = atoi(optarg);
       break;
+    case 'g':
+      variables.gridding = atoi(optarg);
+      break;
 		case '?':
 			print_help();
 			exit(EXIT_FAILURE);
@@ -1023,6 +1027,11 @@ __host__ Vars getOptions(int argc, char **argv) {
   }
 
   if(variables.reg_term > 2){
+    print_help();
+    exit(EXIT_FAILURE);
+  }
+
+  if(variables.gridding < 0){
     print_help();
     exit(EXIT_FAILURE);
   }
@@ -1748,6 +1757,162 @@ __global__ void changeI(float2 *I, float2 *temp, float2 *theta, curandState_t* s
     temp[N*i+j].x = I[N*i+j].x + nrandom.x;
     temp[N*i+j].y = I[N*i+j].y + nrandom.y;
 
+}
+
+
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
+{
+  for(int f=0; f<data->nfields; f++){
+  	for(int i=0; i < data->total_frequencies; i++){
+      #pragma omp parallel for schedule(static,1)
+      for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
+        int k,j;
+        float u, v, w;
+        cufftComplex Vo;
+
+        u  = fields[f].visibilities[i].u[z];
+        v =  fields[f].visibilities[i].v[z];
+        Vo = fields[f].visibilities[i].Vo[z];
+        w = fields[f].visibilities[i].weight[z];
+        //Correct scale and apply hermitian symmetry (it will be applied afterwards)
+        if(u < 0.0){
+          u *= -1.0;
+          v *= -1.0;
+          Vo.y *= -1.0;
+        }
+
+        u *= fields[f].visibilities[i].freq / LIGHTSPEED;
+        v *= fields[f].visibilities[i].freq / LIGHTSPEED;
+
+        j = roundf(u/fabsf(deltau) + N/2);
+    		k = roundf(v/fabsf(deltav) + M/2);
+
+        #pragma omp critical
+        {
+          if(k < M && j < N){
+              fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
+              fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
+              fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+          }
+        }
+      }
+
+      int visCounter = 0;
+      #pragma omp parallel for schedule(static,1)
+      for(int k=0; k<M; k++){
+        for(int j=0; j<N; j++){
+          float deltau_meters = fabsf(deltau) * (LIGHTSPEED/fields[f].visibilities[i].freq);
+          float deltav_meters = fabsf(deltav) * (LIGHTSPEED/fields[f].visibilities[i].freq);
+
+          float u_meters = (j - (N/2)) * deltau_meters;
+          float v_meters = (k - (M/2)) * deltav_meters;
+
+          fields[f].gridded_visibilities[i].u[N*k+j] = u_meters;
+          fields[f].gridded_visibilities[i].v[N*k+j] = v_meters;
+
+          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
+          if(weight > 0.0f){
+            fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
+            #pragma omp critical
+            {
+                visCounter++;
+            }
+          }else{
+            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
+          }
+        }
+      }
+
+      fields[f].visibilities[i].u = (float*)realloc(fields[f].visibilities[i].u, visCounter*sizeof(float));
+      fields[f].visibilities[i].v = (float*)realloc(fields[f].visibilities[i].v, visCounter*sizeof(float));
+
+      fields[f].visibilities[i].Vo = (cufftComplex*)realloc(fields[f].visibilities[i].Vo, visCounter*sizeof(cufftComplex));
+
+      fields[f].visibilities[i].Vm = (cufftComplex*)malloc(visCounter*sizeof(cufftComplex));
+      memset(fields[f].visibilities[i].Vm, 0, visCounter*sizeof(cufftComplex));
+
+      fields[f].visibilities[i].weight = (float*)realloc(fields[f].visibilities[i].weight, visCounter*sizeof(float));
+
+      int l = 0;
+      for(int k=0; k<M; k++){
+        for(int j=0; j<N; j++){
+          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
+          if(weight > 0.0f){
+            fields[f].visibilities[i].u[l] = fields[f].gridded_visibilities[i].u[N*k+j];
+            fields[f].visibilities[i].v[l] = fields[f].gridded_visibilities[i].v[N*k+j];
+            fields[f].visibilities[i].Vo[l].x = fields[f].gridded_visibilities[i].Vo[N*k+j].x;
+            fields[f].visibilities[i].Vo[l].y = fields[f].gridded_visibilities[i].Vo[N*k+j].y;
+            fields[f].visibilities[i].weight[l] = fields[f].gridded_visibilities[i].weight[N*k+j];
+            l++;
+          }
+        }
+      }
+
+      free(fields[f].gridded_visibilities[i].u);
+      free(fields[f].gridded_visibilities[i].v);
+      free(fields[f].gridded_visibilities[i].Vo);
+      free(fields[f].gridded_visibilities[i].weight);
+
+      if(fields[f].numVisibilitiesPerFreq[i] > 0){
+        fields[f].numVisibilitiesPerFreq[i] = visCounter;
+        *total_visibilities += visCounter;
+      }
+    }
+  }
+
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < data->nfields; f++){
+    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+data->total_frequencies);
+    if(local_max > max){
+      max = local_max;
+    }
+  }
+  data->max_number_visibilities_in_channel = max;
+}
+
+__host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV)
+{
+  //Declaring block size and number of blocks for visibilities
+  float sum_inverse_weight = 0.0;
+  float sum_weights = 0.0;
+  long UVpow2;
+
+  for(int f=0; f<data.nfields; f++){
+  	for(int i=0; i< data.total_frequencies; i++){
+      //Calculating beam noise
+      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
+        if(fields[f].visibilities[i].weight[j] > 0.0){
+          sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
+          sum_weights += fields[f].visibilities[i].weight[j];
+        }
+      }
+      *total_visibilities += fields[f].numVisibilitiesPerFreq[i];
+  		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
+  		UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
+      fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
+  		fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
+    }
+  }
+
+  printf("TOTAL VISIBILITIES: %d\n", *total_visibilities);
+  if(verbose_flag){
+      float aux_noise = sqrt(sum_inverse_weight) / *total_visibilities;
+      printf("Calculated NOISE %e\n", aux_noise);
+      printf("Using canvas NOISE anyway...\n");
+      printf("Canvas NOISE = %e\n", beam_noise);
+  }
+
+  if(beam_noise == -1){
+      beam_noise = sqrt(sum_inverse_weight) / *total_visibilities;
+      if(verbose_flag){
+        printf("No NOISE value detected in canvas...\n");
+        printf("Using NOISE: %e ...\n", beam_noise);
+      }
+  }
+
+  return sum_weights;
 }
 
 __global__ void changeGibbs(float2 *I, float2 *temp, float2 *theta, curandState_t* states, int idx)
