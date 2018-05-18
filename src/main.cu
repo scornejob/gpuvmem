@@ -335,7 +335,7 @@ if(gridding){
   omp_set_num_threads(num_gpus);
 }
 
-  float sum_weights = calculateNoise(fields, data, total_visibilities, variables.blockSizeV);
+  float sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
   if(verbose_flag){
     printf("MS File Successfully Read\n");
     if(beam_noise == -1){

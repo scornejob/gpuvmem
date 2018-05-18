@@ -1497,7 +1497,7 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
   data->max_number_visibilities_in_channel = max;
 }
 
-__host__ float calculateNoise(Field *fields, freqData data, int total_visibilities, int blockSizeV)
+__host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV)
 {
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
@@ -1513,7 +1513,7 @@ __host__ float calculateNoise(Field *fields, freqData data, int total_visibiliti
           sum_weights += fields[f].visibilities[i].weight[j];
         }
       }
-
+      *total_visibilities += fields[f].numVisibilitiesPerFreq[i];
   		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
   		UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
       fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
@@ -1523,14 +1523,14 @@ __host__ float calculateNoise(Field *fields, freqData data, int total_visibiliti
 
 
   if(verbose_flag){
-      float aux_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      float aux_noise = sqrt(sum_inverse_weight)/ *total_visibilities;
       printf("Calculated NOISE %e\n", aux_noise);
       printf("Using canvas NOISE anyway...\n");
       printf("Canvas NOISE = %e\n", beam_noise);
   }
 
   if(beam_noise == -1){
-      beam_noise = sqrt(sum_inverse_weight)/total_visibilities;
+      beam_noise = sqrt(sum_inverse_weight)/ *total_visibilities;
       if(verbose_flag){
         printf("No NOISE value detected in canvas...\n");
         printf("Using NOISE: %e ...\n", beam_noise);
