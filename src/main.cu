@@ -588,7 +588,7 @@ if(gridding){
     for(int f=0; f < data.nfields; f++){
   		for(int i=0; i<data.total_frequencies; i++){
         for(int s=0; s<data.nstokes; s++){
-    			hermitianSymmetry<<<fields[f].visibilities[i][s].numBlocksUV, fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].u, fields[f].device_visibilities[i][s].v, fields[f].device_visibilities[i][s].Vo, fields[f].nu[i], fields[f].numVisibilitiesPerFreq[i]);
+    			hermitianSymmetry<<<fields[f].visibilities[i][s].numBlocksUV, fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].u, fields[f].device_visibilities[i][s].v, fields[f].device_visibilities[i][s].Vo, fields[f].nu[i], fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
     			gpuErrchk(cudaDeviceSynchronize());
         }
   		}
@@ -604,10 +604,11 @@ if(gridding){
   			int gpu_id = -1;
   			cudaSetDevice((i%num_gpus) + firstgpu);   // "% num_gpus" allows more CPU threads than GPU devices
   			cudaGetDevice(&gpu_id);
-  			hermitianSymmetry<<<fields[f].visibilities[i][s].numBlocksUV, fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].u, fields[f].device_visibilities[i][s].v, fields[f].device_visibilities[i][s].Vo, fields[f].nu[i], fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-  			gpuErrchk(cudaDeviceSynchronize());
+        for(int s=0;s<data.nstokes; s++){
+  			     hermitianSymmetry<<<fields[f].visibilities[i][s].numBlocksUV, fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].u, fields[f].device_visibilities[i][s].v, fields[f].device_visibilities[i][s].Vo, fields[f].nu[i], fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+  			     gpuErrchk(cudaDeviceSynchronize());
+        }
   		}
-
   	}
   }
 

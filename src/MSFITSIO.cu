@@ -635,22 +635,22 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
     }
   }
 
-  int valid;
+
   for(int f=0;f<data.nfields;f++){
     h = 0;
-    fields[f].valid_frequencies = 0;
+    fields[f].valid_fields = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        valid = 0;
+        fields[f].valid_frequencies[h] = 0;
         for(int sto=0; sto < data.nstokes; sto++){
-            valid++;
             if(fields[f].numVisibilitiesPerFreqPerStoke[h][sto] > 0)
+              fields[f].valid_fields++;
+              fields[f].valid_frequencies[h]++;
 
         }
-        if(valid>0)
-          fields[f].valid_frequencies++;
         h++;
     }
+
   }
 
 

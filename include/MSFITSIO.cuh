@@ -71,6 +71,7 @@ typedef struct observedVisibilities{
 }Vis;
 
 typedef struct field{
+  int valid_fields;
   int valid_frequencies;
   double obsra, obsdec;
   float global_xobs, global_yobs;
