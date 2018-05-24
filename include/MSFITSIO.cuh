@@ -53,7 +53,9 @@ typedef struct freqData{
   int nfields;
   int nsamples;
   int nstokes;
-  int max_number_visibilities_in_channel;
+  int *corr_type;
+
+  int max_number_visibilities_in_channel_and_stokes;
 }freqData;
 
 typedef struct observedVisibilities{
@@ -63,10 +65,7 @@ typedef struct observedVisibilities{
   cufftComplex *Vo;
   cufftComplex *Vm;
   cufftComplex *Vr;
-  float freq;
-  long numVisibilities;
 
-  int *stokes;
   int threadsPerBlockUV;
   int numBlocksUV;
 }Vis;
@@ -75,10 +74,11 @@ typedef struct field{
   int valid_frequencies;
   double obsra, obsdec;
   float global_xobs, global_yobs;
-  long *numVisibilitiesPerFreq;
-  Vis *visibilities;
-  Vis *device_visibilities;
-  Vis *gridded_visibilities;
+  float *nu;
+  long **numVisibilitiesPerFreqPerStoke;
+  Vis **visibilities;
+  Vis **device_visibilities;
+  Vis **gridded_visibilities;
 }Field;
 
 typedef struct canvas_variables{
@@ -111,6 +111,7 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option);
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
+__host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, float fg_scale, long M, long N, int option);
 __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void closeCanvas(fitsfile *canvas);

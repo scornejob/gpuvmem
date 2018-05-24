@@ -46,6 +46,11 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
    freqsAndVisibilities.nfields = field_tab.nrow();
    casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
 
+   casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
+   freqsAndVisibilities.nstokes=n_corr(0);
+
+   freqsAndVisibilities.corr_type = (int*)malloc(nstokes*sizeof(int));
+
    fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
    for(int f=0; f<freqsAndVisibilities.nfields; f++){
      const casa::TableRecord &values = field_row.get(f);
@@ -80,14 +85,13 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
   freqsAndVisibilities.total_frequencies = total_frequencies;
   for(int f=0; f < freqsAndVisibilities.nfields; f++){
-    fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
+    fields[f].numVisibilitiesPerFreq = (long**)malloc(freqsAndVisibilities.total_frequencies*sizeof(long*));
     for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++){
-      fields[f].numVisibilitiesPerFreq[i] = 0;
+      fields[f].numVisibilitiesPerFreq[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
+      for(int s = 0; i < freqsAndVisibilities.nstokes; s++)
+        fields[f].numVisibilitiesPerFreq[i][s] = 0;
     }
   }
-
-  casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
-  freqsAndVisibilities.nstokes=n_corr(0);
 
   casa::Vector<float> weights;
   casa::Matrix<casa::Bool> flagCol;
@@ -120,7 +124,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
             for(int j=0; j < freqsAndVisibilities.channels[i]; j++){
               for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                  fields[f].numVisibilitiesPerFreq[counter+j]++;
+                  fields[f].numVisibilitiesPerFreqPerStoke[counter+j][sto]++;
               }
             }
           }
@@ -134,12 +138,14 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
   int local_max = 0;
   int max = 0;
   for(int f=0; f < freqsAndVisibilities.nfields; f++){
-    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+total_frequencies);
-    if(local_max > max){
-      max = local_max;
+    for(int i=0; i<freqsAndVisibilities.total_frequencies; i++){
+      local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i],fields[f].numVisibilitiesPerFreqPerStoke[i]+freqsAndVisibilities.nstokes);
+      if(local_max > max){
+        max = local_max;
+      }
     }
   }
-  freqsAndVisibilities.max_number_visibilities_in_channel = max;
+  freqsAndVisibilities.max_number_visibilities_in_channel_and_stokes = max;
 
   return freqsAndVisibilities;
 }
@@ -264,7 +270,6 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
               for (int sto=0; sto<data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   c = fields[f].numVisibilitiesPerFreq[g+j];
-                  fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
                   fields[f].visibilities[g+j].u[c] = uvw[0];
                   fields[f].visibilities[g+j].v[c] = uvw[1];
                   u = Normal(0.0, 1.0);
@@ -371,8 +376,6 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
                   if(u<random_probability){
-                    c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
                     fields[f].visibilities[g+j].u[c] = uvw[0];
                     fields[f].visibilities[g+j].v[c] = uvw[1];
                     fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
@@ -381,7 +384,6 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                     fields[f].numVisibilitiesPerFreq[g+j]++;
                   }else{
                     c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
                     fields[f].visibilities[g+j].u[c] = uvw[0];
                     fields[f].visibilities[g+j].v[c] = uvw[1];
                     fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
@@ -490,7 +492,6 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                   u = Random();
                   if(u<random_probability){
                     c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
                     fields[f].visibilities[g+j].u[c] = uvw[0];
                     fields[f].visibilities[g+j].v[c] = uvw[1];
                     nu = Normal(0.0, 1.0);
@@ -501,7 +502,6 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                     fields[f].numVisibilitiesPerFreq[g+j]++;
                   }else{
                     c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
                     fields[f].visibilities[g+j].u[c] = uvw[0];
                     fields[f].visibilities[g+j].v[c] = uvw[1];
                     fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
@@ -575,7 +575,8 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   for(int f=0; f < data.nfields; f++){
     for(int i = 0; i < data.total_frequencies; i++){
-      fields[f].numVisibilitiesPerFreq[i] = 0;
+      for(int s = 0; s < data.nstokes; s++)
+        fields[f].numVisibilitiesPerFreqPerStoke[i][s] = 0;
     }
   }
 
@@ -604,14 +605,13 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
             for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto < data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                  c = fields[f].numVisibilitiesPerFreq[g+j];
-                  fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                  fields[f].visibilities[g+j].u[c] = uvw[0];
-                  fields[f].visibilities[g+j].v[c] = uvw[1];
-                  fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
-                  fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
-                  fields[f].visibilities[g+j].weight[c] = weights[sto];
-                  fields[f].numVisibilitiesPerFreq[g+j]++;
+                  c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                  fields[f].visibilities[g+j][sto].u[c] = uvw[0];
+                  fields[f].visibilities[g+j][sto].v[c] = uvw[1];
+                  fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
+                  fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
+                  fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
+                  fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                 }
               }
             }
@@ -629,22 +629,27 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
       casa::Vector<double> chan_freq_vector;
       chan_freq_vector=chan_freq_col(i);
       for(int j = 0; j < data.channels[i]; j++){
-        fields[f].visibilities[h].freq = chan_freq_vector[j];
+        fields[f].nu[h] = chan_freq_vector[j];
         h++;
       }
     }
   }
 
+  int valid;
   for(int f=0;f<data.nfields;f++){
     h = 0;
     fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        if(fields[f].numVisibilitiesPerFreq[h] > 0){
-          fields[f].valid_frequencies++;
+        valid = 0;
+        for(int sto=0; sto < data.nstokes; sto++){
+            valid++;
+            if(fields[f].numVisibilitiesPerFreqPerStoke[h][sto] > 0)
+
         }
+        if(valid>0)
+          fields[f].valid_frequencies++;
         h++;
-      }
     }
   }
 
