@@ -1469,65 +1469,61 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 }
 
 
-/*
- * Interpolate in the visibility array to find the visibility at (u,v);
- */
-__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
-{
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  long i1, i2, j1, j2;
-  float du, dv, u, v;
-  float v11, v12, v21, v22;
-  float Zreal;
-  float Zimag;
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
+ {
+   int i = threadIdx.x + blockDim.x * blockIdx.x;
+   long i1, i2, j1, j2;
+   float du, dv, u, v;
+   float v11, v12, v21, v22;
+   float Zreal;
+   float Zimag;
 
-  if (i < numVisibilities){
+   if (i < numVisibilities){
 
-    u = Ux[i]/deltau;
-    v = Vx[i]/deltav;
+     u = Ux[i]/deltau;
+     v = Vx[i]/deltav;
 
-    if (fabsf(u) > (N/2)+0.5 || fabsf(v) > (N/2)+0.5) {
-      printf("Error in residual: u,v = %f,%f\n", u, v);
-      asm("trap;");
+     if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
+
+       if(u < 0.0){
+         u = N + u;
+       }
+
+       if(v < 0.0){
+         v = N + v;
+       }
+
+       i1 = u;
+       i2 = (i1+1)%N;
+       du = u - i1;
+       j1 = v;
+       j2 = (j1+1)%N;
+       dv = v - j1;
+
+       if (i1 >= 0 && i1 < N && j1 >= 0 && j2 < N){
+         /* Bilinear interpolation: real part */
+         v11 = V[N*j1 + i1].x; /* [i1, j1] */
+         v12 = V[N*j2 + i1].x; /* [i1, j2] */
+         v21 = V[N*j1 + i2].x; /* [i2, j1] */
+         v22 = V[N*j2 + i2].x; /* [i2, j2] */
+         Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+         /* Bilinear interpolation: imaginary part */
+         v11 = V[N*j1 + i1].y; /* [i1, j1] */
+         v12 = V[N*j2 + i1].y; /* [i1, j2] */
+         v21 = V[N*j1 + i2].y; /* [i2, j1] */
+         v22 = V[N*j2 + i2].y; /* [i2, j2] */
+         Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+
+         Vm[i].x = Zreal;
+         Vm[i].y = Zimag;
+       }else{
+         weight[i] = 0.0f;
+       }
+    }else{
+      weight[i] = 0.0f;
     }
 
-    if(u < 0.0){
-      u = N + u;
-    }
-
-    if(v < 0.0){
-      v = N + v;
-    }
-
-    i1 = u;
-    i2 = (i1+1)%N;
-    du = u - i1;
-    j1 = v;
-    j2 = (j1+1)%N;
-    dv = v - j1;
-
-    if (i1 < 0 || i1 > N || j1 < 0 || j2 > N) {
-      printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
-      asm("trap;");
-    }
-
-    /* Bilinear interpolation: real part */
-    v11 = V[N*j1 + i1].x; /* [i1, j1] */
-    v12 = V[N*j2 + i1].x; /* [i1, j2] */
-    v21 = V[N*j1 + i2].x; /* [i2, j1] */
-    v22 = V[N*j2 + i2].x; /* [i2, j2] */
-    Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-    /* Bilinear interpolation: imaginary part */
-    v11 = V[N*j1 + i1].y; /* [i1, j1] */
-    v12 = V[N*j2 + i1].y; /* [i1, j2] */
-    v21 = V[N*j1 + i2].y; /* [i2, j1] */
-    v22 = V[N*j2 + i2].y; /* [i2, j2] */
-    Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-
-    Vm[i].x = Zreal;
-    Vm[i].y = Zimag;
-
-  }
+   }
 
 }
 
@@ -2029,18 +2025,23 @@ __global__ void DPhi(float2 *dphi, float *dS, float *dL, long N)
 
 __host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
 {
-  for(int f=0; f<data->nfields; f++){
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < data->nfields; f++){
   	for(int i=0; i < data->total_frequencies; i++){
-      #pragma omp parallel for schedule(static,1)
+
+      #pragma omp parallel for schedule(dynamic)
       for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
-        int k,j;
-        float u, v, w;
+        int j, k;
+        float u, v;
+        float w;
         cufftComplex Vo;
 
         u  = fields[f].visibilities[i].u[z];
         v =  fields[f].visibilities[i].v[z];
-        Vo = fields[f].visibilities[i].Vo[z];
         w = fields[f].visibilities[i].weight[z];
+        Vo = fields[f].visibilities[i].Vo[z];
+
         //Correct scale and apply hermitian symmetry (it will be applied afterwards)
         if(u < 0.0){
           u *= -1.0;
@@ -2057,14 +2058,15 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
         #pragma omp critical
         {
           if(k < M && j < N){
-              fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
-              fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
-              fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+           fields[f].gridded_visibilities[i].Vo[N*k+j].x += w * Vo.x;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y += w * Vo.y;
+            fields[f].gridded_visibilities[i].weight[N*k+j] += w;
           }
         }
       }
 
       int visCounter = 0;
+
       #pragma omp parallel for schedule(static,1)
       for(int k=0; k<M; k++){
         for(int j=0; j<N; j++){
@@ -2081,10 +2083,8 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
           if(weight > 0.0f){
             fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
             fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
-            #pragma omp critical
-            {
-                visCounter++;
-            }
+            #pragma omp atomic
+              visCounter++;
           }else{
             fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
           }
@@ -2126,16 +2126,14 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
         *total_visibilities += visCounter;
       }
     }
-  }
 
-  int local_max = 0;
-  int max = 0;
-  for(int f=0; f < data->nfields; f++){
     local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+data->total_frequencies);
     if(local_max > max){
       max = local_max;
     }
   }
+
+
   data->max_number_visibilities_in_channel = max;
 }
 
@@ -2290,8 +2288,8 @@ __host__ float chiCuadrado(float2 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
 
           residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
           gpuErrchk(cudaDeviceSynchronize());
@@ -2348,8 +2346,8 @@ __host__ float chiCuadrado(float2 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
 
 
           residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
@@ -2364,10 +2362,9 @@ __host__ float chiCuadrado(float2 *I)
 
         	//REDUCTION
         	//chi2
-          #pragma omp critical
-          {
+          #pragma omp atomic
             resultchi2 += partial_chi2;
-          }
+
         }
       }
     }
