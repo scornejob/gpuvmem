@@ -115,4 +115,8 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
 __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
 __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option);
+
+template <typename T>
+__host__ void open_read_fits(T *data, char *file_name, int elements, int type);
+
 __host__ void closeCanvas(fitsfile *canvas);

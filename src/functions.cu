@@ -30,9 +30,9 @@
 #include "functions.cuh"
 
 
-extern long M, N;
-extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images;
+extern long M, N, numVisibilities;
+extern int iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
+status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -2352,7 +2352,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
     }
     double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
     double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);
-    double2toImage(I, mod_in, out_image, mempath, 2, M, N, 1);
+    float2toImage(I, mod_in, out_image, mempath, 2, M, N, 1);
     randomize(pixels, N*N);
   }
 
@@ -2364,8 +2364,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
   fclose(outfile);
   cudaFree(temp);
-  cudaFree(total);
-  cudaFree(total2);
   cudaFree(states);
 
 }

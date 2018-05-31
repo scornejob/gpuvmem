@@ -131,5 +131,3 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 __global__ void random_init(unsigned int seed, curandState_t* states, long N);
 __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps);
 __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps);
-template <typename T>
-__host__ void open_read_fits(T *data, char *file_name, int elements)
