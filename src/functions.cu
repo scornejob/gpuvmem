@@ -785,6 +785,7 @@ __host__ void print_help() {
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --print-images     Prints images per iteration\n");
+  printf("        --check-point      Start from a certain iteration\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -868,6 +869,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"apply-noise", 0, &apply_noise, 1},
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
+                                    {"checkpoint", 0, &checkpoint, 1},
                                     {"print-images", 0, &print_images, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
@@ -1349,65 +1351,65 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 /*
  * Interpolate in the visibility array to find the visibility at (u,v);
  */
-__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N)
-{
-  int i = threadIdx.x + blockDim.x * blockIdx.x;
-  long i1, i2, j1, j2;
-  float du, dv, u, v;
-  float v11, v12, v21, v22;
-  float Zreal;
-  float Zimag;
+ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
+  {
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    long i1, i2, j1, j2;
+    float du, dv, u, v;
+    float v11, v12, v21, v22;
+    float Zreal;
+    float Zimag;
 
-  if (i < numVisibilities){
+    if (i < numVisibilities){
 
-    u = Ux[i]/deltau;
-    v = Vx[i]/deltav;
+      u = Ux[i]/deltau;
+      v = Vx[i]/deltav;
 
-    if (fabsf(u) > (N/2)+0.5 || fabsf(v) > (N/2)+0.5) {
-      printf("Error in residual: u,v = %f,%f\n", u, v);
-      asm("trap;");
+      if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
+
+        if(u < 0.0){
+          u = N + u;
+        }
+
+        if(v < 0.0){
+          v = N + v;
+        }
+
+        i1 = u;
+        i2 = (i1+1)%N;
+        du = u - i1;
+        j1 = v;
+        j2 = (j1+1)%N;
+        dv = v - j1;
+
+        if (i1 >= 0 && i1 < N && j1 >= 0 && j2 < N){
+          /* Bilinear interpolation: real part */
+          v11 = V[N*j1 + i1].x; /* [i1, j1] */
+          v12 = V[N*j2 + i1].x; /* [i1, j2] */
+          v21 = V[N*j1 + i2].x; /* [i2, j1] */
+          v22 = V[N*j2 + i2].x; /* [i2, j2] */
+          Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+          /* Bilinear interpolation: imaginary part */
+          v11 = V[N*j1 + i1].y; /* [i1, j1] */
+          v12 = V[N*j2 + i1].y; /* [i1, j2] */
+          v21 = V[N*j1 + i2].y; /* [i2, j1] */
+          v22 = V[N*j2 + i2].y; /* [i2, j2] */
+          Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+
+          Vm[i].x = Zreal;
+          Vm[i].y = Zimag;
+        }else{
+          weight[i] = 0.0f;
+        }
+     }else{
+       //Vm[i].x = 0.0f;
+       //Vm[i].y = 0.0f;
+       weight[i] = 0.0f;
+     }
+
     }
 
-    if(u < 0.0){
-      u = N + u;
-    }
-
-    if(v < 0.0){
-      v = N + v;
-    }
-
-    i1 = u;
-    i2 = (i1+1)%N;
-    du = u - i1;
-    j1 = v;
-    j2 = (j1+1)%N;
-    dv = v - j1;
-
-    if (i1 < 0 || i1 > N || j1 < 0 || j2 > N) {
-      printf("Error in residual: u,v = %f,%f, %ld,%ld, %ld,%ld\n", u, v, i1, i2, j1, j2);
-      asm("trap;");
-    }
-
-    /* Bilinear interpolation: real part */
-    v11 = V[N*j1 + i1].x; /* [i1, j1] */
-    v12 = V[N*j2 + i1].x; /* [i1, j2] */
-    v21 = V[N*j1 + i2].x; /* [i2, j1] */
-    v22 = V[N*j2 + i2].x; /* [i2, j2] */
-    Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-    /* Bilinear interpolation: imaginary part */
-    v11 = V[N*j1 + i1].y; /* [i1, j1] */
-    v12 = V[N*j2 + i1].y; /* [i1, j2] */
-    v21 = V[N*j1 + i2].y; /* [i2, j1] */
-    v22 = V[N*j2 + i2].y; /* [i2, j2] */
-    Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-
-    Vm[i].x = Zreal;
-    Vm[i].y = Zimag;
-
-  }
-
-}
-
+ }
 
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
   int i = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1762,18 +1764,23 @@ __global__ void changeI(float2 *I, float2 *temp, float2 *theta, curandState_t* s
 
 __host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
 {
-  for(int f=0; f<data->nfields; f++){
+  int local_max = 0;
+  int max = 0;
+  for(int f=0; f < data->nfields; f++){
   	for(int i=0; i < data->total_frequencies; i++){
-      #pragma omp parallel for schedule(static,1)
+
+      #pragma omp parallel for schedule(dynamic)
       for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
-        int k,j;
-        float u, v, w;
+        int j, k;
+        float u, v;
+        float w;
         cufftComplex Vo;
 
         u  = fields[f].visibilities[i].u[z];
         v =  fields[f].visibilities[i].v[z];
-        Vo = fields[f].visibilities[i].Vo[z];
         w = fields[f].visibilities[i].weight[z];
+        Vo = fields[f].visibilities[i].Vo[z];
+
         //Correct scale and apply hermitian symmetry (it will be applied afterwards)
         if(u < 0.0){
           u *= -1.0;
@@ -1790,14 +1797,15 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
         #pragma omp critical
         {
           if(k < M && j < N){
-              fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
-              fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
-              fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+           fields[f].gridded_visibilities[i].Vo[N*k+j].x += w * Vo.x;
+            fields[f].gridded_visibilities[i].Vo[N*k+j].y += w * Vo.y;
+            fields[f].gridded_visibilities[i].weight[N*k+j] += w;
           }
         }
       }
 
       int visCounter = 0;
+
       #pragma omp parallel for schedule(static,1)
       for(int k=0; k<M; k++){
         for(int j=0; j<N; j++){
@@ -1814,10 +1822,8 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
           if(weight > 0.0f){
             fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
             fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
-            #pragma omp critical
-            {
-                visCounter++;
-            }
+            #pragma omp atomic
+              visCounter++;
           }else{
             fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
           }
@@ -1859,16 +1865,14 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
         *total_visibilities += visCounter;
       }
     }
-  }
 
-  int local_max = 0;
-  int max = 0;
-  for(int f=0; f < data->nfields; f++){
     local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+data->total_frequencies);
     if(local_max > max){
       max = local_max;
     }
   }
+
+
   data->max_number_visibilities_in_channel = max;
 }
 
@@ -2029,8 +2033,8 @@ __host__ float chiCuadrado(float2 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
 
           residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
           gpuErrchk(cudaDeviceSynchronize());
@@ -2087,8 +2091,8 @@ __host__ float chiCuadrado(float2 *I)
         	gpuErrchk(cudaDeviceSynchronize());
 
           //RESIDUAL CALCULATION
-          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
-        	gpuErrchk(cudaDeviceSynchronize());
+          vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, vars_gpu[i%num_gpus].device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
 
 
           residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
@@ -2266,7 +2270,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   int accepted_afterburndown = 0;
   float2 *temp;
   double2 *total_out, *total2_out;
-  double2 *total, *total2;
 
   /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
@@ -2275,12 +2278,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   gpuErrchk(cudaMalloc((void**)&total2_out, sizeof(double2)*M*N));
   gpuErrchk(cudaMemset(total2_out, 0, sizeof(double2)*M*N));
 
-  /**************** GPU MEMORY FOR TOTAL I_nu_0 and alpha ***************/
-  gpuErrchk(cudaMalloc((void**)&total, sizeof(double2)*M*N));
-  gpuErrchk(cudaMemset(total, 0, sizeof(double2)*M*N));
-  /**************** GPU MEMORY FOR TOTAL ^ 2 I_nu_0 and alpha ***************/
-  gpuErrchk(cudaMalloc((void**)&total2, sizeof(double2)*M*N));
-  gpuErrchk(cudaMemset(total2, 0, sizeof(double2)*M*N));
 
 
   /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
@@ -2326,13 +2323,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
             sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
             gpuErrchk(cudaDeviceSynchronize());
             accepted_afterburndown++;
-            continue;
           }
 
-          sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
-          gpuErrchk(cudaDeviceSynchronize());
           accepted++;
-          continue;
 
         }
         else{
@@ -2349,18 +2342,17 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                 sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 accepted_afterburndown++;
-                continue;
               }
 
-              sumI<<<numBlocksNN, threadsPerBlockNN>>>(total, total2, I, N);
-              gpuErrchk(cudaDeviceSynchronize());
               accepted++;
-              continue;
 
             }
           }
       }
     }
+    double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
+    double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);
+    double2toImage(I, mod_in, out_image, mempath, 2, M, N, 1);
     randomize(pixels, N*N);
   }
 

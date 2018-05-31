@@ -132,8 +132,8 @@ __host__ int main(int argc, char **argv) {
   firstgpu = -1;
 
   struct stat st = {0};
-  if(print_images)
-    if(stat(mempath, &st) == -1) mkdir(mempath,0700);
+
+  if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
