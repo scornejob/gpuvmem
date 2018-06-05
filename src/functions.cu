@@ -61,6 +61,12 @@ extern VariablesPerField *vars_per_field;
 
 extern varsPerGPU *vars_gpu;
 
+extern char *checkp;
+
+extern double2 *host_total;
+extern double2 *host_total2;
+
+
 __host__ void goToError()
 {
   if(num_gpus > 1){
@@ -2274,11 +2280,14 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
   gpuErrchk(cudaMemset(total_out, 0, sizeof(double2)*M*N));
+  if(checkpoint)
+    gpuErrchk(cudaMemcpy2D(total_out, sizeof(double2), host_total, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
+
   /**************** GPU MEMORY FOR TOTAL OUT ^ 2 I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total2_out, sizeof(double2)*M*N));
   gpuErrchk(cudaMemset(total2_out, 0, sizeof(double2)*M*N));
-
-
+  if(checkpoint)
+    gpuErrchk(cudaMemcpy2D(total2_out, sizeof(double2), host_total2, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
   /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
@@ -2294,7 +2303,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   randomize(pixels, N*N);
 
   for(int i = 0; i< iterations; i++){
-    for(int j = 0; j < N*N; j++){
+    for(int j = 0; j < M*N; j++){
       if(host_noise_image[j] < noise_cut){
         printf("--------------Iteration %d-----------\n", i);
         printf("Changing pixel %d = %d\n", j, pixels[j]);
@@ -2325,7 +2334,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
             accepted_afterburndown++;
           }
 
-          accepted++;
+          //accepted++;
 
         }
         else{
@@ -2344,20 +2353,21 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                 accepted_afterburndown++;
               }
 
-              accepted++;
+              //accepted++;
 
             }
           }
       }
     }
-    double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
-    double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);
-    float2toImage(I, mod_in, out_image, mempath, 2, M, N, 1);
+    double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
+    double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
+    float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
     randomize(pixels, N*N);
   }
 
-  avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
-  gpuErrchk(cudaDeviceSynchronize());
+  //avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
+  //gpuErrchk(cudaDeviceSynchronize());
+  printf("ACCEPTED AFTER BURNDOWN: %d\n", accepted_afterburndown);
 
   double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
   double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);

@@ -1505,53 +1505,6 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
 
 }
 
-template <typename T>
-__host__ void open_read_fits(T *data, char *file_name, int elements, int type)
-{
-  fitsfile *mod_in;
-  int status = 0;
-  float null = 0;
-  long fpixel = 1;
-  int anynull;
-
-  fits_open_file(&mod_in, file_name, 0, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    exit(0);
-  }
-
-  data = (T*)malloc(elements*sizeof(T));
-
-  switch(type){
-    case 31:
-      fits_read_img(mod_in, TINT, fpixel, elements, &null, data, &anynull, &status);
-      if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(0);
-      }
-      break;
-    case 42:
-      fits_read_img(mod_in, TFLOAT, fpixel, elements, &null, data, &anynull, &status);
-      if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(0);
-      }
-      break;
-    case 82:
-      fits_read_img(mod_in, TDOUBLE, fpixel, elements, &null, data, &anynull, &status);
-      if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(0);
-      }
-      break;
-    default:
-      printf("That option does not exist");
-  }
-
-
-
-}
-
 __host__ void closeCanvas(fitsfile *canvas)
 {
   int status = 0;
