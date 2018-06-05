@@ -46,7 +46,7 @@ float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cut
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, checkpoint = 0, gridding, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels;
 char *output, *mempath, *out_image;
 
@@ -62,6 +62,11 @@ Field *fields;
 VariablesPerField *vars_per_field;
 
 varsPerGPU *vars_gpu;
+
+char *checkp;
+
+double2 *host_total;
+double2 *host_total2;
 
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
@@ -130,10 +135,15 @@ __host__ int main(int argc, char **argv) {
 
   multigpu = 0;
   firstgpu = -1;
+  checkp = "checkpoint/";
 
   struct stat st = {0};
-  if(print_images)
-    if(stat(mempath, &st) == -1) mkdir(mempath,0700);
+
+  if(stat(mempath, &st) == -1) mkdir(mempath,0700);
+
+  struct stat st2 = {0};
+
+  if(stat(checkp, &st2) == -1) mkdir(checkp,0700);
 
   if(verbose_flag){
   	printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
@@ -475,25 +485,13 @@ __host__ int main(int argc, char **argv) {
   }
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
-  int anynull;
-  long fpixel = 1;
-  float null = 0.;
-  long elementsImage = M*N;
-
-  int statustau = 0;
-  int status_alpha = 0;
 
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   float *input_alpha = (float*)malloc(M*N*sizeof(float));
-  pixels = (int*)malloc(M*N*sizeof(int));
-  fits_read_img(mod_in, TFLOAT, fpixel, elementsImage, &null, input_Inu_0, &anynull, &statustau);
 
-  fits_open_file(&mod_in_alpha, alpha_name, 0, &status_alpha);
-  if (status_alpha) {
-    fits_report_error(stderr, status_alpha); /* print error message */
-    exit(0);
-  }
-  fits_read_img(mod_in_alpha, TFLOAT, fpixel, elementsImage, &null, input_alpha, &anynull, &status_alpha);
+  open_read_fits<float>(input_Inu_0, modinput, M*N, TFLOAT);
+  open_read_fits<float>(input_alpha, alpha_name, M*N, TFLOAT);
+
 
   int x = M-1;
   int y = N-1;
@@ -508,8 +506,64 @@ __host__ int main(int argc, char **argv) {
     y--;
 	}
 
-	////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
+  // IN CASE OF CHECKPOINT ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+  double *host_total_alpha;
+  double *host_total_I_nu_0;
+  double *host_total2_alpha;
+  double *host_total2_I_nu_0;
 
+  char *I_nu_0_total;
+  char *alpha_total;
+  char *I_nu_0_total2;
+  char *alpha_total2;
+
+  size_t needed_I_nu_0;
+  size_t needed_alpha;
+
+  if(checkpoint){
+    host_total = (double2*)malloc(M*N*sizeof(double2));
+    host_total2 = (double2*)malloc(M*N*sizeof(double2));
+    ///////////////////////////////////READ TOTAL SUM //////////////////////////////////////////////////////////////////////////////////
+    needed_alpha = snprintf(NULL, 0, "%salpha_%d.fits", checkp, 0) + 1;
+    needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits" , checkp, 1) + 1;
+
+    alpha_total = (char*)malloc(needed_alpha*sizeof(char));
+    snprintf(I_nu_0_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
+
+    I_nu_0_total = (char*)malloc(needed_I_nu_0*sizeof(char));
+    snprintf(I_nu_0_total, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 0);
+
+    open_read_fits<double>(host_total_alpha, alpha_total, M*N, TDOUBLE);
+    open_read_fits<double>(host_total_I_nu_0, I_nu_0_total, M*N, TDOUBLE);
+
+    /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
+    alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
+    snprintf(I_nu_0_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
+
+    I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
+    snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
+
+    open_read_fits<double>(host_total2_alpha, alpha_total2, M*N, TDOUBLE);
+    open_read_fits<double>(host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
+    /////////////////////////////////////////////////////PASSING TO DOUBLE2 ARRAY ///////////////////////////////////////////
+    x = M-1;
+    y = N-1;
+  	for(int i=0;i<M;i++){
+  		for(int j=0;j<N;j++){
+  		    host_total[N*i+j].x = host_total_I_nu_0[N*y+x];  // I_nu
+          host_total[N*i+j].y = host_total_alpha[N*y+x];
+          host_total2[N*i+j].x = host_total2_I_nu_0[N*y+x];  // I_nu
+          host_total2[N*i+j].y = host_total2_alpha[N*y+x];
+          x--;
+  		}
+      x=M-1;
+      y--;
+  	}
+
+
+  }
+
+  ////////////////////////////////////////////////CUDA MEMORY ALLOCATION FOR DEVICE///////////////////////////////////////////////////
 	if(num_gpus == 1){
     cudaSetDevice(selected);
     gpuErrchk(cudaMalloc((void**)&device_Inu, sizeof(cufftComplex)*M*N));
