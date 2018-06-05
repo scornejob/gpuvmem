@@ -135,11 +135,19 @@ __host__ int main(int argc, char **argv) {
 
   multigpu = 0;
   firstgpu = -1;
-  checkp = "checkpoint/";
+  //checkp = "checkpoint/";
+  size_t checkpoint_many;
+  checkpoint_many = snprintf(NULL, 0, "%scheckpoint/", mempath) + 1;
+  checkp = (char*)malloc(checkpoint_many*sizeof(char));
+
 
   struct stat st = {0};
 
   if(stat(mempath, &st) == -1) mkdir(mempath,0700);
+
+  //CONCAT MEMPATH WITH CHECKPOINT
+
+  snprintf(checkp, checkpoint_many*sizeof(char), "%scheckpoint/", mempath, 0);
 
   struct stat st2 = {0};
 
@@ -488,6 +496,8 @@ __host__ int main(int argc, char **argv) {
 
   float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
   float *input_alpha = (float*)malloc(M*N*sizeof(float));
+  pixels = (int*)malloc(M*N*sizeof(int));
+
 
   open_read_fits<float>(input_Inu_0, modinput, M*N, TFLOAT);
   open_read_fits<float>(input_alpha, alpha_name, M*N, TFLOAT);

@@ -791,7 +791,7 @@ __host__ void print_help() {
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --print-images     Prints images per iteration\n");
-  printf("        --check-point      Start from a certain iteration\n");
+  printf("        --checkpoint       Start from a certain iteration\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
