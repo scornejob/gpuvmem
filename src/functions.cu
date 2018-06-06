@@ -1469,6 +1469,9 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 }
 
 
+/*
+ * Interpolate in the visibility array to find the visibility at (u,v);
+ */
 __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
  {
    int i = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1500,7 +1503,7 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
        j2 = (j1+1)%N;
        dv = v - j1;
 
-       if (i1 >= 0 && i1 < N && j1 >= 0 && j2 < N){
+       if (i1 >= 0 && i1 < N && i2 >= 0 && i2 < N && j1 >= 0 && j1 < N && j2 >= 0 && j2 < N){
          /* Bilinear interpolation: real part */
          v11 = V[N*j1 + i1].x; /* [i1, j1] */
          v12 = V[N*j2 + i1].x; /* [i1, j2] */
@@ -1520,12 +1523,14 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
          weight[i] = 0.0f;
        }
     }else{
+      //Vm[i].x = 0.0f;
+      //Vm[i].y = 0.0f;
       weight[i] = 0.0f;
     }
 
    }
 
-}
+ }
 
 
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
