@@ -119,7 +119,7 @@ __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char
 __host__ void closeCanvas(fitsfile *canvas);
 
 template <typename T>
-__host__ void open_read_fits(T *data, char *file_name, int elements, int type)
+__host__ void open_read_fits(T **data, char *file_name, int elements, int type)
 {
   fitsfile *mod_in;
   int status = 0;
@@ -133,25 +133,25 @@ __host__ void open_read_fits(T *data, char *file_name, int elements, int type)
     exit(0);
   }
 
-  data = (T*)malloc(elements*sizeof(T));
+  *data = (T*)malloc(elements*sizeof(T));
 
   switch(type){
     case 31:
-      fits_read_img(mod_in, TINT, fpixel, elements, &null, data, &anynull, &status);
+      fits_read_img(mod_in, TINT, fpixel, elements, &null, *data, &anynull, &status);
       if (status) {
         fits_report_error(stderr, status); /* print error message */
         exit(0);
       }
       break;
     case 42:
-      fits_read_img(mod_in, TFLOAT, fpixel, elements, &null, data, &anynull, &status);
+      fits_read_img(mod_in, TFLOAT, fpixel, elements, &null, *data, &anynull, &status);
       if (status) {
         fits_report_error(stderr, status); /* print error message */
         exit(0);
       }
       break;
     case 82:
-      fits_read_img(mod_in, TDOUBLE, fpixel, elements, &null, data, &anynull, &status);
+      fits_read_img(mod_in, TDOUBLE, fpixel, elements, &null, *data, &anynull, &status);
       if (status) {
         fits_report_error(stderr, status); /* print error message */
         exit(0);

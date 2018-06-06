@@ -494,13 +494,13 @@ __host__ int main(int argc, char **argv) {
 	////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
 	float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
 
-  float *input_Inu_0= (float*)malloc(M*N*sizeof(float));
-  float *input_alpha = (float*)malloc(M*N*sizeof(float));
+  float *input_Inu_0;
+  float *input_alpha;
   pixels = (int*)malloc(M*N*sizeof(int));
 
 
-  open_read_fits<float>(input_Inu_0, modinput, M*N, TFLOAT);
-  open_read_fits<float>(input_alpha, alpha_name, M*N, TFLOAT);
+  open_read_fits<float>(&input_Inu_0, modinput, M*N, TFLOAT);
+  open_read_fits<float>(&input_alpha, alpha_name, M*N, TFLOAT);
 
 
   int x = M-1;
@@ -543,8 +543,8 @@ __host__ int main(int argc, char **argv) {
     I_nu_0_total = (char*)malloc(needed_I_nu_0*sizeof(char));
     snprintf(I_nu_0_total, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 0);
 
-    open_read_fits<double>(host_total_alpha, alpha_total, M*N, TDOUBLE);
-    open_read_fits<double>(host_total_I_nu_0, I_nu_0_total, M*N, TDOUBLE);
+    open_read_fits<double>(&host_total_alpha, alpha_total, M*N, TDOUBLE);
+    open_read_fits<double>(&host_total_I_nu_0, I_nu_0_total, M*N, TDOUBLE);
 
     /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
     alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
@@ -553,8 +553,8 @@ __host__ int main(int argc, char **argv) {
     I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
     snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
 
-    open_read_fits<double>(host_total2_alpha, alpha_total2, M*N, TDOUBLE);
-    open_read_fits<double>(host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
+    open_read_fits<double>(&host_total2_alpha, alpha_total2, M*N, TDOUBLE);
+    open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
     /////////////////////////////////////////////////////PASSING TO DOUBLE2 ARRAY ///////////////////////////////////////////
     x = M-1;
     y = N-1;
@@ -772,7 +772,7 @@ __host__ int main(int argc, char **argv) {
 	float fret = 0.0;
 
   float2 theta_init;
-  theta_init.x = minpix * fg_scale;
+  theta_init.x = MINPIX * fg_scale + fg_scale;
   float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
   theta_init.y = peak_alpha / 1000;
   free(input_alpha);

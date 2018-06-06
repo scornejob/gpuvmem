@@ -1925,15 +1925,15 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
   return sum_weights;
 }
 
-__global__ void changeGibbs(float2 *I, float2 *temp, float2 *theta, curandState_t* states, int idx)
+__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int idx)
 {
       float2 nrandom;
 
       nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
       nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
-      temp[idx].x = I[idx].x + nrandom.x;
-      temp[idx].y = I[idx].y + nrandom.y;
+      temp[idx].x += nrandom.x;
+      temp[idx].y += nrandom.y;
 
 }
 
@@ -2264,9 +2264,10 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 
 __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps)
 {
-  curandState_t *states, *states2;
+  curandState_t *states;
+  //*states2;
   cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
-  cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
+  //cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
   float chi2_t_0, chi2_t_1;
   float delta_chi2 = 0.0;
   float p = 0.0;
@@ -2291,13 +2292,13 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
   gpuErrchk(cudaMemset(temp, 0, sizeof(float2)*M*N));
-  gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+
   SelectStream(0);
   PutSeed(-1);
   random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states, N);
   gpuErrchk(cudaDeviceSynchronize());
-  random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states2, N);
-  gpuErrchk(cudaDeviceSynchronize());
+  //random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states2, N);
+  //gpuErrchk(cudaDeviceSynchronize());
   FILE *outfile = fopen("chi2.txt", "w");
   randomize(pixels, N*N);
 
@@ -2311,8 +2312,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
         //  gpuErrchk(cudaDeviceSynchronize());
         //}
+        gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
 
-        changeGibbs<<<1, 1>>>(I, temp, theta, states, pixels[j]);
+        changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j]);
         gpuErrchk(cudaDeviceSynchronize());
 
 
@@ -2323,7 +2325,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         fprintf(outfile, "%f\n", chi2_t_0);
         delta_chi2 = chi2_t_1 - chi2_t_0;
         if(delta_chi2 <= 0){
-          printf("Acccepted Delta chi2: %f\n", delta_chi2);
+          printf("Accepted Delta chi2: %f\n", delta_chi2);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
             float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
