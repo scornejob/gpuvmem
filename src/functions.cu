@@ -1357,63 +1357,63 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
 /*
  * Interpolate in the visibility array to find the visibility at (u,v);
  */
- __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
-  {
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
-    long i1, i2, j1, j2;
-    float du, dv, u, v;
-    float v11, v12, v21, v22;
-    float Zreal;
-    float Zimag;
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
+ {
+   int i = threadIdx.x + blockDim.x * blockIdx.x;
+   long i1, i2, j1, j2;
+   float du, dv, u, v;
+   float v11, v12, v21, v22;
+   float Zreal;
+   float Zimag;
 
-    if (i < numVisibilities){
+   if (i < numVisibilities){
 
-      u = Ux[i]/deltau;
-      v = Vx[i]/deltav;
+     u = Ux[i]/deltau;
+     v = Vx[i]/deltav;
 
-      if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
+     if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
 
-        if(u < 0.0){
-          u = N + u;
-        }
+       if(u < 0.0){
+         u = N + u;
+       }
 
-        if(v < 0.0){
-          v = N + v;
-        }
+       if(v < 0.0){
+         v = N + v;
+       }
 
-        i1 = u;
-        i2 = (i1+1)%N;
-        du = u - i1;
-        j1 = v;
-        j2 = (j1+1)%N;
-        dv = v - j1;
+       i1 = u;
+       i2 = (i1+1)%N;
+       du = u - i1;
+       j1 = v;
+       j2 = (j1+1)%N;
+       dv = v - j1;
 
-        if (i1 >= 0 && i1 < N && j1 >= 0 && j2 < N){
-          /* Bilinear interpolation: real part */
-          v11 = V[N*j1 + i1].x; /* [i1, j1] */
-          v12 = V[N*j2 + i1].x; /* [i1, j2] */
-          v21 = V[N*j1 + i2].x; /* [i2, j1] */
-          v22 = V[N*j2 + i2].x; /* [i2, j2] */
-          Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-          /* Bilinear interpolation: imaginary part */
-          v11 = V[N*j1 + i1].y; /* [i1, j1] */
-          v12 = V[N*j2 + i1].y; /* [i1, j2] */
-          v21 = V[N*j1 + i2].y; /* [i2, j1] */
-          v22 = V[N*j2 + i2].y; /* [i2, j2] */
-          Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+       if (i1 >= 0 && i1 < N && i2 >= 0 && i2 < N && j1 >= 0 && j1 < N && j2 >= 0 && j2 < N){
+         /* Bilinear interpolation: real part */
+         v11 = V[N*j1 + i1].x; /* [i1, j1] */
+         v12 = V[N*j2 + i1].x; /* [i1, j2] */
+         v21 = V[N*j1 + i2].x; /* [i2, j1] */
+         v22 = V[N*j2 + i2].x; /* [i2, j2] */
+         Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+         /* Bilinear interpolation: imaginary part */
+         v11 = V[N*j1 + i1].y; /* [i1, j1] */
+         v12 = V[N*j2 + i1].y; /* [i1, j2] */
+         v21 = V[N*j1 + i2].y; /* [i2, j1] */
+         v22 = V[N*j2 + i2].y; /* [i2, j2] */
+         Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
 
-          Vm[i].x = Zreal;
-          Vm[i].y = Zimag;
-        }else{
-          weight[i] = 0.0f;
-        }
-     }else{
-       //Vm[i].x = 0.0f;
-       //Vm[i].y = 0.0f;
-       weight[i] = 0.0f;
-     }
-
+         Vm[i].x = Zreal;
+         Vm[i].y = Zimag;
+       }else{
+         weight[i] = 0.0f;
+       }
+    }else{
+      //Vm[i].x = 0.0f;
+      //Vm[i].y = 0.0f;
+      weight[i] = 0.0f;
     }
+
+   }
 
  }
 
