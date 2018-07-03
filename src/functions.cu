@@ -2299,14 +2299,33 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   gpuErrchk(cudaDeviceSynchronize());
   //random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states2, N);
   //gpuErrchk(cudaDeviceSynchronize());
-  FILE *outfile = fopen("chi2.txt", "w");
+  size_t file_chi2_n = snprintf(NULL, 0, "%schi2.txt", checkp) + 1;
+  size_t file_iter_n = snprintf(NULL, 0, "%siter.txt", checkp) + 1;
+  char *chi2_file_name = (char*)malloc(sizeof(char)*file_chi2_n);
+  char *iter_file_name = (char*)malloc(sizeof(char)*file_iter_n);
+
+  snprintf(chi2_file_name, file_chi2_n*sizeof(char), "%schi2.txt", checkp, 0);
+  snprintf(iter_file_name, file_iter_n*sizeof(char), "%siter.txt", checkp, 0);
+
+  FILE *outfile;
+  if(checkpoint)
+    outfile = fopen(chi2_file_name, "a");
+  else
+    outfile = fopen(chi2_file_name, "w");
+
+  FILE *outfile_its = fopen(iter_file_name , "w");
+
+  int position_in_file = ftell(outfile_its);
   randomize(pixels, N*N);
 
   for(int i = 0; i< iterations; i++){
+    printf("--------------Iteration %d-----------\n", i);
+    fseek(outfile_its,position_in_file,SEEK_SET);
+    fprintf(outfile_its, "%d\n", i);
     for(int j = 0; j < M*N; j++){
       if(host_noise_image[j] < noise_cut){
-        printf("--------------Iteration %d-----------\n", i);
-        printf("Changing pixel %d = %d\n", j, pixels[j]);
+
+        //printf("Changing pixel %d = %d\n", j, pixels[j]);
 
         //if(i>0){
         //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
@@ -2320,12 +2339,12 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
         chi2_t_0 = chiCuadrado(I);
         chi2_t_1 = chiCuadrado(temp);
-        printf("chi2_t0: %f\n", chi2_t_0);
-        printf("chi2_t1: %f\n", chi2_t_1);
+        //printf("chi2_t0: %f\n", chi2_t_0);
+        //printf("chi2_t1: %f\n", chi2_t_1);
         fprintf(outfile, "%f\n", chi2_t_0);
         delta_chi2 = chi2_t_1 - chi2_t_0;
         if(delta_chi2 <= 0){
-          printf("Accepted Delta chi2: %f\n", delta_chi2);
+          //printf("Accepted Delta chi2: %f\n", delta_chi2);
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
             float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
@@ -2339,12 +2358,12 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
         }
         else{
-            printf("Not Accepted Delta chi2: %f\n", delta_chi2);
+            //printf("Not Accepted Delta chi2: %f\n", delta_chi2);
             //l = exp(-delta_chi2);
             //p = chi2_t_0 / chi2_t_1;
             un_rand = Random();
             if(-log(un_rand) > delta_chi2){
-              printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
+              //printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
               gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
               /*if(print_images && i%3 == 0)
                 float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
@@ -2369,11 +2388,13 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   //avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
   //gpuErrchk(cudaDeviceSynchronize());
   printf("ACCEPTED AFTER BURNDOWN: %d\n", accepted_afterburndown);
+  fprintf(outfile_its, "%d\n", accepted_afterburndown);
 
-  double2toImage(total_out, mod_in, out_image, mempath, 0, M, N, 1);
-  double2toImage(total2_out, mod_in, out_image, mempath, 1, M, N, 1);
+  double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
+  double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
 
   fclose(outfile);
+  fclose(outfile_its);
   cudaFree(temp);
   cudaFree(states);
 

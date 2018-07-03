@@ -498,6 +498,8 @@ __host__ int main(int argc, char **argv) {
   float *input_alpha;
   pixels = (int*)malloc(M*N*sizeof(int));
 
+  size_t needed_I_nu_0;
+  size_t needed_alpha;
 
   open_read_fits<float>(&input_Inu_0, modinput, M*N, TFLOAT);
   open_read_fits<float>(&input_alpha, alpha_name, M*N, TFLOAT);
@@ -527,8 +529,7 @@ __host__ int main(int argc, char **argv) {
   char *I_nu_0_total2;
   char *alpha_total2;
 
-  size_t needed_I_nu_0;
-  size_t needed_alpha;
+
 
   if(checkpoint){
     host_total = (double2*)malloc(M*N*sizeof(double2));
@@ -538,7 +539,7 @@ __host__ int main(int argc, char **argv) {
     needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits" , checkp, 1) + 1;
 
     alpha_total = (char*)malloc(needed_alpha*sizeof(char));
-    snprintf(I_nu_0_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
+    snprintf(alpha_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
 
     I_nu_0_total = (char*)malloc(needed_I_nu_0*sizeof(char));
     snprintf(I_nu_0_total, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 0);
@@ -548,7 +549,7 @@ __host__ int main(int argc, char **argv) {
 
     /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
     alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
-    snprintf(I_nu_0_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
+    snprintf(alpha_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
 
     I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
     snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
