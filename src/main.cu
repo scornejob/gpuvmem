@@ -47,7 +47,7 @@ dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, checkpoint = 0, gridding, it_maximum, status_mod_in;
-int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels;
+int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels, valid_pixels;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -107,8 +107,6 @@ __host__ int main(int argc, char **argv) {
         exit(EXIT_SUCCESS);
   }
 
-
-	float noise_min = 1E32;
 
 	Vars variables = getOptions(argc, argv);
 	char *msinput = variables.input;
@@ -496,7 +494,7 @@ __host__ int main(int argc, char **argv) {
 
   float *input_Inu_0;
   float *input_alpha;
-  pixels = (int*)malloc(M*N*sizeof(int));
+
 
   size_t needed_I_nu_0;
   size_t needed_alpha;
@@ -511,7 +509,6 @@ __host__ int main(int argc, char **argv) {
 		for(int j=0;j<N;j++){
 		    host_2I[N*i+j].x = input_Inu_0[N*y+x];  // I_nu
         host_2I[N*i+j].y = input_alpha[N*y+x];
-        pixels[N*i+j] = N*i+j;
         x--;
 		}
     x=M-1;
@@ -745,14 +742,21 @@ __host__ int main(int argc, char **argv) {
 
 
 	host_noise_image = (float*)malloc(M*N*sizeof(float));
+  pixels = (int*)malloc(1*sizeof(int));
+  //pixels[N*i+j] = N*i+j;
 	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-	for(int i=0; i<M; i++){
-		for(int j=0; j<N; j++){
-			if(host_noise_image[N*i+j] < noise_min){
-				noise_min = host_noise_image[N*i+j];
-			}
-		}
-	}
+  float noise_min = *std::min_element(input_alpha,input_alpha+(M*N));
+
+  valid_pixels = 0;
+  for(int i=0; i<M; i++){
+    for(int j=0; j<N; j++){
+      if(host_noise_image[j] < noise_cut){
+        pixels[valid_pixels] = N*i+j;
+        valid_pixels++;
+        pixels = (int*)realloc(pixels, (valid_pixels+1)*sizeof(int));
+      }
+    }
+  }
 
 	fg_scale = noise_min;
 	noise_cut = noise_cut * noise_min;

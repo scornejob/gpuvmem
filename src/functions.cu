@@ -55,7 +55,7 @@ extern fitsfile *mod_in;
 
 extern Field *fields;
 
-extern int flag_opt, *pixels;
+extern int flag_opt, *pixels, valid_pixels;
 
 extern VariablesPerField *vars_per_field;
 
@@ -2322,8 +2322,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
     printf("--------------Iteration %d-----------\n", i);
     fseek(outfile_its,position_in_file,SEEK_SET);
     fprintf(outfile_its, "%d\n", i);
-    for(int j = 0; j < M*N; j++){
-      if(host_noise_image[j] < noise_cut){
+    for(int j = 0; j < valid_pixels; j++){
 
         //printf("Changing pixel %d = %d\n", j, pixels[j]);
 
@@ -2377,7 +2376,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
             }
           }
-      }
     }
     double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
     double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
