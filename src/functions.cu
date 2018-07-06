@@ -2316,7 +2316,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   FILE *outfile_its = fopen(iter_file_name , "w");
 
   int position_in_file = ftell(outfile_its);
-  randomize(pixels, N*N);
+  randomize(pixels, valid_pixels);
 
   for(int i = 0; i< iterations; i++){
     printf("--------------Iteration %d-----------\n", i);

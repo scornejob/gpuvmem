@@ -745,12 +745,15 @@ __host__ int main(int argc, char **argv) {
   pixels = (int*)malloc(1*sizeof(int));
   //pixels[N*i+j] = N*i+j;
 	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-  float noise_min = *std::min_element(input_alpha,input_alpha+(M*N));
+  float noise_min = *std::min_element(host_noise_image,host_noise_image+(M*N));
+
+	fg_scale = noise_min;
+	noise_cut *= noise_min;
 
   valid_pixels = 0;
   for(int i=0; i<M; i++){
     for(int j=0; j<N; j++){
-      if(host_noise_image[j] < noise_cut){
+      if(host_noise_image[N*i+j] < noise_cut){
         pixels = (int*)realloc(pixels, (valid_pixels+1)*sizeof(int));
         pixels[valid_pixels] = N*i+j;
         valid_pixels++;
@@ -758,8 +761,7 @@ __host__ int main(int argc, char **argv) {
     }
   }
 
-	fg_scale = noise_min;
-	noise_cut = noise_cut * noise_min;
+
   if(verbose_flag){
 	   printf("fg_scale = %e\n", fg_scale);
      printf("noise_jypix = %e\n", noise_jypix);
