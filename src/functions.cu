@@ -1973,10 +1973,10 @@ __host__ float chiCuadrado(float2 *I)
   float resultS  = 0.0;
   float resultS_alpha = 0.0;
 
-  if(clip_flag){
-    clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
-    gpuErrchk(cudaDeviceSynchronize());
-  }
+  //if(clip_flag){
+  clip2I<<<numBlocksNN, threadsPerBlockNN>>>(I, N, MINPIX, fg_scale);
+  gpuErrchk(cudaDeviceSynchronize());
+  //}
 
   clip2IWNoise<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, I, N, noise_cut, MINPIX, alpha_start, fg_scale, eta);
   gpuErrchk(cudaDeviceSynchronize());
@@ -2018,10 +2018,10 @@ __host__ float chiCuadrado(float2 *I)
           calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
           gpuErrchk(cudaDeviceSynchronize());
 
-          if(clip_flag){
+          /*if(clip_flag){
             clip<<<numBlocksNN, threadsPerBlockNN>>>(device_Inu, N, MINPIX);
             gpuErrchk(cudaDeviceSynchronize());
-          }
+          }*/
 
         	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, device_Inu, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
@@ -2075,10 +2075,10 @@ __host__ float chiCuadrado(float2 *I)
           calculateInu<<<numBlocksNN, threadsPerBlockNN>>>(vars_gpu[i%num_gpus].device_Inu, I, fields[f].visibilities[i].freq, nu_0, fg_scale, MINPIX, eta, N);
           gpuErrchk(cudaDeviceSynchronize());
 
-          if(clip_flag){
+          /*if(clip_flag){
             clip<<<numBlocksNN, threadsPerBlockNN>>>(vars_gpu[i%num_gpus].device_Inu, N, MINPIX);
             gpuErrchk(cudaDeviceSynchronize());
-          }
+          }*/
 
         	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, vars_gpu[i%num_gpus].device_Inu, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
         	gpuErrchk(cudaDeviceSynchronize());
