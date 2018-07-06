@@ -2324,7 +2324,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
     fprintf(outfile_its, "%d\n", i);
     for(int j = 0; j < valid_pixels; j++){
 
-        //printf("Changing pixel %d = %d\n", j, pixels[j]);
+        //printf("Changing pixel %d \n", pixels[j]);
 
         //if(i>0){
         //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
