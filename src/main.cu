@@ -751,7 +751,7 @@ __host__ int main(int argc, char **argv) {
   for(int i=0; i<M; i++){
     for(int j=0; j<N; j++){
       if(host_noise_image[j] < noise_cut){
-        pixels = (int*)realloc(pixels, (valid_pixels+1)*sizeof(int));s
+        pixels = (int*)realloc(pixels, (valid_pixels+1)*sizeof(int));
         pixels[valid_pixels] = N*i+j;
         valid_pixels++;
       }
