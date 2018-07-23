@@ -2514,6 +2514,6 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
   DPhi<<<numBlocksNN, threadsPerBlockNN>>>(device_dphi, device_dS, device_dS_alpha, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  gpuErrchk(cudaMemcpy2D(dxi2, sizeof(float2), device_dphi, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+  gpuErrchk(cudaMemcpy(dxi2, device_dphi, sizeof(float2)*M*N, cudaMemcpyDeviceToDevice));
 
 }
