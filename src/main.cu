@@ -106,8 +106,6 @@ __host__ int main(int argc, char **argv) {
   }
 
 
-	float noise_min = 1E32;
-
 	Vars variables = getOptions(argc, argv);
 	char *msinput = variables.input;
 	char *msoutput = variables.output;
@@ -655,13 +653,7 @@ __host__ int main(int argc, char **argv) {
 
 	float *host_noise_image = (float*)malloc(M*N*sizeof(float));
 	gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-	for(int i=0; i<M; i++){
-		for(int j=0; j<N; j++){
-			if(host_noise_image[N*i+j] < noise_min){
-				noise_min = host_noise_image[N*i+j];
-			}
-		}
-	}
+	float noise_min = *std::min_element(host_noise_image,host_noise_image+(M*N));
 
 	fg_scale = noise_min;
 	noise_cut = noise_cut * noise_min;
