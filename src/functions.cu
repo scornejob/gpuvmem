@@ -2281,13 +2281,13 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
   gpuErrchk(cudaMemset(total_out, 0, sizeof(double2)*M*N));
   if(checkpoint)
-    gpuErrchk(cudaMemcpy2D(total_out, sizeof(double2), host_total, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy2D(total_out, sizeof(double2), host_total, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
 
   /**************** GPU MEMORY FOR TOTAL OUT ^ 2 I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total2_out, sizeof(double2)*M*N));
   gpuErrchk(cudaMemset(total2_out, 0, sizeof(double2)*M*N));
   if(checkpoint)
-    gpuErrchk(cudaMemcpy2D(total2_out, sizeof(double2), host_total2, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy2D(total2_out, sizeof(double2), host_total2, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
 
   /**************** GPU MEMORY FOR TEMPORAL I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&temp, sizeof(float2)*M*N));
@@ -2321,7 +2321,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   for(int i = 0; i< iterations; i++){
     printf("--------------Iteration %d-----------\n", i);
     fseek(outfile_its,position_in_file,SEEK_SET);
-    fprintf(outfile_its, "%d\n", i);
+    fprintf(outfile_its, "%d\n", accepted_afterburndown);
     for(int j = 0; j < valid_pixels; j++){
 
         //printf("Changing pixel %d \n", pixels[j]);
