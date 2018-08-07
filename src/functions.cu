@@ -2210,7 +2210,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
   I_nu[N*i+j].y = 0.0f;
 }
 
-__global__ void I_nu_0_Noise(float *I_nu_0_noise, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N)
+__global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2222,12 +2222,12 @@ __global__ void I_nu_0_Noise(float *I_nu_0_noise, float2 *images, float nu, floa
   nudiv_pow_alpha = powf(nudiv, alpha);
 
   for(int k=0; k<numVisibilities; k++){
-    I_nu_0_noise[N*i+j] += w[k] * nudiv_pow_alpha;
+    noise_I[N*i+j].x += w[k] * nudiv_pow_alpha;
   }
 
 }
 
-__global__ void alpha_Noise(float *alpha_noise, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N)
+__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2259,7 +2259,7 @@ __global__ void alpha_Noise(float *alpha_noise, float2 *images, float nu, float 
         sink = sinpif(2.0*(Ukv+Vkv));
       #endif
         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
-        alpha_noise[N*i+j] += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
+        noise_I[N*i+j].y += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
     }
   }
 }

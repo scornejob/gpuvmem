@@ -131,3 +131,5 @@ __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda
 __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
+__global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N);
+__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N);
