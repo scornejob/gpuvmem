@@ -11,6 +11,10 @@ CCFLAG = -lstdc++
 # Gencode arguments
 SMS ?= 30 35 37 50 52
 
+ifeq ($(NEWCASA),1)
+CFLAGS += -DNEWCASA
+endif
+
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified <<<)
 endif
@@ -29,7 +33,7 @@ endif
 main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
-	@ nvcc build/*.o -o bin/gpumfs $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
+	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
 	@ echo "The compilation has been completed successfully"
 
 build/main.o: src/main.cu
@@ -82,7 +86,6 @@ cfits:
 	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
 
 clean:
-	@ clear
 	@ echo "Cleaning folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
@@ -91,19 +94,14 @@ clean:
 	@ cd cfitsio; make distclean
 
 conf:
-	@ clear
 	@ echo "Doing configure..."
 	@ ./configure
 
 co65:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 32 -Y 32 -V 1024 -P 2 --verbose -l 0.0 --nopositivity
+	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -l 0.01 -P 2 --verbose --print-images
 selfcalband9:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out -m ./tests/selfcalband9/mod_out_in.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 32 -Y 32 -V 1024 -F 6.93874e+11 --verbose
+	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 --verbose -g 2 --print-images
 freq78:
-	@ clear
-	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 32 -Y 32 -V 1024 -t 5000 --verbose
+	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose -g 2 --print-images
 antennae:
-	@ clear
-	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 32 -Y 32 -V 1024 --verbose
+	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 -g 2 --verbose --print-images
