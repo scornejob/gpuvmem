@@ -1,10 +1,15 @@
 # GPUVMEM
 
+# Papers and documentation
+
+- https://doi.org/10.1016/j.ascom.2017.11.003
+
 # Libraries
 
 To compile GPUVMEM you need:
 
-- casacore (https://github.com/casacore/casacore)
+- casacore (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using the last version of casacore, please compile using the flag NEWCASA=1.
+
 - CUDA
 - OpenMP
 
@@ -14,19 +19,14 @@ cd gpuvmem
 ./configure
 make
 ```
-# Usage
-
-Create your canvas or mod_in_0.fits with difmap or CASA, typically we use a FITS CASA CLEAN image of the desired object.
-Create your input.dat file with the following data and change the parameters if you want:
+If you are using the last version of casacore
 
 ```
-lambda_entropy  0.01
-noise_cut	100.5
-minpix  0.001
-ftol		1.0e-12
-random_probability 0.0
-t_telescope        2
+cd gpuvmem
+./configure
+make NEWCASA=1
 ```
+
 # t_telescope references the following telescopes:
 
 1. CBI2

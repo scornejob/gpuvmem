@@ -36,7 +36,7 @@ namespace cg = cooperative_groups;
 
 extern long M, N;
 extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images;
+status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, print_errors;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -882,6 +882,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                                     {"nopositivity", 0, &nopositivity, 1},
                                     {"clipping", 0, &clip_flag, 1},
                                     {"print-images", 0, &print_images, 1},
+                                    {"print-errors", 0, &print_errors, 1},
                                     /* These options don’t set a flag. */
                                     {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                                     {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -2207,6 +2208,60 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
   }
 
   I_nu[N*i+j].y = 0.0f;
+}
+
+__global__ void I_nu_0_Noise(float *I_nu_0_noise, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float alpha, nudiv, nudiv_pow_alpha;
+
+  nudiv = nu/nu_0;
+  alpha = images[N*i+j].y;
+  nudiv_pow_alpha = powf(nudiv, alpha);
+
+  for(int k=0; k<numVisibilities; k++){
+    I_nu_0_noise[N*i+j] += w[k] * nudiv_pow_alpha;
+  }
+
+}
+
+__global__ void alpha_Noise(float *alpha_noise, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2;
+  int x0, y0;
+
+  x0 = xobs;
+  y0 = yobs;
+  x = (j - x0) * DELTAX * RPDEG;
+  y = (i - y0) * DELTAY * RPDEG;
+
+  nudiv = nu/nu_0;
+  I_nu_0 = images[N*i+j].x;
+  alpha = images[N*i+j].y;
+  nudiv_pow_alpha = powf(nudiv, alpha);
+
+  I_nu = I_nu_0 * nudiv_pow_alpha;
+  log_nu = logf(nudiv);
+
+  if(noise[N*i+j] <= noise_cut){
+    for(int v=0; v<numVisibilities; v++){
+      Ukv = x * U[v];
+    	Vkv = y * V[v];
+      #if (__CUDA_ARCH__ >= 300 )
+        sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
+      #else
+        cosk = cospif(2.0*(Ukv+Vkv));
+        sink = sinpif(2.0*(Ukv+Vkv));
+      #endif
+        dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
+        alpha_noise[N*i+j] += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
+    }
+  }
 }
 
 

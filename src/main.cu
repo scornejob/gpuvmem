@@ -50,7 +50,7 @@ float noise_jypix, fg_scale, final_chi2, final_H, beam_fwhm, beam_freq, beam_cut
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, print_errors = 0, gridding, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term;
 char *output, *mempath, *out_image;
 
