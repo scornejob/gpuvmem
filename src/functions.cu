@@ -2215,15 +2215,18 @@ __global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float nu, float nu
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float alpha, nudiv, nudiv_pow_alpha;
+  float alpha, nudiv, nudiv_pow_alpha, sum_noise;
 
   nudiv = nu/nu_0;
   alpha = images[N*i+j].y;
   nudiv_pow_alpha = powf(nudiv, alpha);
 
+  sum_noise = 0.0f;
   for(int k=0; k<numVisibilities; k++){
-    noise_I[N*i+j].x += w[k] * nudiv_pow_alpha;
+     sum_noise += w[k] * nudiv_pow_alpha;
   }
+
+  noise_I[N*i+j].x = 1 / (sqrtf(sum_noise));
 
 }
 
@@ -2232,7 +2235,7 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2;
+  float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2, sum_noise;
   int x0, y0;
 
   x0 = xobs;
@@ -2248,6 +2251,7 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
   I_nu = I_nu_0 * nudiv_pow_alpha;
   log_nu = logf(nudiv);
 
+  sum_noise = 0.0f;
   if(noise[N*i+j] <= noise_cut){
     for(int v=0; v<numVisibilities; v++){
       Ukv = x * U[v];
@@ -2259,8 +2263,9 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
         sink = sinpif(2.0*(Ukv+Vkv));
       #endif
         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
-        noise_I[N*i+j].y += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
+        sum_noise += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
     }
+    noise_I[N*i+j].y = 1 / sqrt(sum_noise);
   }
 }
 
