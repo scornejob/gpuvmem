@@ -81,7 +81,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 
 The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding the Fi to the objective function
 
-All the objects to image experience must be created by their respective factory
+All the objects must be created by their respective factory
 
 The number of available images is determined by the -z command
 
