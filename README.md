@@ -68,7 +68,8 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 -t  --iterations      Number of iterations for optimization (Default = 50)
--z  --
+-z  --initial-cond    Initial conditions for image/s
+-Z  --penalizators    Penalizators for Fi/s in Objective Function
     --xcorr           Run gpuvmem with cross-correlation
     --nopositivity    Run gpuvmem using chi2 with no positivity restriction
     --apply-noise     Apply random gaussian noise to visibilities
@@ -76,14 +77,21 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --print-images    Prints images per iteration
     --verbose         Shows information through all the execution
 ```
+# USAGE FRAMEWORK
 
+The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding the Fi to the objective function
 
-# PRIORS
+All the objects to image experience must be created by their respective factory
 
-0. Entropy
-1. Quadratic penalization
-2. Total Variation
-3. Laplacian Regularization
+The number of available images is determined by the -z command
+
+Gridding can be applied both as a filter and as an input parameter
+
+All the specializations of objects are listed in the enums
+
+All filters can only be applied before using Synthesizer->setDevice()
+
+The configuration of a Fi has as parameters, the index of its penalty factor (-Z), the index of the image from where the data will be calculated, and finally the index of the image where the results of the calculations will be applied.
 
 # IMPORTANT
 
@@ -107,6 +115,7 @@ Usage:
 - Simón Casassus
 - Axel Osses
 - Victor Moral
+- Nicolás Muñoz
 
 # BUG REPORTS
 
