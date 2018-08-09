@@ -75,30 +75,33 @@ __host__ int main(int argc, char **argv) {
   enum {SencondDerivate}; // Error calculation
 
   Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(AlphaMFS);
-  //Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS);
+  Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
+  ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
+
+  //Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
   //sy->setIoHandler(ioms);
   sy->configure(argc, argv);
-  Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
+  cg->setObjectiveFunction(of);
+  sy->setOptimizator(cg);
+
+  //Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
   //sy->applyFilter(g); // delete this line for no gridding
-  sy->setDevice();
-  ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
+
+  sy->setDevice(); // This routine sends the data to GPU memory
   Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
-  chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
   Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
   Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
+  chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
   e->configure(0, 0, 0);
   l->configure(1, 0, 0);
-  //e->setPenalizationFactor(0.01);
+  //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
   of->addFi(chi2);
   of->addFi(e);
-  //of->addFi(l);
-  Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
-  cg->setObjectiveFunction(of);
+  of->addFi(l);
   sy->image->functionMapping[0].newP = particularNewP;
   sy->image->functionMapping[0].evaluateXt = particularEvaluateXt;
-  sy->setOptimizator(cg);
   sy->run();
-  sy->unSetDevice();
+  sy->unSetDevice(); // This routine performs memory cleanup and release
 
 	return 0;
 }
