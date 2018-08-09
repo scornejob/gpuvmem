@@ -1,0 +1,21 @@
+#ifndef ALPHAMFS_CUH
+#define ALPHAMFS_CUH
+
+#include "framework.cuh"
+#include "functions.cuh"
+#include "frprmn.cuh"
+#include <time.h>
+#include "directioncosines.cuh"
+
+class AlphaMFS : public Synthesizer
+{
+public:
+  void run();
+  void setOutPut(char * FileName){};
+  void setDevice();
+  void unSetDevice();
+  void configure(int argc, char **argv);
+  void applyFilter(Filter *filter){ filter->applyCriteria(this->visibilities);};
+};
+
+#endif
