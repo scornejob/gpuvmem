@@ -77,7 +77,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --print-images    Prints images per iteration
     --verbose         Shows information through all the execution
 ```
-# USAGE FRAMEWORK
+# FRAMEWORK USAGE
 
 The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding the Fi to the objective function
 
