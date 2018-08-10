@@ -120,11 +120,6 @@ protected:
   int imageToAdd;
 };
 
-class Error
-{
-public:
-  virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
-};
 
 class Image
 {
@@ -134,6 +129,21 @@ public:
   float *image;
   imageMap *functionMapping;
   float *error_image;
+};
+
+class Visibilities
+{
+public:
+  freqData *data;
+  VariablesPerField *vars_per_field;
+  Field *fields;
+  int *total_visibilities;
+};
+
+class Error
+{
+public:
+  virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
 };
 
 class ObjectiveFunction
@@ -217,14 +227,6 @@ protected:
 };
 
 
-class Visibilities
-{
-public:
-  freqData *data;
-  VariablesPerField *vars_per_field;
-  Field *fields;
-  int *total_visibilities;
-};
 
 class Filter
 {
