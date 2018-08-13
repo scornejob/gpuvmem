@@ -2574,7 +2574,7 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
 
 }
 
-void calculateErrors(){
+void calculateErrors(float2 *errors, float2 *images){
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
@@ -2586,6 +2586,10 @@ void calculateErrors(){
     for(int f=0; f<data.nfields; f++){
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
+          I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
+          alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
         }
       }
     }
@@ -2605,6 +2609,10 @@ void calculateErrors(){
 
           #pragma omp critical
           {
+            I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i], N);
+            gpuErrchk(cudaDeviceSynchronize());
+            alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, fields[f].numVisibilitiesPerFreq[i], N);
+            gpuErrchk(cudaDeviceSynchronize());
 
           }
         }
