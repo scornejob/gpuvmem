@@ -66,7 +66,6 @@ typedef struct observedVisibilities{
   float *weight;
   cufftComplex *Vo;
   cufftComplex *Vm;
-  cufftComplex *Vr;
   float freq;
   long numVisibilities;
 
