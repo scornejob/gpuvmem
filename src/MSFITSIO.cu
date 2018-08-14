@@ -1233,6 +1233,11 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
       alphaname = (char*)malloc(needed_alpha*sizeof(char));
       snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
       break;
+    case 2:
+      needed_alpha = snprintf(NULL, 0, "!%s_alpha_error.fits", out_image) + 1;
+      alphaname = (char*)malloc(needed_alpha*sizeof(char));
+      snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha_error.fits", out_image);
+      break;
     case -1:
       break;
     default:
@@ -1250,6 +1255,11 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
       needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits" , mempath, iteration) + 1;
       Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
       snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
+      break;
+    case 2:
+      needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0_error.fits", out_image) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0_error.fits", out_image);
       break;
     case -1:
       break;

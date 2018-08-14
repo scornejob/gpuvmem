@@ -733,6 +733,8 @@ __host__ int main(int argc, char **argv) {
   printf("Saving residuals to MS...\n");
 	writeMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
 	printf("Residuals saved.\n");
+  if(print_errors)
+    calculateErrors(device_2I);
 
 	//Free device and host memory
 	printf("Free device and host memory\n");

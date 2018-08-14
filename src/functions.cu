@@ -2268,7 +2268,12 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
         dchi2 = ((Vr.x * cosk) - (Vr.y * sink));
         sum_noise += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
     }
-    noise_I[N*i+j].y = 1 / sqrt(sum_noise);
+    if(sum_noise <= 0)
+      noise_I[N*i+j].y = 0.0f;
+    else
+      noise_I[N*i+j].y = 1 / (sqrt(sum_noise));
+  }else{
+    noise_I[N*i+j].y = 0.0f;
   }
 }
 
@@ -2574,12 +2579,18 @@ __host__ void dchiCuadrado(float2 *I, float2 *dxi2)
 
 }
 
-void calculateErrors(float2 *errors, float2 *images){
+__host__ void calculateErrors(float2 *images){
+
+  float2 *errors;
+
   if(num_gpus == 1){
     cudaSetDevice(selected);
   }else{
     cudaSetDevice(firstgpu);
   }
+
+  gpuErrchk(cudaMalloc((void**)&errors, sizeof(float2)*M*N));
+  gpuErrchk(cudaMemset(errors, 0, sizeof(float2)*M*N));
 
   if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -2620,4 +2631,6 @@ void calculateErrors(float2 *errors, float2 *images){
     }
   }
 
+  float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
+  cudaFree(errors);
 }
