@@ -111,7 +111,7 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(float2 *xt, float2 *pcom, float2 *xicom, float x, long N, float MINPIX, float eta);
 __global__ void evaluateXtNoPositivity(float2 *xt, float2 *pcom, float2 *xicom, float x, long N);
-__global__ void chi2Vector(float *chi2, cufftComplex *Vm, cufftComplex *Vo, float *w, int numVisibilities);
+__global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, int numVisibilities);
 __global__ void SVector(float *S, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta);
 __global__ void QVector(float *Q, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
 __global__ void TVVector(float *TV, float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX);
@@ -122,7 +122,7 @@ __global__ void DL(float *dL, float2 *I, float *noise, float noise_cut, float la
 __global__ void DTV(float *dTV, float2 *I, float *noise, float noise_cut, float lambda, long N);
 __global__ void DQ(float *dQ, float2 *I, float *noise, float noise_cut, float lambda, long N);
 __global__ void DS(float *dS, float2 *I, float *noise, float noise_cut, float lambda, float MINPIX, float fg_scale, float eta, long N);
-__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vm, cufftComplex *Vo, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
+__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);
@@ -130,4 +130,4 @@ __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
 __global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N);
-__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vm, cufftComplex *Vo, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N);
+__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N);
