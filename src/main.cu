@@ -97,9 +97,9 @@ __host__ int main(int argc, char **argv) {
   //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
   of->addFi(chi2);
   of->addFi(e);
-  of->addFi(l);
-  sy->image->functionMapping[0].newP = particularNewP;
-  sy->image->functionMapping[0].evaluateXt = particularEvaluateXt;
+  //of->addFi(l);
+  sy->getImage()->getFunctionMapping()[0].newP = particularNewP;
+  sy->getImage()->getFunctionMapping()[0].evaluateXt = particularEvaluateXt;
   sy->run();
   sy->unSetDevice(); // This routine performs memory cleanup and release
 

@@ -55,15 +55,16 @@ __host__ float f1dim(float x)
     gpuErrchk(cudaMalloc((void**)&device_xt, sizeof(float)*M*N*image_count));
     gpuErrchk(cudaMemset(device_xt, 0, sizeof(float)*M*N*image_count));
 
+    imageMap* auxPtr = I->getFunctionMapping();
     //xt = pcom+x*xicom;
     if(nopositivity == 0){
-      for(int i=0; i<I->image_count; i++)
+      for(int i=0; i<I->getImageCount(); i++)
       {
-        (I->functionMapping[i].evaluateXt)(device_xt, device_pcom, device_xicom, x, i);
+        (auxPtr[i].evaluateXt)(device_xt, device_pcom, device_xicom, x, i);
         gpuErrchk(cudaDeviceSynchronize());
       }
     }else{
-      for(int i=0; i<I->image_count; i++)
+      for(int i=0; i<I->getImageCount(); i++)
       {
         evaluateXtNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(device_xt, device_pcom, device_xicom, x, N, M, i);
         gpuErrchk(cudaDeviceSynchronize());

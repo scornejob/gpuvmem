@@ -59,12 +59,12 @@ extern int it_maximum;
 
 __host__ void ConjugateGradient::allocateMemoryGpu()
 {
-  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float)*M*N*image->image_count));
-  gpuErrchk(cudaMemset(device_g, 0, sizeof(float)*M*N*image->image_count));
-  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float)*M*N*image->image_count));
-  gpuErrchk(cudaMemset(device_h, 0, sizeof(float)*M*N*image->image_count));
-  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N*image->image_count));
-  gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N*image->image_count));
+  gpuErrchk(cudaMalloc((void**)&device_g, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemset(device_g, 0, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMalloc((void**)&device_h, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemset(device_h, 0, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N*image->getImageCount()));
 
   gpuErrchk(cudaMalloc((void**)&device_gg_vector, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(device_gg_vector, 0, sizeof(float)*M*N));
@@ -86,19 +86,19 @@ __host__ void ConjugateGradient::minimizate()
   allocateMemoryGpu();
   testof = of;
   if(configured){
-    of->configure(N, M, image->image_count);
+    of->configure(N, M, image->getImageCount());
     configured = 0;
   }
 
-  fp = of->calcFunction(image->image);
+  fp = of->calcFunction(image->getImage());
   if(verbose_flag){
     printf("Starting function value = %f\n", fp);
   }
-  of->calcGradient(image->image,xi);
+  of->calcGradient(image->getImage(),xi);
   //g=-xi
   //xi=h=g
 
-  for(int i=0; i < image->image_count; i++)
+  for(int i=0; i < image->getImageCount(); i++)
   {
     searchDirection<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, N, M, i);//Search direction
     gpuErrchk(cudaDeviceSynchronize());
@@ -110,25 +110,25 @@ __host__ void ConjugateGradient::minimizate()
     if(verbose_flag){
       printf("\n\n********** Iteration %d **********\n\n", i);
     }
-    linmin(image->image, xi, &fret, NULL);
+    linmin(image->getImage(), xi, &fret, NULL);
     if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {
       printf("Exit due to tolerance\n");
-      of->calcFunction(image->image);
+      of->calcFunction(I->getImage());
       deallocateMemoryGpu();
 			return;
 		}
 
-    fp= of->calcFunction(image->image);
+    fp= of->calcFunction(image->getImage());
     if(verbose_flag){
       printf("Function value = %f\n", fp);
     }
-    of->calcGradient(image->image,xi);
+    of->calcGradient(image->getImage(),xi);
     dgg = gg = 0.0;
     ////gg = g*g
     ////dgg = (xi+g)*xi
     gpuErrchk(cudaMemset(device_gg_vector, 0, sizeof(float)*M*N));
     gpuErrchk(cudaMemset(device_dgg_vector, 0, sizeof(float)*M*N));
-    for(int i=0; i < image->image_count; i++)
+    for(int i=0; i < image->getImageCount(); i++)
     {
       getGGandDGG<<<numBlocksNN, threadsPerBlockNN>>>(device_gg_vector, device_dgg_vector, xi, device_g, N, M, i);
       gpuErrchk(cudaDeviceSynchronize());
@@ -138,7 +138,7 @@ __host__ void ConjugateGradient::minimizate()
     dgg = deviceReduce<float>(device_dgg_vector, M*N);
     if(gg == 0.0){
       printf("Exit due to gg = 0\n");
-      of->calcFunction(image->image);
+      of->calcFunction(image->getImage());
       deallocateMemoryGpu();
       return;
     }
@@ -146,7 +146,7 @@ __host__ void ConjugateGradient::minimizate()
     //printf("Gamma = %f\n", gam);
     //g=-xi
     //xi=h=g+gam*h;
-    for(int i=0; i < image->image_count; i++)
+    for(int i=0; i < image->getImageCount(); i++)
     {
       newXi<<<numBlocksNN, threadsPerBlockNN>>>(device_g, xi, device_h, gam, N, M, i);
       gpuErrchk(cudaDeviceSynchronize());
@@ -158,7 +158,7 @@ __host__ void ConjugateGradient::minimizate()
     }
   }
   printf("Too many iterations in frprmn\n");
-  of->calcFunction(image->image);
+  of->calcFunction(image->getImage());
   deallocateMemoryGpu();
   return;
 };

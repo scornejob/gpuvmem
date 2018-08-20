@@ -77,14 +77,15 @@ __host__ void linmin(float *p, float *xi, float *fret, float (*func)(float*))//p
   //GPU MUL AND ADD
   //xi     = xi*xmin;
   //p      = p + xi;
+  imageMap *auxPtr = I->getFunctionMapping();
   if(nopositivity == 0){
-    for(int i=0; i<I->image_count; i++)
+    for(int i=0; i<I->getImageCount(); i++)
     {
-      (I->functionMapping[i].newP)(p, xi, xmin, i);
+      (auxPtr[i].newP)(p, xi, xmin, i);
       gpuErrchk(cudaDeviceSynchronize());
     }
   }else{
-    for(int i=0; i<I->image_count; i++)
+    for(int i=0; i<I->getImageCount(); i++)
     {
       newPNoPositivity<<<numBlocksNN, threadsPerBlockNN>>>(p, xi, xmin, N, M, i);
       gpuErrchk(cudaDeviceSynchronize());

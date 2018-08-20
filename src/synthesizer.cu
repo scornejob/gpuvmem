@@ -317,9 +317,9 @@ void AlphaMFS::configure(int argc, char **argv)
        iohandler->IoreadMS(msinput, fields, data);
     }
     this->visibilities = new Visibilities();
-    this->visibilities->data = &data;
-    this->visibilities->fields = fields;
-    this->visibilities->total_visibilities = &total_visibilities;
+    this->visibilities->setData(&data);
+    this->visibilities->setFields(fields);
+    this->visibilities->setTotalVisibilites(&total_visibilities);
     float deltax = RPDEG*DELTAX; //radians
     float deltay = RPDEG*DELTAY; //radians
     deltau = 1.0 / (M * deltax);
@@ -436,7 +436,7 @@ void AlphaMFS::setDevice()
 
         gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
-        gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vr, 0, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+        gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vr, 0, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
         gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vm, 0, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
       }
     }
@@ -545,11 +545,13 @@ void AlphaMFS::setDevice()
 
   /////////// MAKING IMAGE OBJECT /////////////
   image = new Image(device_Image, image_count);
-  image->functionMapping = (imageMap*)malloc(sizeof(imageMap)*image_count);
+  imageMap *functionPtr = (imageMap*)malloc(sizeof(imageMap)*image_count);
+  image->setFunctionMapping(functionPtr);
+
    for(int i = 0; i < image_count; i++)
    {
-     image->functionMapping[i].newP = defaultNewP;
-     image->functionMapping[i].evaluateXt = defaultEvaluateXt;
+     functionPtr[i].newP = defaultNewP;
+     functionPtr[i].evaluateXt = defaultEvaluateXt;
    }
 
   if(num_gpus == 1){
@@ -754,9 +756,9 @@ void AlphaMFS::run()
     //Pass residuals to host
     printf("Saving final image to disk\n");
     if(image_count == 1)
-      fitsOutputCufftComplex(image->image, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+      fitsOutputCufftComplex(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
     else if(image_count == 2)
-      float2toImage(image->image, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+      float2toImage(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
 
     if(print_errors)/* flag for print error image */
       {

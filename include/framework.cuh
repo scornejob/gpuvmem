@@ -73,7 +73,7 @@ public:
   virtual void calculateInu(cufftComplex *image, float *I, float freq) = 0;
   virtual void chainRule(float *I, float freq) = 0;
   virtual void configure(int I) = 0;
-public:
+protected:
   float *chain;
   cufftComplex *fg_image;
   int image_count;
@@ -125,15 +125,31 @@ class Image
 {
 public:
   Image(float *image, int image_count){this->image = image; this->image_count = image_count;};
+  int getImageCount(){return image_count;};
+  float *getImage(){return image;};
+  float *getErrorImage(){return error_image;};
+  imageMap *getFunctionMapping(){return functionMapping;};
+  void setImageCount(int i){this->image_count = i;};
+  void setErrorImage(float *f){this->error_image = f;};
+  void setImage(float *i){this->image = i;};
+  void setFunctionMapping(imageMap *f){this->functionMapping = f;};
+private:
   int image_count;
   float *image;
-  imageMap *functionMapping;
   float *error_image;
+  imageMap *functionMapping;
 };
 
 class Visibilities
 {
 public:
+  void setData(freqData* d){this->data = d;};
+  void setFields(Field *f){this->fields = f;};
+  void setTotalVisibilites(int *t){this->total_visibilities = t;};
+  freqData *getData(){return data;};
+  Field *getFields(){return fields;};
+  int *getTotalVisibilities(){return total_visibilities;};
+private:
   freqData *data;
   VariablesPerField *vars_per_field;
   Field *fields;
@@ -262,10 +278,11 @@ public:
   __host__ void setVisibilities(Visibilities * v){this->visibilities = v;};
   __host__ void setIoHandler(Io *handler){this->iohandler = handler;};
   __host__ void setError(Error *e){this->error = e;};
-  cufftComplex *device_I;
-  float ftol;
-  Image *image;
+  Image *getImage(){return image;};
+  void setImage(Image *i){this->image = i;};
 protected:
+  cufftComplex *device_I;
+  Image *image;
   Optimizator *optimizator;
   Io *iohandler = NULL;
   Visibilities *visibilities;
