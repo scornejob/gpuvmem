@@ -1444,6 +1444,19 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
 
 }
 
+__global__ void chi2Vector(float *chi2, cufftComplex *Vm, cufftComplex *Vo, float *w, long numVisibilities)
+{
+	int i = threadIdx.x + blockDim.x * blockIdx.x;
+
+  cufftComplex Vr;
+  if (i < numVisibilities){
+    Vr.x = Vm[i].x - Vo[i].x;
+    Vr.y = Vm[i].y - Vo[i].y;
+		chi2[i] =  w[i] * ((Vr.x * Vr.x) + (Vr.y * Vr.y));
+	}
+
+}
+
 __global__ void SVector(float *S, float *noise, float *I, long N, long M, float noise_cut, float MINPIX, float eta, int image)
 {
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1684,6 +1697,42 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
   }
 }
 
+__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vm, cufftComplex *Vo, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float beam_fwhm, float beam_freq, float beam_cutoff, float freq)
+{
+
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  int x0 = xobs;
+  int y0 = yobs;
+  float x = (j - x0) * DELTAX * RPDEG;
+  float y = (i - y0) * DELTAY * RPDEG;
+
+	float Ukv, Vkv, cosk, sink, atten;
+  cufftComplex Vr;
+  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
+
+  float dchi2 = 0.0;
+  if(noise[N*i+j] <= noise_cut){
+  	for(int v=0; v<numVisibilities; v++){
+        Ukv = x * U[v];
+    		Vkv = y * V[v];
+        Vr.x = Vm[v].x - Vo[v].x;
+        Vr.y = Vm[v].y - Vo[v].y;
+        #if (__CUDA_ARCH__ >= 300 )
+          sincospif(2.0*(Ukv+Vkv), &sink, &cosk);
+        #else
+          cosk = cospif(2.0*(Ukv+Vkv));
+          sink = sinpif(2.0*(Ukv+Vkv));
+        #endif
+        dchi2 += w[v]*((Vr.x * cosk) - (Vr.y * sink));
+  	}
+
+  dchi2 *= fg_scale * atten;
+  dChi2[N*i+j] = dchi2;
+  }
+}
+
 __global__ void DChi2_total(float *dchi2_total, float *dchi2, long N)
 {
 
@@ -1915,8 +1964,8 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
           vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
           gpuErrchk(cudaDeviceSynchronize());
 
-          residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
-          gpuErrchk(cudaDeviceSynchronize());
+          //residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
+          //gpuErrchk(cudaDeviceSynchronize());
           /*}else{
             residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, device_V, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
             gpuErrchk(cudaDeviceSynchronize());
@@ -1924,7 +1973,8 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
           }*/
 
         	////chi 2 VECTOR
-        	chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
+        	//chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
+          chi2Vector<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(device_chi2, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i]);
         	gpuErrchk(cudaDeviceSynchronize());
 
         	//REDUCTIONS
@@ -2038,7 +2088,7 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
 
-          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
+          DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq);
           gpuErrchk(cudaDeviceSynchronize());
 
           if(image_count == 1)
