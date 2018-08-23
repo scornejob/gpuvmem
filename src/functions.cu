@@ -2211,38 +2211,48 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
   I_nu[N*i+j].y = 0.0f;
 }
 
-__global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, long numVisibilities, long N)
+__global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float *noise, float noise_cut, float nu, float nu_0, float *w, float beam_fwhm, float beam_freq, float beam_cutoff, float xobs, float yobs, float DELTAX, float DELTAY, float fg_scale, long numVisibilities, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float alpha, nudiv, nudiv_pow_alpha, sum_noise;
+  float alpha, nudiv, nudiv_pow_alpha, sum_noise, atten, x, y;
+  int x0, y0;
+
+  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, nu, xobs, yobs, DELTAX, DELTAY);
 
   nudiv = nu/nu_0;
   alpha = images[N*i+j].y;
   nudiv_pow_alpha = powf(nudiv, alpha);
 
   sum_noise = 0.0f;
-  for(int k=0; k<numVisibilities; k++){
-     sum_noise += w[k] * nudiv_pow_alpha;
+  if(noise[N*i+j] <= noise_cut){
+    for(int k=0; k<numVisibilities; k++){
+      sum_noise += atten * atten * w[k] * nudiv_pow_alpha * nudiv_pow_alpha;
+    }
+    noise_I[N*i+j].x += sum_noise;
+  }else{
+    noise_I[N*i+j].x = 0.0f;
   }
 
-  noise_I[N*i+j].x = 1 / (sqrtf(sum_noise));
+
 
 }
 
-__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, int xobs, int yobs, long numVisibilities, long N)
+__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, float xobs, float yobs, float beam_fwhm, float beam_freq, float beam_cutoff, float fg_scale, long numVisibilities, long N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2, sum_noise;
+  float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2, sum_noise, atten;
   int x0, y0;
 
   x0 = xobs;
   y0 = yobs;
   x = (j - x0) * DELTAX * RPDEG;
   y = (i - y0) * DELTAY * RPDEG;
+
+  atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, nu, xobs, yobs, DELTAX, DELTAY);
 
   nudiv = nu/nu_0;
   I_nu_0 = images[N*i+j].x;
@@ -2264,16 +2274,33 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
         sink = sinpif(2.0*(Ukv+Vkv));
       #endif
         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
-        sum_noise += w[v] * log_nu * log_nu * I_nu * (I_nu + dchi2);
+        sum_noise += w[v] * log_nu * log_nu * atten * I_nu * fg_scale * (atten * I_nu * fg_scale + dchi2);
     }
     if(sum_noise <= 0)
-      noise_I[N*i+j].y = 0.0f;
+      noise_I[N*i+j].y += 0.0f;
     else
-      noise_I[N*i+j].y = 1 / (sqrt(sum_noise));
+      noise_I[N*i+j].y += sum_noise;
   }else{
     noise_I[N*i+j].y = 0.0f;
   }
 }
+
+__global__ void noise_reduction(float2 *noise_I, long N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  if(noise_I[N*i+j].x > 0.0f)
+    noise_I[N*i+j].x = 1/sqrt(noise_I[N*i+j].x);
+  else
+    noise_I[N*i+j].x = 0.0f;
+
+  if(noise_I[N*i+j].y > 0.0f)
+    noise_I[N*i+j].y = 1/sqrt(noise_I[N*i+j].y);
+  else
+    noise_I[N*i+j].y = 0.0f;
+}
+
+
 
 
 __host__ float chiCuadrado(float2 *I)
@@ -2600,9 +2627,11 @@ __host__ void calculateErrors(float2 *images){
     for(int f=0; f<data.nfields; f++){
       for(int i=0; i<data.total_frequencies;i++){
         if(fields[f].numVisibilitiesPerFreq[i] != 0){
-          I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i], N);
+          I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, device_noise_image, noise_cut, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, beam_fwhm, beam_freq, beam_cutoff, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, fg_scale, fields[f].numVisibilitiesPerFreq[i], N);
           gpuErrchk(cudaDeviceSynchronize());
-          alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, fields[f].numVisibilitiesPerFreq[i], N);
+          alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, beam_fwhm, beam_freq, beam_cutoff, fg_scale, fields[f].numVisibilitiesPerFreq[i], N);
+          gpuErrchk(cudaDeviceSynchronize());
+          noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
           gpuErrchk(cudaDeviceSynchronize());
         }
       }
@@ -2623,9 +2652,11 @@ __host__ void calculateErrors(float2 *images){
 
           #pragma omp critical
           {
-            I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].numVisibilitiesPerFreq[i], N);
+            I_nu_0_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, device_noise_image, noise_cut, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, beam_fwhm, beam_freq, beam_cutoff, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, fg_scale, fields[f].numVisibilitiesPerFreq[i], N);
             gpuErrchk(cudaDeviceSynchronize());
-            alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, fields[f].numVisibilitiesPerFreq[i], N);
+            alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, beam_fwhm, beam_freq, beam_cutoff, fg_scale, fields[f].numVisibilitiesPerFreq[i], N);
+            gpuErrchk(cudaDeviceSynchronize());
+            noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
             gpuErrchk(cudaDeviceSynchronize());
 
           }
