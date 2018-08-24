@@ -251,6 +251,7 @@ __host__ void print_help() {
   printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
   printf("        --clipping         Clips the image to positive values\n");
   printf("        --print-images     Prints images per iteration\n");
+  printf("        --print-errors     Prints final error images\n");
   printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -1894,7 +1895,7 @@ __global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float 
 
 }
 
-__global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, float xobs, float yobs, float beam_fwhm, float beam_freq, float beam_cutoff, float fg_scale, long numVisibilities, long N, long M)
+__global__ void alpha_Noise(float *noise_I, float *images, float nu, float nu_0, float *w, float *U, float *V, cufftComplex *Vr, float *noise, float noise_cut, float DELTAX, float DELTAY, float xobs, float yobs, float beam_fwhm, float beam_freq, float beam_cutoff, float fg_scale, long numVisibilities, long N, long M)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1940,7 +1941,7 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
   }
 }
 
-__global__ void noise_reduction(float2 *noise_I, long N){
+__global__ void noise_reduction(float *noise_I, long N, long M){
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -2419,7 +2420,7 @@ __host__ void calculateErrors(Image *image){
           gpuErrchk(cudaDeviceSynchronize());
           alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, image->getImage(), fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, beam_fwhm, beam_freq, beam_cutoff, fg_scale, fields[f].numVisibilitiesPerFreq[i], N, M);
           gpuErrchk(cudaDeviceSynchronize());
-          noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
+          noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N, M);
           gpuErrchk(cudaDeviceSynchronize());
         }
       }
@@ -2444,7 +2445,7 @@ __host__ void calculateErrors(Image *image){
             gpuErrchk(cudaDeviceSynchronize());
             alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, image->getImage(), fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, beam_fwhm, beam_freq, beam_cutoff, fg_scale, fields[f].numVisibilitiesPerFreq[i], N, M);
             gpuErrchk(cudaDeviceSynchronize());
-            noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
+            noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N, M);
             gpuErrchk(cudaDeviceSynchronize());
 
           }
