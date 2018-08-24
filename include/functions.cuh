@@ -60,6 +60,7 @@ __host__ void DTVariation(float *I, float *dgi, float penalization_factor, int m
 __host__ float totalvariation(float *I, float * ds, float penalization_factor, int mod, int order, int index);
 __host__ void DQuadraticP(float *I, float *dgi, float penalization_factor, int mod, int order, int index);
 __host__ float quadraticP(float *I, float * ds, float penalization_factor, int mod, int order, int index);
+__host__ void calculateErrors(Image *image);
 
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);

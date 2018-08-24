@@ -4,10 +4,8 @@ extern long N, M;
 
 void SecondDerivateError::calculateErrorImage(Image *I, Visibilities *v)
 {
-  /* params must contain image and visibilities,
-  is recomended tu make a strunct for it in framework.cuh.
-  Image object has a float * for the error images, but it is not initialized.
-  */
+  if(I->getImageCount() > 1)
+    calculateErrors(I);
 };
 
 namespace {

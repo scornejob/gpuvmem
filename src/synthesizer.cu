@@ -766,12 +766,13 @@ void AlphaMFS::run()
         {
           this->error = Singleton<ErrorFactory>::Instance().CreateError(0);
         }
-        printf("Saving Error image file to disk\n");
         /* code for calculate error */
         /* make void * params */
-
+        printf("Calculating Error Images\n");
+        this->error->calculateErrorImage(this->image, this->visibilities);
+        printf("Saving Error image file to disk\n");
         //this->error->calculateErrorImage()
-        //float2toImage(image->error_image)
+        //float2toImage(image->error_image())
       }
     //Saving residuals to disk
     residualsToHost(fields, data, num_gpus, firstgpu);

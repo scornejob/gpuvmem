@@ -1242,6 +1242,10 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
       Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
       snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
       break;
+    case 2:
+      needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0_error.fits", out_image) + 1;
+      Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
+      snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0_error.fits", out_image);
     case -1:
       break;
     default:
