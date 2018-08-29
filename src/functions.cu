@@ -2216,8 +2216,7 @@ __global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float *noise, floa
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float alpha, nudiv, nudiv_pow_alpha, sum_noise, atten, x, y;
-  int x0, y0;
+  float alpha, nudiv, nudiv_pow_alpha, sum_noise, atten;
 
   atten = attenuation(beam_fwhm, beam_freq, beam_cutoff, nu, xobs, yobs, DELTAX, DELTAY);
 
@@ -2228,9 +2227,9 @@ __global__ void I_nu_0_Noise(float2 *noise_I, float2 *images, float *noise, floa
   sum_noise = 0.0f;
   if(noise[N*i+j] <= noise_cut){
     for(int k=0; k<numVisibilities; k++){
-      sum_noise += atten * atten * w[k] * nudiv_pow_alpha * nudiv_pow_alpha;
+      sum_noise +=  w[k];
     }
-    noise_I[N*i+j].x += sum_noise;
+    noise_I[N*i+j].x += fg_scale * fg_scale * fg_scale * fg_scale * atten * atten * sum_noise * nudiv_pow_alpha * nudiv_pow_alpha;
   }else{
     noise_I[N*i+j].x = 0.0f;
   }
@@ -2274,12 +2273,12 @@ __global__ void alpha_Noise(float2 *noise_I, float2 *images, float nu, float nu_
         sink = sinpif(2.0*(Ukv+Vkv));
       #endif
         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
-        sum_noise += w[v] * log_nu * log_nu * atten * I_nu * fg_scale * (atten * I_nu * fg_scale + dchi2);
+        sum_noise += w[v] * (atten * I_nu * fg_scale + dchi2);
     }
     if(sum_noise <= 0)
       noise_I[N*i+j].y += 0.0f;
     else
-      noise_I[N*i+j].y += sum_noise;
+      noise_I[N*i+j].y += log_nu * log_nu * atten * I_nu * fg_scale * sum_noise;
   }else{
     noise_I[N*i+j].y = 0.0f;
   }
