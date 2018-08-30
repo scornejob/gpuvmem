@@ -733,16 +733,16 @@ __host__ int main(int argc, char **argv) {
     fprintf(outfile, "Wall time: %lf", wall_time);
     fclose(outfile);
   }
-	//Pass residuals to host
+
 	printf("Saving final image to disk\n");
 	float2toImage(device_2I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+  if(print_errors)
+    calculateErrors(device_2I);
 	//Saving residuals to disk
   residualsToHost(fields, data, num_gpus, firstgpu);
   printf("Saving residuals to MS...\n");
 	writeMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
 	printf("Residuals saved.\n");
-  if(print_errors)
-    calculateErrors(device_2I);
 
 	//Free device and host memory
 	printf("Free device and host memory\n");

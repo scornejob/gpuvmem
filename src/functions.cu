@@ -2633,8 +2633,6 @@ __host__ void calculateErrors(float2 *images){
         }
       }
     }
-    noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
-    gpuErrchk(cudaDeviceSynchronize());
   }else{
     for(int f=0;f<data.nfields;f++){
       #pragma omp parallel for schedule(static,1)
@@ -2655,15 +2653,20 @@ __host__ void calculateErrors(float2 *images){
             gpuErrchk(cudaDeviceSynchronize());
             alpha_Noise<<<numBlocksNN, threadsPerBlockNN>>>(errors, images, fields[f].visibilities[i].freq, nu_0, fields[f].device_visibilities[i].weight, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, fields[f].global_xobs, fields[f].global_yobs, beam_fwhm, beam_freq, beam_cutoff, fg_scale, fields[f].numVisibilitiesPerFreq[i], N);
             gpuErrchk(cudaDeviceSynchronize());
-
           }
         }
       }
     }
-    cudaSetDevice(firstgpu);
-    noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
-    gpuErrchk(cudaDeviceSynchronize());
   }
+
+  if(num_gpus == 1){
+    cudaSetDevice(selected);
+  }else{
+    cudaSetDevice(firstgpu);
+  }
+
+  noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N);
+  gpuErrchk(cudaDeviceSynchronize());
 
   float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
   cudaFree(errors);
