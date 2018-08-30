@@ -66,6 +66,37 @@ extern char *checkp;
 extern double2 *host_total;
 extern double2 *host_total2;
 
+extern float2 *temp;
+extern double2 *total_out, *total2_out;
+extern double2 *total, *total2;
+
+extern FILE *outfile;
+extern FILE *outfile_its;
+
+extern int position_in_file;
+
+extern int accepted_afterburndown;
+
+extern int real_iterations;
+
+void sig_handler(int signo)
+{
+    if(signo == SIGKILL || signo == SIGTERM || signo == SIGINT){
+      printf("--------------Iteration %d-----------\n", real_iterations);
+      fseek(outfile_its,position_in_file,SEEK_SET);
+      fprintf(outfile_its, "Iterations: %d\n", real_iterations);
+      fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
+      double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
+      double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
+      float2toImage(device_2I, mod_in, out_image, checkp, 2, M, N, 1);
+      fclose(outfile);
+      fclose(outfile_its);
+      cudaFree(device_2I);
+      cudaFree(total2_out);
+      cudaFree(total_out);
+      exit(0);
+    }
+}
 
 __host__ void goToError()
 {
@@ -2157,10 +2188,7 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
   float p = 0.0;
   float un_rand = 0.0;
   int accepted = 0;
-  int accepted_afterburndown = 0;
-  float2 *temp;
-  double2 *total_out, *total2_out;
-  double2 *total, *total2;
+  accepted_afterburndown = 0;
 
   /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
@@ -2274,8 +2302,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   float un_rand = 0.0;
   int accepted = 0;
   int accepted_afterburndown = 0;
-  float2 *temp;
-  double2 *total_out, *total2_out;
+
 
   /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
   gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
@@ -2307,21 +2334,22 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
   snprintf(chi2_file_name, file_chi2_n*sizeof(char), "%schi2.txt", checkp, 0);
   snprintf(iter_file_name, file_iter_n*sizeof(char), "%siter.txt", checkp, 0);
 
-  FILE *outfile;
   if(checkpoint)
     outfile = fopen(chi2_file_name, "a");
   else
     outfile = fopen(chi2_file_name, "w");
 
-  FILE *outfile_its = fopen(iter_file_name , "w");
+  outfile_its = fopen(iter_file_name , "w");
 
-  int position_in_file = ftell(outfile_its);
+  position_in_file = ftell(outfile_its);
   randomize(pixels, valid_pixels);
 
-  for(int i = 0; i< iterations; i++){
-    printf("--------------Iteration %d-----------\n", i);
-    fseek(outfile_its,position_in_file,SEEK_SET);
-    fprintf(outfile_its, "%d\n", accepted_afterburndown);
+  signal(SIGINT, sig_handler);
+  signal(SIGTERM, sig_handler);
+  signal(SIGKILL, sig_handler);
+
+  for(real_iterations = 0; real_iterations< iterations; real_iterations++){
+
     for(int j = 0; j < valid_pixels; j++){
 
         //printf("Changing pixel %d \n", pixels[j]);
@@ -2347,7 +2375,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
           /*if(print_images && i%3 == 0)
             float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-          if(i >= burndown_steps){
+          if(real_iterations >= burndown_steps){
             sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
             gpuErrchk(cudaDeviceSynchronize());
             accepted_afterburndown++;
@@ -2366,7 +2394,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
               gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
               /*if(print_images && i%3 == 0)
                 float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-              if(i >= burndown_steps){
+              if(real_iterations >= burndown_steps){
                 sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
                 gpuErrchk(cudaDeviceSynchronize());
                 accepted_afterburndown++;
@@ -2377,6 +2405,10 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
             }
           }
     }
+    printf("--------------Iteration %d-----------\n", real_iterations);
+    fseek(outfile_its,position_in_file,SEEK_SET);
+    fprintf(outfile_its, "Iterations: %d\n", real_iterations);
+    fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
     double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
     double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
     float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);

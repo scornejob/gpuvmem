@@ -68,6 +68,19 @@ char *checkp;
 double2 *host_total;
 double2 *host_total2;
 
+float2 *temp;
+double2 *total_out, *total2_out;
+double2 *total, *total2;
+
+FILE *outfile;
+FILE *outfile_its;
+
+int position_in_file;
+
+int accepted_afterburndown;
+
+int real_iterations;
+
 inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
 {
   #ifdef _WIN32

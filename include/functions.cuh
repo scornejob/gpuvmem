@@ -13,6 +13,7 @@
 #include <curand.h>
 #include <curand_kernel.h>
 #include <time.h>
+#include<signal.h>
 #include "MSFITSIO.cuh"
 
 #define FLOAT_IMG   -32
