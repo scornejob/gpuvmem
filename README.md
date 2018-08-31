@@ -31,10 +31,10 @@ make NEWCASA=1
 
 1. CBI2
 2. ALMA
-3. CBI2 Test
-4. ATCA
-5. VLA
-6. SZA
+3. ATCA
+4. VLA
+5. SZA
+6. CBI
 
 
 # Use GPUVMEM:
