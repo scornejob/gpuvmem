@@ -1350,11 +1350,11 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
 
 
 
-__device__ float AiryDiskBeam(float distance, float lambda, float antenna_diameter)
+__device__ float AiryDiskBeam(float distance, float lambda, float antenna_diameter, float pb_factor)
 {
   float atten;
-  float fwhm = 1.22 * lambda / antenna_diameter;
-  float bessel_arg = PI*distance/(fwhm/RZ);
+  float r = pb_factor * lambda / antenna_diameter;
+  float bessel_arg = PI*distance/(r/RZ);
   float bessel_func = j1f(bessel_arg);
   if(distance == 0.0f){
     atten = 1.0f;
@@ -1389,7 +1389,7 @@ __device__ float attenuation(float antenna_diameter, float pb_factor, float pb_c
     float arc = sqrtf(x*x+y*y);
     float lambda = LIGHTSPEED/freq;
 
-    atten = AiryDiskBeam(arc, lambda, antenna_diameter);
+    atten = AiryDiskBeam(arc, lambda, antenna_diameter, pb_factor);
 
     if(arc <= pb_cutoff){
       atten_result = atten;
