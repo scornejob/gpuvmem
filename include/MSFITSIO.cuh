@@ -45,6 +45,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+//Included variable from Makefile using "make NEWCASA=1"
+#ifdef NEWCASA
+namespace casa = casacore;
+#endif
 
 typedef struct freqData{
   int n_internal_frequencies;

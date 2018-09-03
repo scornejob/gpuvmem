@@ -11,6 +11,10 @@ CCFLAG = -lstdc++
 # Gencode arguments
 SMS ?= 30 35 37 50 52
 
+ifeq ($(NEWCASA),1)
+CFLAGS += -DNEWCASA
+endif
+
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified <<<)
 endif
