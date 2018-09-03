@@ -21,6 +21,7 @@ const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
+const float RZ = 1.2196698912665045;
 
 __host__ void goToError();
 __host__ long NearestPowerOf2(long x);
@@ -71,7 +72,7 @@ __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N)
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
 __device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
-__global__ void total_attenuation(float *total_atten, float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N);
+__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N);
 __global__ void mean_attenuation(float *total_atten, int channels, long N);
 __global__ void weight_image(float *weight_image, float *total_atten, float noise_jypix, long N);
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);

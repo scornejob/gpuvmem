@@ -11,7 +11,7 @@ cufftComplex *device_V, *device_fg_image, *device_image;
 
 float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
-float noise_jypix, fg_scale, final_chi2, final_S, beam_fwhm, beam_freq, beam_cutoff, eta;
+float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta;
 float *host_I, sum_weights, *initial_values, *penalizators;
 
 dim3 threadsPerBlockNN;
@@ -604,7 +604,7 @@ void AlphaMFS::setDevice()
     for(int f=0; f<data.nfields; f++){
       for(int i=0; i<data.total_frequencies; i++){
         if(fields[f].numVisibilitiesPerFreq[i] > 0){
-          total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
+          total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
           gpuErrchk(cudaDeviceSynchronize());
         }
       }
@@ -623,7 +623,7 @@ void AlphaMFS::setDevice()
         if(fields[f].numVisibilitiesPerFreq[i] > 0){
           #pragma omp critical
           {
-            total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, beam_fwhm, beam_freq, beam_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
+            total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
             gpuErrchk(cudaDeviceSynchronize());
           }
         }
