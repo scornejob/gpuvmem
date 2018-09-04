@@ -157,6 +157,6 @@ co65:
 selfcalband9:
 	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 --verbose -z 0.001 --print-images
 freq78:
-	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images
+	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images -z 0.001 -Z 0.01,0.5
 antennae:
-	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images
+	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 0.01,0.5
