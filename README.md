@@ -1,11 +1,13 @@
 # GPUVMEM
 
-# Libraries
+# Installation
 
-To compile GPUVMEM you need:
+1. Download or clone gpuvmem.
+
+2. To compile GPUVMEM you will need:
 
 - casacore (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using the last version of casacore, please compile using the flag NEWCASA=1.
-- CUDA
+- CUDA >= 9
 - OpenMP
 
 # Compiling
@@ -24,8 +26,9 @@ make NEWCASA=1
 
 # Usage
 
-Create your canvas or mod_in_0.fits with difmap or CASA, typically we use a FITS CASA CLEAN image of the desired object.
-Create your input.dat file with the following data and change the parameters if you want:
+Create your canvas or mod_in_0.fits with the image data in the header, typically we use a FITS CASA CLEAN dirty image of the desired object.
+
+Create your input.dat file with the following data and change the parameters as you need:
 
 ```
 noise_cut	100.5
@@ -101,13 +104,13 @@ Remember to create the mem folder to save the FITS images
 
 We have fixed the Makefile and now you can compile gpuvmem using the new version of casacore.
 
-# RESTORING YOUR IMAGE
+# RESTORING YOUR IMAGE PLEASE SEE CARCAMO ET AL. 2018 FOR MORE INFORMATION
 
 Usage:
 
 `casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output`
 
-# Contributors
+# CONTRIBUTORS
 
 - Miguel Cárcamo
 - Fernando Rannou
@@ -117,7 +120,7 @@ Usage:
 - Victor Moral
 - Nicolás Muñoz
 
-# BUG REPORTS
+# CONTRIBUTION AND BUG REPORTS
 
 **Describe the bug**
 A clear and concise description of what the bug is.
