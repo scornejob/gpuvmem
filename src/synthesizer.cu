@@ -13,6 +13,7 @@ float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
 float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta;
 float *host_I, sum_weights, *initial_values, *penalizators;
+Telescope *telescope;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -450,7 +451,6 @@ void AlphaMFS::setDevice()
 
   noise_jypix = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
 
-  host_I = (float*)malloc(M*N*sizeof(float)*image_count);
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
@@ -483,12 +483,25 @@ void AlphaMFS::setDevice()
   char *pt;
   char *temp = (char*)malloc(sizeof(char)*strlen(variables.initial_values));
   strcpy(temp, variables.initial_values);
-  initial_values = (float*)malloc(sizeof(float)*image_count);
+  if(image_count == 1){
+    initial_values = (float*)malloc(sizeof(float)*image_count+1);
+  }else{
+    initial_values = (float*)malloc(sizeof(float)*image_count);
+  }
   pt = strtok(temp, ",");
   for(int i=0; i< image_count; i++){
     initial_values[i] = atof(pt);
     pt = strtok (NULL, ",");
   }
+
+  if(image_count == 1)
+  {
+    initial_values[1] = 0.0f;
+    image_count++;
+    nu_0 = 1.0f;
+    imagesChanged = 1;
+  }
+  host_I = (float*)malloc(M*N*sizeof(float)*image_count);
 
   free(pt);
   free(temp);
@@ -691,21 +704,24 @@ void AlphaMFS::run()
     //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
     printf("\n\nStarting Optimizator\n");
 
-    if(image_count == 1)
-    {
-      optimizator->setImage(image);
-      optimizator->minimizate();
-    }else if(image_count == 2)
-    {
-      optimizator->setImage(image);
-      optimizator->setFlag(0);
-      optimizator->minimizate();
-      optimizator->setFlag(1);
-      optimizator->minimizate();
-      optimizator->setFlag(2);
-      optimizator->minimizate();
-      optimizator->setFlag(3);
-      optimizator->minimizate();
+    if(this->Order == NULL){
+      if(imagesChanged)
+      {
+        optimizator->setImage(image);
+        optimizator->minimizate();
+      }else if(image_count == 2){
+        optimizator->setImage(image);
+        optimizator->setFlag(0);
+        optimizator->minimizate();
+        optimizator->setFlag(1);
+        optimizator->minimizate();
+        optimizator->setFlag(2);
+        optimizator->minimizate();
+        optimizator->setFlag(3);
+        optimizator->minimizate();
+      }
+    }else{
+      (this->Order)(optimizator, image);
     }
 
     t = clock() - t;

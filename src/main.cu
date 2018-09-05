@@ -46,6 +46,12 @@ inline bool IsAppBuiltAs64()
   #endif
 }
 
+void orderTest(Optimizator *o, Image *I){
+  o->setImage(I);
+  o->setFlag(0);
+  o->minimizate();
+}
+
 __host__ int main(int argc, char **argv) {
 	////CHECK FOR AVAILABLE GPUs
 	cudaGetDeviceCount(&num_gpus);
@@ -87,16 +93,17 @@ __host__ int main(int argc, char **argv) {
   //Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
   //sy->applyFilter(g); // delete this line for no gridding
 
-  sy->setDevice(); // This routine sends the data to GPU memory
+  sy->setDevice();
+  sy->setOrder(orderTest); // This routine sends the data to GPU memory
   Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
   Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
   Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
   chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
-  //e->configure(0, 0, 0);
+  e->configure(0, 0, 0);
   //l->configure(1, 0, 0);
   //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
   of->addFi(chi2);
-  //of->addFi(e);
+  of->addFi(e);
   //of->addFi(l);
   sy->getImage()->getFunctionMapping()[0].newP = particularNewP;
   sy->getImage()->getFunctionMapping()[0].evaluateXt = particularEvaluateXt;

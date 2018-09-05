@@ -156,6 +156,22 @@ private:
   int *total_visibilities;
 };
 
+class Telescope
+{
+public:
+  virtual void apply_beam(cufftComplex *image, float xobs, float yobs, float freq) = 0;
+  void setAntennaDiameter(float a){this->antenna_diameter = a;};
+  void setPbFactor(float a){this->pb_factor = a;};
+  void setPbCutoff(float a){this->pb_cutoff = a;};
+  float getAntennaDiameter(){return this->antenna_diameter;};
+  float getPbFactor(){return this->pb_factor;};
+  float getPbCutoff(){return this->pb_cutoff;};
+private:
+  float antenna_diameter = 0;   /* CBI2 Antenna Diameter */
+  float pb_factor = 0;          /* FWHM Factor */
+  float pb_cutoff = 0;
+};
+
 class Error
 {
 public:
@@ -278,6 +294,7 @@ public:
   __host__ void setVisibilities(Visibilities * v){this->visibilities = v;};
   __host__ void setIoHandler(Io *handler){this->iohandler = handler;};
   __host__ void setError(Error *e){this->error = e;};
+  __host__ void setOrder(void (*func)(Optimizator *o,Image *I)){this->Order = func;};
   Image *getImage(){return image;};
   void setImage(Image *i){this->image = i;};
 protected:
@@ -287,6 +304,8 @@ protected:
   Io *iohandler = NULL;
   Visibilities *visibilities;
   Error *error = NULL;
+  void (*Order)(Optimizator *o, Image *I) = NULL;
+  int imagesChanged = 0;
 };
 
 

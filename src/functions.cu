@@ -41,6 +41,7 @@ status_mod_in, flag_opt, verbose_flag, clip_flag, num_gpus, selected, iter, t_te
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_fg_image, *device_image;
 extern float *device_I;
+extern Telescope *telescope;
 
 extern float *device_dphi, *device_chi2, *device_dchi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
