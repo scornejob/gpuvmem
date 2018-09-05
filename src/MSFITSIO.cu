@@ -1225,9 +1225,9 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
       snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
       break;
     case 2:
-      needed_alpha = snprintf(NULL, 0, "!%salpha_error.fits", mempath, iteration) + 1;
+      needed_alpha = snprintf(NULL, 0, "!%salpha_error.fits", out_image) + 1;
       alphaname = (char*)malloc(needed_alpha*sizeof(char));
-      snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_error.fits", mempath, iteration);
+      snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_error.fits", out_image);
       break;
     case -1:
       break;
