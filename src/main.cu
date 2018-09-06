@@ -52,6 +52,19 @@ void orderTest(Optimizator *o, Image *I){
   o->minimizate();
 }
 
+void testOfits(float *I, Io *io){
+  io->IoPrintImage(I, "testInu.fits", "", 0);
+  io->IoPrintImage(I, "testAlpha.fits", "", 1);
+}
+void testOfitsErrors(float *I, Io *io){
+  io->IoPrintImage(I, "ErrortestInu.fits", "", 0);
+  io->IoPrintImage(I, "ErrortestAlpha.fits", "", 1);
+}
+void testOfitsIterations(float *I, Io *io){
+  io->IoPrintImage(I, "testInuIterations.fits", "", 0);
+  io->IoPrintImage(I, "testAlphaIterations.fits", "", 1);
+}
+
 __host__ int main(int argc, char **argv) {
 	////CHECK FOR AVAILABLE GPUs
 	cudaGetDeviceCount(&num_gpus);
@@ -83,13 +96,15 @@ __host__ int main(int argc, char **argv) {
   Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(MFS);
   Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
   ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
-
-  //Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
-  //sy->setIoHandler(ioms);
+  Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
+  sy->setIoHandler(ioms);
+  // create a dir for printImages
+  ioms->setPrintImagesPath(""); /// Important to print images see ioms.cu
   sy->configure(argc, argv);
   cg->setObjectiveFunction(of);
   sy->setOptimizator(cg);
-
+  sy->setIoOrderEnd(testOfits);
+  sy->setIoOrderError(testOfitsErrors);
   //Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
   //sy->applyFilter(g); // delete this line for no gridding
 

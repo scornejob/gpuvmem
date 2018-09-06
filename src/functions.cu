@@ -2122,15 +2122,6 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
     ip->clip(I);
   }
 
-
-  if(print_images)
-    if(image_count < 2)
-      fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
-    else
-      {
-        float2toImage(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
-      }
-
   if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int f=0; f<data.nfields; f++){
@@ -2449,6 +2440,6 @@ __host__ void calculateErrors(Image *image){
   noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N, M);
   gpuErrchk(cudaDeviceSynchronize());
 
-  float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
-  cudaFree(errors);
+  //float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
+  //cudaFree(errors);
 }

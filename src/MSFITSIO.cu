@@ -1068,7 +1068,7 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *name_image, char *units, i
   host_IFITS = (float*)malloc(M*N*sizeof(float));
 
   int offset = (M*N)*index*sizeof(float);
-  gpuErrchk(cudaMemcpy(host_IFITS, I+offset, sizeof(float)*M*N, cudaMemcpyDeviceToHost));
+  gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
   float* image2D;
 	image2D = (float*) malloc(M*N*sizeof(float));

@@ -703,7 +703,7 @@ void MFS::run()
 {
     //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
     printf("\n\nStarting Optimizator\n");
-
+    //optimizator->getObjectiveFuntion()->setIoOrderIterations(IoOrderIterations);
     if(this->Order == NULL){
       if(imagesChanged)
       {
@@ -771,10 +771,11 @@ void MFS::run()
     }
     //Pass residuals to host
     printf("Saving final image to disk\n");
-    if(image_count == 1)
-      fitsOutputCufftComplex(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
-    else if(image_count == 2)
-      float2toImage(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+    if(IoOrderEnd == NULL){
+      iohandler->IoPrint2Image(image->getImage());
+    }else{
+      (IoOrderEnd)(image->getImage(), iohandler);
+    }
 
     if(print_errors)/* flag for print error image */
       {
@@ -786,6 +787,13 @@ void MFS::run()
         /* make void * params */
         printf("Calculating Error Images\n");
         this->error->calculateErrorImage(this->image, this->visibilities);
+        if(IoOrderError == NULL){
+          iohandler->IoPrintImage(image->getImage(),"errorInu.fits", "", 0);
+          iohandler->IoPrintImage(image->getImage(),"errorAlpha.fits", "", 0);
+        }else{
+          (IoOrderError)(image->getImage(), iohandler);
+        }
+        cudaFree(image->getErrorImage());
         printf("Saving Error image file to disk\n");
         //this->error->calculateErrorImage()
         //float2toImage(image->error_image())
