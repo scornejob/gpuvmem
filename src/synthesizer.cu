@@ -53,7 +53,7 @@ inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
   #endif
 }
 
-void AlphaMFS::configure(int argc, char **argv)
+void MFS::configure(int argc, char **argv)
 {
     if(iohandler == NULL)
     {
@@ -333,7 +333,7 @@ void AlphaMFS::configure(int argc, char **argv)
     }
 }
 
-void AlphaMFS::setDevice()
+void MFS::setDevice()
 {
   float deltax = RPDEG*DELTAX; //radians
   float deltay = RPDEG*DELTAY; //radians
@@ -699,7 +699,7 @@ void AlphaMFS::setDevice()
   }
 };
 
-void AlphaMFS::run()
+void MFS::run()
 {
     //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
     printf("\n\nStarting Optimizator\n");
@@ -802,7 +802,7 @@ void AlphaMFS::run()
 
 };
 
-void AlphaMFS::unSetDevice()
+void MFS::unSetDevice()
 {
   //Free device and host memory
   printf("Free device and host memory\n");
@@ -893,10 +893,10 @@ void AlphaMFS::unSetDevice()
 };
 
 namespace {
-  Synthesizer* CreateAlphaMFS()
+  Synthesizer* CreateMFS()
   {
-    return new AlphaMFS;
+    return new MFS;
   }
-  const int AlphaMFSID = 0;
-  const bool RegisteredAlphaMFS = Singleton<SynthesizerFactory>::Instance().RegisterSynthesizer(AlphaMFSID, CreateAlphaMFS);
+  const int MFSID = 0;
+  const bool RegisteredMFS = Singleton<SynthesizerFactory>::Instance().RegisterSynthesizer(MFSID, CreateMFS);
 };

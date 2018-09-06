@@ -7,7 +7,7 @@
 #include <time.h>
 #include "directioncosines.cuh"
 
-class AlphaMFS : public Synthesizer
+class MFS : public Synthesizer
 {
 public:
   void run();

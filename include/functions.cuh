@@ -38,8 +38,6 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
 __host__ void clipping(cufftComplex *I, int iterations);
 template <class T>
 __host__ T deviceReduce(T *in, long N);
-__host__ void linkClipWNoise1I(cufftComplex *fg_image, float * I);
-__host__ void linkApplyBeam1I(cufftComplex *image, cufftComplex *fg_image, float xobs, float yobs, float freq);
 __host__ float chi2(float *I, VirtualImageProcessor *ip);
 __host__ void linkRestartDGi(float *dgi);
 __host__ void linkAddToDPhi(float *dphi, float *dgi, int index);

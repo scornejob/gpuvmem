@@ -1040,7 +1040,65 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 }
 
+__host__ void OFITS(float *I, fitsfile *canvas, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N){
+  fitsfile *fpointer;
+	int status = 0;
+	long fpixel = 1;
+	long elements = M*N;
+  size_t needed;
+  long naxes[2]={M,N};
+	long naxis = 2;
+
+  fits_create_file(&fpointer, name_image, &status);
+  if(status){
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+
+  fits_copy_header(canvas, fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+
+  fits_update_key(fpointer, TSTRING, "BUNIT", units, "Unit of measurement", &status);
+  fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
+
+  float *host_IFITS;
+  host_IFITS = (float*)malloc(M*N*sizeof(float));
+
+  int offset = (M*N)*index*sizeof(float);
+  gpuErrchk(cudaMemcpy(host_IFITS, I+offset, sizeof(float)*M*N, cudaMemcpyDeviceToHost));
+
+  float* image2D;
+	image2D = (float*) malloc(M*N*sizeof(float));
+
+  int x = M-1;
+  int y = N-1;
+  for(int i=0; i < M; i++){
+		for(int j=0; j < N; j++){
+			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
+		}
+	}
+
+  fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+	fits_close_file(fpointer, &status);
+  if (status) {
+    fits_report_error(stderr, status); /* print error message */
+    exit(-1);
+  }
+
+  free(host_IFITS);
+	free(image2D);
+
+}
+
 __host__ void fitsOutputCufftComplex(float *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+
 {
   fitsfile *fpointer;
 	int status = 0;

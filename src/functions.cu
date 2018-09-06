@@ -2235,18 +2235,6 @@ __host__ void DLaplacian(float *I, float *dgi, float penalization_factor, float 
   }
 };
 
-__host__ void linkClipWNoise1I(cufftComplex *fg_image, float * I)
-{
-  clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(fg_image, device_noise_image, I, N, noise_cut, initial_values[0], eta);
-  gpuErrchk(cudaDeviceSynchronize());
-};
-
-__host__ void linkApplyBeam1I(cufftComplex *image, cufftComplex *fg_image, float xobs, float yobs, float freq)
-{
-  apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(antenna_diameter, pb_factor, pb_cutoff, image, fg_image, N, xobs, yobs, fg_scale, freq, DELTAX, DELTAY);
-  gpuErrchk(cudaDeviceSynchronize());
-};
-
 __host__ void linkAddToDPhi(float *dphi, float *dgi, int index)
 {
   if(num_gpus == 1){

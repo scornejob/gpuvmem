@@ -67,7 +67,6 @@ class VirtualImageProcessor
 {
 public:
   virtual void clip(float *I) = 0;
-  virtual void clip(cufftComplex *I) = 0;
   virtual void clipWNoise(float *I) = 0;
   virtual void apply_beam(cufftComplex *image, float xobs, float yobs, float freq) = 0;
   virtual void calculateInu(cufftComplex *image, float *I, float freq) = 0;
