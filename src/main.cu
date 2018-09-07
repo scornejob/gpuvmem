@@ -46,25 +46,6 @@ inline bool IsAppBuiltAs64()
   #endif
 }
 
-void orderTest(Optimizator *o, Image *I){
-  o->setImage(I);
-  o->setFlag(0);
-  o->minimizate();
-}
-
-void testOfits(float *I, Io *io){
-  io->IoPrintImage(I, "testInu.fits", "", 0);
-  io->IoPrintImage(I, "testAlpha.fits", "", 1);
-}
-void testOfitsErrors(float *I, Io *io){
-  io->IoPrintImage(I, "ErrortestInu.fits", "", 0);
-  io->IoPrintImage(I, "ErrortestAlpha.fits", "", 1);
-}
-void testOfitsIterations(float *I, Io *io){
-  io->IoPrintImage(I, "testInuIterations.fits", "", 0);
-  io->IoPrintImage(I, "testAlphaIterations.fits", "", 1);
-}
-
 __host__ int main(int argc, char **argv) {
 	////CHECK FOR AVAILABLE GPUs
 	cudaGetDeviceCount(&num_gpus);
@@ -98,18 +79,15 @@ __host__ int main(int argc, char **argv) {
   ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
   Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
   sy->setIoHandler(ioms);
-  // create a dir for printImages
-  ioms->setPrintImagesPath(""); /// Important to print images see ioms.cu
+
   sy->configure(argc, argv);
   cg->setObjectiveFunction(of);
   sy->setOptimizator(cg);
-  sy->setIoOrderEnd(testOfits);
-  sy->setIoOrderError(testOfitsErrors);
+
   //Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
   //sy->applyFilter(g); // delete this line for no gridding
 
   sy->setDevice();  // This routine sends the data to GPU memory
-  sy->setOrder(orderTest);
   Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
   Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
   Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);

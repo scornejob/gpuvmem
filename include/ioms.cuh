@@ -14,9 +14,8 @@ public:
   void IoreadMS(char *MS_name, Field *fields, freqData data);
   void IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
   void IocloseCanvas(fitsfile *canvas);
-  void IoPrintImage(float *I, char *name_image, char *units, int index);
-  void IoPrintImageIteration(float *I, char *name_image, char *units, int index);
-  void IoPrint2Image(float *I);
+  void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
+  void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
   void doOrderIterations(float *I);
   void doOrderEnd(float *I);
   void doOrderError(float *I);

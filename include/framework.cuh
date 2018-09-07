@@ -166,7 +166,7 @@ public:
   float getPbFactor(){return this->pb_factor;};
   float getPbCutoff(){return this->pb_cutoff;};
 private:
-  float antenna_diameter = 0;   /* CBI2 Antenna Diameter */
+  float antenna_diameter = 0;   /* Antenna Diameter */
   float pb_factor = 0;          /* FWHM Factor */
   float pb_cutoff = 0;
 };
@@ -188,9 +188,8 @@ public:
   virtual void IoreadMS(char *MS_name, Field *fields, freqData data) = 0;
   virtual void IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag) = 0;
   virtual void IocloseCanvas(fitsfile *canvas) = 0;
-  virtual void IoPrintImage(float *I, char *name_image, char *units, int index) = 0;
-  virtual void IoPrint2Image(float *I) = 0;
-  virtual void IoPrintImageIteration(float *I, char *name_image, char *units, int index) = 0;
+  virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
+  virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
   void setPrintImagesPath(char * pip){this->printImagesPath = pip;};
 protected:
   int *iteration;
@@ -217,14 +216,6 @@ public:
 
   void calcGradient(float *p, float *xi)
   {
-    if(print_images){
-      if(IoOrderIterations == NULL){
-        io->IoPrintImage(p,"imageIterationInu","",0);
-        io->IoPrintImage(p,"imageIterationAlpha","",1);
-      }else{
-        (IoOrderIterations)(p, io);
-      }
-    }
     restartDPhi();
     for(vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
     {

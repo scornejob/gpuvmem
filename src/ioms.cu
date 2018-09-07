@@ -1,13 +1,5 @@
 #include "ioms.cuh"
 
-extern long M, N;
-extern char *out_image, *mempath;
-extern fitsfile *mod_in;
-extern int iter;
-extern float fg_scale;
-extern int print_images;
-
-
 freqData IoMS::IocountVisibilities(char * MS_name, Field *&fields)
 {
   return countVisibilities(MS_name, fields);
@@ -37,19 +29,22 @@ void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, freqData data, 
   writeMS(infile, outfile, fields, data, random_probability, verbose_flag);
 };
 
-void IoMS::IoPrintImage(float *I, char *name_image, char *units, int index){
-  //fuse name_image wiht this->printImagesPath
-  OFITS(I, mod_in, name_image, units, iter, index, fg_scale, M, N);
+void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+{
+  OFITS(I, canvas, path, name_image, units, iteration, index, fg_scale, M, N);
 }
 
-void IoMS::IoPrintImageIteration(float *I, char *name_image, char *units, int index){
-  char *fullpath;
-  //fuse name_image wiht this->printImagesPath
-  OFITS(I, mod_in, fullpath, units, iter, index, fg_scale, M, N);
-}
+void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+{
+  size_t needed;
+  char *full_name;
 
-void IoMS::IoPrint2Image(float *I){
-  float2toImage(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+  needed = snprintf(NULL, 0, "%s_%d.fits", name_image, iteration) + 1;
+  full_name = (char*)malloc(needed*sizeof(char));
+  snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iteration);
+
+  OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
+  free(full_name);
 }
 
 void IoMS::IocloseCanvas(fitsfile *canvas)

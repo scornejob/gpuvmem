@@ -1040,7 +1040,8 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 }
 
-__host__ void OFITS(float *I, fitsfile *canvas, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N){
+__host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+{
   fitsfile *fpointer;
 	int status = 0;
 	long fpixel = 1;
@@ -1048,8 +1049,13 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *name_image, char *units, i
   size_t needed;
   long naxes[2]={M,N};
 	long naxis = 2;
+  char *full_name;
 
-  fits_create_file(&fpointer, name_image, &status);
+  needed = snprintf(NULL, 0, "!%s%s", path, name_image) + 1;
+  full_name = (char*)malloc(needed*sizeof(char));
+  snprintf(full_name, needed*sizeof(char), "!%s%s", path, name_image);
+
+  fits_create_file(&fpointer, full_name, &status);
   if(status){
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
@@ -1064,20 +1070,22 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *name_image, char *units, i
   fits_update_key(fpointer, TSTRING, "BUNIT", units, "Unit of measurement", &status);
   fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
 
-  float *host_IFITS;
-  host_IFITS = (float*)malloc(M*N*sizeof(float));
+  float *host_IFITS = (float*)malloc(M*N*sizeof(float));
 
-  int offset = (M*N)*index*sizeof(float);
+  //unsigned int offset = M*N*index*sizeof(float);
+  int offset = M*N*index;
   gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
-  float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
+  float *image2D = (float*) malloc(M*N*sizeof(float));
 
   int x = M-1;
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
+      if(fg_scale != 0.0)
+			   image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
+      else
+        image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
 		}
 	}
 

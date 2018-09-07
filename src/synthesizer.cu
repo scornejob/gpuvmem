@@ -501,6 +501,7 @@ void MFS::setDevice()
     nu_0 = 1.0f;
     imagesChanged = 1;
   }
+
   host_I = (float*)malloc(M*N*sizeof(float)*image_count);
 
   free(pt);
@@ -656,7 +657,7 @@ void MFS::setDevice()
         gpuErrchk(cudaDeviceSynchronize());
       }
       if(print_images)
-        fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
+        iohandler->IoPrintImageIteration(vars_per_field[f].atten_image, mod_in, mempath, "atten", "", f, 0, 0.0, M, N);
     }
   }
 
@@ -673,18 +674,12 @@ void MFS::setDevice()
   noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, noise_jypix, N);
   gpuErrchk(cudaDeviceSynchronize());
   if(print_images)
-    fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
+    iohandler->IoPrintImage(device_noise_image, mod_in, mempath, "noise.fits", "", 0, 0, 0.0, M, N);
 
 
   float *host_noise_image = (float*)malloc(M*N*sizeof(float));
   gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-  for(int i=0; i<M; i++){
-    for(int j=0; j<N; j++){
-      if(host_noise_image[N*i+j] < noise_min){
-        noise_min = host_noise_image[N*i+j];
-      }
-    }
-  }
+  float noise_min = *std::min_element(host_noise_image,host_noise_image+(M*N));
 
   fg_scale = noise_min;
   noise_cut = noise_cut * noise_min;
@@ -772,7 +767,8 @@ void MFS::run()
     //Pass residuals to host
     printf("Saving final image to disk\n");
     if(IoOrderEnd == NULL){
-      iohandler->IoPrint2Image(image->getImage());
+      iohandler->IoPrintImage(image->getImage(), mod_in, "", out_image, "JY/PIXEL", iter, 0, fg_scale, M, N);
+      iohandler->IoPrintImage(image->getImage(), mod_in, "", "alpha.fits", "", iter, 1, fg_scale, M, N);
     }else{
       (IoOrderEnd)(image->getImage(), iohandler);
     }
@@ -788,10 +784,10 @@ void MFS::run()
         printf("Calculating Error Images\n");
         this->error->calculateErrorImage(this->image, this->visibilities);
         if(IoOrderError == NULL){
-          iohandler->IoPrintImage(image->getImage(),"errorInu.fits", "", 0);
-          iohandler->IoPrintImage(image->getImage(),"errorAlpha.fits", "", 0);
+          iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_Inu_0.fits", "JY/PIXEL", iter, 0, 0.0, M, N);
+          iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_alpha.fits", "", iter, 1, 0.0, M, N);
         }else{
-          (IoOrderError)(image->getImage(), iohandler);
+          (IoOrderError)(image->getErrorImage(), iohandler);
         }
         cudaFree(image->getErrorImage());
         printf("Saving Error image file to disk\n");
