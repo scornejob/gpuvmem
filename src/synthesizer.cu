@@ -789,10 +789,7 @@ void MFS::run()
         }else{
           (IoOrderError)(image->getErrorImage(), iohandler);
         }
-        cudaFree(image->getErrorImage());
-        printf("Saving Error image file to disk\n");
-        //this->error->calculateErrorImage()
-        //float2toImage(image->error_image())
+
       }
     //Saving residuals to disk
     residualsToHost(fields, data, num_gpus, firstgpu);

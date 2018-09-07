@@ -2440,6 +2440,6 @@ __host__ void calculateErrors(Image *image){
   noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N, M);
   gpuErrchk(cudaDeviceSynchronize());
 
-  //float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
-  //cudaFree(errors);
+  image->setErrorImage(errors);
+
 }
