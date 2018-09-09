@@ -65,7 +65,6 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -l  --lambda          Lambda Regularization Parameter (Optional)
 -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
--P  --prior           Prior used to regularize the solution (Default = 0 = Entropy)
 -e  --eta             Variable that controls the minimum image value (Default eta = -1.0)
 -f  --file            Output file where final objective function values are saved (Optional)
 -M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
