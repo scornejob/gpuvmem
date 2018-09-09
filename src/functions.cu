@@ -41,6 +41,7 @@ status_mod_in, flag_opt, verbose_flag, clip_flag, num_gpus, selected, iter, t_te
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_fg_image, *device_image;
 extern float *device_I;
+extern Telescope *telescope;
 
 extern float *device_dphi, *device_chi2, *device_dchi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
@@ -2121,15 +2122,6 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
     ip->clip(I);
   }
 
-
-  if(print_images)
-    if(image_count < 2)
-      fitsOutputCufftComplex(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
-    else
-      {
-        float2toImage(I, mod_in, out_image, mempath, iter, fg_scale, M, N, 1);
-      }
-
   if(num_gpus == 1){
     cudaSetDevice(selected);
     for(int f=0; f<data.nfields; f++){
@@ -2232,18 +2224,6 @@ __host__ void DLaplacian(float *I, float *dgi, float penalization_factor, float 
     DL<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
     gpuErrchk(cudaDeviceSynchronize());
   }
-};
-
-__host__ void linkClipWNoise1I(cufftComplex *fg_image, float * I)
-{
-  clipWNoise<<<numBlocksNN, threadsPerBlockNN>>>(fg_image, device_noise_image, I, N, noise_cut, initial_values[0], eta);
-  gpuErrchk(cudaDeviceSynchronize());
-};
-
-__host__ void linkApplyBeam1I(cufftComplex *image, cufftComplex *fg_image, float xobs, float yobs, float freq)
-{
-  apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(antenna_diameter, pb_factor, pb_cutoff, image, fg_image, N, xobs, yobs, fg_scale, freq, DELTAX, DELTAY);
-  gpuErrchk(cudaDeviceSynchronize());
 };
 
 __host__ void linkAddToDPhi(float *dphi, float *dgi, int index)
@@ -2460,6 +2440,6 @@ __host__ void calculateErrors(Image *image){
   noise_reduction<<<numBlocksNN, threadsPerBlockNN>>>(errors, N, M);
   gpuErrchk(cudaDeviceSynchronize());
 
-  float2toImage(errors, mod_in, out_image, mempath, iter, fg_scale, M, N, 2);
-  cudaFree(errors);
+  image->setErrorImage(errors);
+
 }

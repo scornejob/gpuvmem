@@ -67,7 +67,6 @@ class VirtualImageProcessor
 {
 public:
   virtual void clip(float *I) = 0;
-  virtual void clip(cufftComplex *I) = 0;
   virtual void clipWNoise(float *I) = 0;
   virtual void apply_beam(cufftComplex *image, float xobs, float yobs, float freq) = 0;
   virtual void calculateInu(cufftComplex *image, float *I, float freq) = 0;
@@ -156,10 +155,45 @@ private:
   int *total_visibilities;
 };
 
+class Telescope
+{
+public:
+  virtual void apply_beam(cufftComplex *image, float xobs, float yobs, float freq) = 0;
+  void setAntennaDiameter(float a){this->antenna_diameter = a;};
+  void setPbFactor(float a){this->pb_factor = a;};
+  void setPbCutoff(float a){this->pb_cutoff = a;};
+  float getAntennaDiameter(){return this->antenna_diameter;};
+  float getPbFactor(){return this->pb_factor;};
+  float getPbCutoff(){return this->pb_cutoff;};
+private:
+  float antenna_diameter = 0;   /* Antenna Diameter */
+  float pb_factor = 0;          /* FWHM Factor */
+  float pb_cutoff = 0;
+};
+
 class Error
 {
 public:
   virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
+};
+
+class Io
+{
+public:
+  virtual freqData IocountVisibilities(char * MS_name, Field *&fields) = 0;
+  virtual canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag) = 0;
+  virtual void IoreadMSMCNoise(char *MS_name, Field *fields, freqData data) = 0;
+  virtual void IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
+  virtual void IoreadMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
+  virtual void IoreadMS(char *MS_name, Field *fields, freqData data) = 0;
+  virtual void IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag) = 0;
+  virtual void IocloseCanvas(fitsfile *canvas) = 0;
+  virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
+  virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
+  void setPrintImagesPath(char * pip){this->printImagesPath = pip;};
+protected:
+  int *iteration;
+  char *printImagesPath;
 };
 
 class ObjectiveFunction
@@ -208,6 +242,9 @@ public:
   void setN(long N){this->N = N;}
   void setM(long M){this->M = M;}
   void setImageCount(int I){this->image_count = I;}
+  void setIo(Io *i){this->io = i;};
+  void setPrintImages(int i){this->print_images = i;};
+  void setIoOrderIterations(void (*func)(float *I, Io *io)){this->IoOrderIterations = func;};
   void configure(long N, long M, int I)
   {
       setN(N);
@@ -218,11 +255,14 @@ public:
   }
 private:
   vector<Fi*> fis;
+  Io *io = NULL;
   float *dphi;
   int phiStatus = 1;
   int flag = 0;
   long N = 0;
   long M = 0;
+  int print_images = 0;
+  void (*IoOrderIterations)(float *I, Io *io) = NULL;
   int image_count = 1;
 };
 
@@ -236,6 +276,7 @@ public:
   __host__ void setImage(Image *image){this->image = image;};
   __host__ void setObjectiveFunction(ObjectiveFunction *of){ this->of = of;};
   void setFlag(int flag){this->flag = flag;};
+  ObjectiveFunction* getObjectiveFuntion(){return this->of;};
 protected:
   ObjectiveFunction *of;
   Image *image;
@@ -249,19 +290,6 @@ class Filter
 public:
   virtual void applyCriteria(Visibilities *v) = 0;
   virtual void configure(void *params) = 0;
-};
-
-class Io
-{
-public:
-  virtual freqData IocountVisibilities(char * MS_name, Field *&fields) = 0;
-  virtual canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag) = 0;
-  virtual void IoreadMSMCNoise(char *MS_name, Field *fields, freqData data) = 0;
-  virtual void IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
-  virtual void IoreadMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
-  virtual void IoreadMS(char *MS_name, Field *fields, freqData data) = 0;
-  virtual void IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag) = 0;
-  virtual void IocloseCanvas(fitsfile *canvas) = 0;
 };
 
 //Implementation of Factory
@@ -278,8 +306,12 @@ public:
   __host__ void setVisibilities(Visibilities * v){this->visibilities = v;};
   __host__ void setIoHandler(Io *handler){this->iohandler = handler;};
   __host__ void setError(Error *e){this->error = e;};
+  __host__ void setOrder(void (*func)(Optimizator *o,Image *I)){this->Order = func;};
   Image *getImage(){return image;};
   void setImage(Image *i){this->image = i;};
+  void setIoOrderEnd(void (*func)(float *I, Io *io)){this->IoOrderEnd = func;};
+  void setIoOrderError(void (*func)(float *I, Io *io)){this->IoOrderError = func;};
+  void setIoOrderIterations(void (*func)(float *I, Io *io)){this->IoOrderIterations = func;};
 protected:
   cufftComplex *device_I;
   Image *image;
@@ -287,6 +319,11 @@ protected:
   Io *iohandler = NULL;
   Visibilities *visibilities;
   Error *error = NULL;
+  void (*Order)(Optimizator *o, Image *I) = NULL;
+  int imagesChanged = 0;
+  void (*IoOrderIterations)(float *I, Io *io) = NULL;
+  void (*IoOrderEnd)(float *I, Io *io) = NULL;
+  void (*IoOrderError)(float *I, Io *io) = NULL;
 };
 
 

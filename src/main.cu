@@ -50,7 +50,7 @@ __host__ int main(int argc, char **argv) {
 	////CHECK FOR AVAILABLE GPUs
 	cudaGetDeviceCount(&num_gpus);
 
-  printf("gpuvmem Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus, Victor Moral, Fernando Rannou - miguel.carcamo@usach.cl\n");
+  printf("gpuvmem Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus, Victor Moral, Fernando Rannou, Nicolás Muñoz - miguel.carcamo@protonmail.cl\n");
   printf("This program comes with ABSOLUTELY NO WARRANTY; for details use option -w\n");
   printf("This is free software, and you are welcome to redistribute it under certain conditions; use option -c for details.\n\n\n");
 
@@ -66,7 +66,7 @@ __host__ int main(int argc, char **argv) {
   }
 
 //// AVAILABLE CLASSES
-  enum {AlphaMFS}; // Synthesizer
+  enum {MFS}; // Synthesizer
   enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation}; // Fi
   enum {Gridding}; // Filter
   enum {ConjugateGradient}; // Optimizator
@@ -74,12 +74,12 @@ __host__ int main(int argc, char **argv) {
   enum {MS}; // Io
   enum {SecondDerivative}; // Error calculation
 
-  Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(AlphaMFS);
+  Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(MFS);
   Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
   ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
+  Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
+  sy->setIoHandler(ioms);
 
-  //Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
-  //sy->setIoHandler(ioms);
   sy->configure(argc, argv);
   cg->setObjectiveFunction(of);
   sy->setOptimizator(cg);
@@ -87,18 +87,17 @@ __host__ int main(int argc, char **argv) {
   //Filter *g = Singleton<FilterFactory>::Instance().CreateFilter(Gridding);
   //sy->applyFilter(g); // delete this line for no gridding
 
-  sy->setDevice(); // This routine sends the data to GPU memory
+  sy->setDevice();  // This routine sends the data to GPU memory
   Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
   Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
   Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
   chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
   e->configure(0, 0, 0);
-  l->configure(1, 0, 0);
+  //l->configure(1, 0, 0);
   //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
   of->addFi(chi2);
   of->addFi(e);
-  of->addFi(l);
-  
+  //of->addFi(l);
   sy->getImage()->getFunctionMapping()[0].newP = particularNewP;
   sy->getImage()->getFunctionMapping()[0].evaluateXt = particularEvaluateXt;
   sy->run();

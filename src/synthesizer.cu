@@ -13,6 +13,7 @@ float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
 float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta;
 float *host_I, sum_weights, *initial_values, *penalizators;
+Telescope *telescope;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
@@ -52,7 +53,7 @@ inline bool IsGPUCapableP2P(cudaDeviceProp *pProp)
   #endif
 }
 
-void AlphaMFS::configure(int argc, char **argv)
+void MFS::configure(int argc, char **argv)
 {
     if(iohandler == NULL)
     {
@@ -332,7 +333,7 @@ void AlphaMFS::configure(int argc, char **argv)
     }
 }
 
-void AlphaMFS::setDevice()
+void MFS::setDevice()
 {
   float deltax = RPDEG*DELTAX; //radians
   float deltay = RPDEG*DELTAY; //radians
@@ -450,7 +451,6 @@ void AlphaMFS::setDevice()
 
   noise_jypix = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
 
-  host_I = (float*)malloc(M*N*sizeof(float)*image_count);
   /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
   double raimage = ra * RPDEG_D;
   double decimage = dec * RPDEG_D;
@@ -483,12 +483,26 @@ void AlphaMFS::setDevice()
   char *pt;
   char *temp = (char*)malloc(sizeof(char)*strlen(variables.initial_values));
   strcpy(temp, variables.initial_values);
-  initial_values = (float*)malloc(sizeof(float)*image_count);
+  if(image_count == 1){
+    initial_values = (float*)malloc(sizeof(float)*image_count+1);
+  }else{
+    initial_values = (float*)malloc(sizeof(float)*image_count);
+  }
   pt = strtok(temp, ",");
   for(int i=0; i< image_count; i++){
     initial_values[i] = atof(pt);
     pt = strtok (NULL, ",");
   }
+
+  if(image_count == 1)
+  {
+    initial_values[1] = 0.0f;
+    image_count++;
+    nu_0 = 1.0f;
+    imagesChanged = 1;
+  }
+
+  host_I = (float*)malloc(M*N*sizeof(float)*image_count);
 
   free(pt);
   free(temp);
@@ -643,7 +657,7 @@ void AlphaMFS::setDevice()
         gpuErrchk(cudaDeviceSynchronize());
       }
       if(print_images)
-        fitsOutputFloat(vars_per_field[f].atten_image, mod_in, mempath, f, M, N, 0);
+        iohandler->IoPrintImageIteration(vars_per_field[f].atten_image, mod_in, mempath, "atten", "", f, 0, 0.0, M, N);
     }
   }
 
@@ -660,18 +674,12 @@ void AlphaMFS::setDevice()
   noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, noise_jypix, N);
   gpuErrchk(cudaDeviceSynchronize());
   if(print_images)
-    fitsOutputFloat(device_noise_image, mod_in, mempath, 0, M, N, 1);
+    iohandler->IoPrintImage(device_noise_image, mod_in, mempath, "noise.fits", "", 0, 0, 0.0, M, N);
 
 
   float *host_noise_image = (float*)malloc(M*N*sizeof(float));
   gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
-  for(int i=0; i<M; i++){
-    for(int j=0; j<N; j++){
-      if(host_noise_image[N*i+j] < noise_min){
-        noise_min = host_noise_image[N*i+j];
-      }
-    }
-  }
+  float noise_min = *std::min_element(host_noise_image,host_noise_image+(M*N));
 
   fg_scale = noise_min;
   noise_cut = noise_cut * noise_min;
@@ -686,26 +694,29 @@ void AlphaMFS::setDevice()
   }
 };
 
-void AlphaMFS::run()
+void MFS::run()
 {
     //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
     printf("\n\nStarting Optimizator\n");
-
-    if(image_count == 1)
-    {
-      optimizator->setImage(image);
-      optimizator->minimizate();
-    }else if(image_count == 2)
-    {
-      optimizator->setImage(image);
-      optimizator->setFlag(0);
-      optimizator->minimizate();
-      optimizator->setFlag(1);
-      optimizator->minimizate();
-      optimizator->setFlag(2);
-      optimizator->minimizate();
-      optimizator->setFlag(3);
-      optimizator->minimizate();
+    //optimizator->getObjectiveFuntion()->setIoOrderIterations(IoOrderIterations);
+    if(this->Order == NULL){
+      if(imagesChanged)
+      {
+        optimizator->setImage(image);
+        optimizator->minimizate();
+      }else if(image_count == 2){
+        optimizator->setImage(image);
+        optimizator->setFlag(0);
+        optimizator->minimizate();
+        optimizator->setFlag(1);
+        optimizator->minimizate();
+        optimizator->setFlag(2);
+        optimizator->minimizate();
+        optimizator->setFlag(3);
+        optimizator->minimizate();
+      }
+    }else{
+      (this->Order)(optimizator, image);
     }
 
     t = clock() - t;
@@ -755,10 +766,12 @@ void AlphaMFS::run()
     }
     //Pass residuals to host
     printf("Saving final image to disk\n");
-    if(image_count == 1)
-      fitsOutputCufftComplex(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
-    else if(image_count == 2)
-      float2toImage(image->getImage(), mod_in, out_image, mempath, iter, fg_scale, M, N, 0);
+    if(IoOrderEnd == NULL){
+      iohandler->IoPrintImage(image->getImage(), mod_in, "", out_image, "JY/PIXEL", iter, 0, fg_scale, M, N);
+      iohandler->IoPrintImage(image->getImage(), mod_in, "", "alpha.fits", "", iter, 1, 0.0, M, N);
+    }else{
+      (IoOrderEnd)(image->getImage(), iohandler);
+    }
 
     if(print_errors)/* flag for print error image */
       {
@@ -770,9 +783,13 @@ void AlphaMFS::run()
         /* make void * params */
         printf("Calculating Error Images\n");
         this->error->calculateErrorImage(this->image, this->visibilities);
-        printf("Saving Error image file to disk\n");
-        //this->error->calculateErrorImage()
-        //float2toImage(image->error_image())
+        if(IoOrderError == NULL){
+          iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_Inu_0.fits", "JY/PIXEL", iter, 0, 0.0, M, N);
+          iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_alpha.fits", "", iter, 1, 0.0, M, N);
+        }else{
+          (IoOrderError)(image->getErrorImage(), iohandler);
+        }
+
       }
     //Saving residuals to disk
     residualsToHost(fields, data, num_gpus, firstgpu);
@@ -786,7 +803,7 @@ void AlphaMFS::run()
 
 };
 
-void AlphaMFS::unSetDevice()
+void MFS::unSetDevice()
 {
   //Free device and host memory
   printf("Free device and host memory\n");
@@ -877,10 +894,10 @@ void AlphaMFS::unSetDevice()
 };
 
 namespace {
-  Synthesizer* CreateAlphaMFS()
+  Synthesizer* CreateMFS()
   {
-    return new AlphaMFS;
+    return new MFS;
   }
-  const int AlphaMFSID = 0;
-  const bool RegisteredAlphaMFS = Singleton<SynthesizerFactory>::Instance().RegisterSynthesizer(AlphaMFSID, CreateAlphaMFS);
+  const int MFSID = 0;
+  const bool RegisteredMFS = Singleton<SynthesizerFactory>::Instance().RegisterSynthesizer(MFSID, CreateMFS);
 };

@@ -1040,142 +1040,56 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 }
 
-__host__ void fitsOutputCufftComplex(float *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+__host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
 {
   fitsfile *fpointer;
 	int status = 0;
 	long fpixel = 1;
 	long elements = M*N;
   size_t needed;
-  char *name;
-	long naxes[2]={M,N};
+  long naxes[2]={M,N};
 	long naxis = 2;
-  char *unit = "JY/PIXEL";
+  char *full_name;
 
-  switch(option){
-    case 0:
-      needed = snprintf(NULL, 0, "!%s", out_image) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%s", out_image);
-      break;
-    case 1:
-      needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      exit(-1);
-  }
+  needed = snprintf(NULL, 0, "!%s%s", path, name_image) + 1;
+  full_name = (char*)malloc(needed*sizeof(char));
+  snprintf(full_name, needed*sizeof(char), "!%s%s", path, name_image);
 
-  fits_create_file(&fpointer, name, &status);
-  if (status) {
+  fits_create_file(&fpointer, full_name, &status);
+  if(status){
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
   }
+
   fits_copy_header(canvas, fpointer, &status);
   if (status) {
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
   }
 
-  fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+  fits_update_key(fpointer, TSTRING, "BUNIT", units, "Unit of measurement", &status);
   fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
 
+  float *host_IFITS = (float*)malloc(M*N*sizeof(float));
 
-  float *host_IFITS;
-  host_IFITS = (float*)malloc(M*N*sizeof(float));
-  gpuErrchk(cudaMemcpy(host_IFITS, I, sizeof(float)*M*N, cudaMemcpyDeviceToHost));
+  //unsigned int offset = M*N*index*sizeof(float);
+  int offset = M*N*index;
+  gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
-
-  int x = M-1;
-  int y = N-1;
-  for(int i=0; i < M; i++){
-		for(int j=0; j < N; j++){
-			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
-		}
-	}
-
-	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    exit(-1);
-  }
-	fits_close_file(fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    exit(-1);
-  }
-
-  free(host_IFITS);
-	free(image2D);
-  free(name);
-}
-
-__host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option)
-{
-  fitsfile *fpointer;
-	int status = 0;
-	long fpixel = 1;
-	long elements = M*N;
-  size_t needed;
-  char *name;
-	long naxes[2]={M,N};
-	long naxis = 2;
-  char *unit = "JY/PIXEL";
-
-  switch(option){
-    case 0:
-      needed = snprintf(NULL, 0, "!%satten_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%satten_%d.fits", mempath, iteration);
-      break;
-    case 1:
-      needed = snprintf(NULL, 0, "!%snoise_%d.fits", mempath, iteration) + 1;
-      name = (char*)malloc(needed*sizeof(char));
-      snprintf(name, needed*sizeof(char), "!%snoise_%d.fits", mempath, iteration);
-      break;
-    case -1:
-      break;
-    default:
-      printf("Invalid case to FITS\n");
-      exit(-1);
-  }
-
-  fits_create_file(&fpointer, name, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    exit(-1);
-  }
-  fits_copy_header(canvas, fpointer, &status);
-  if (status) {
-    fits_report_error(stderr, status); /* print error message */
-    exit(-1);
-  }
-  if(option==0 || option==1){
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-  }
-
-  float *host_IFITS;
-  host_IFITS = (float*)malloc(M*N*sizeof(float));
-  gpuErrchk(cudaMemcpy(host_IFITS, I, sizeof(float)*M*N, cudaMemcpyDeviceToHost));
-
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
+  float *image2D = (float*) malloc(M*N*sizeof(float));
 
   int x = M-1;
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
+      if(fg_scale != 0.0)
+			   image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
+      else
         image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
 		}
 	}
 
-	fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+  fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
   if (status) {
     fits_report_error(stderr, status); /* print error message */
     exit(-1);
@@ -1188,7 +1102,7 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
 
   free(host_IFITS);
 	free(image2D);
-  free(name);
+
 }
 
 __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, float fg_scale, long M, long N, int option)
@@ -1223,6 +1137,11 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
       needed_alpha = snprintf(NULL, 0, "!%salpha_%d.fits", mempath, iteration) + 1;
       alphaname = (char*)malloc(needed_alpha*sizeof(char));
       snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
+      break;
+    case 2:
+      needed_alpha = snprintf(NULL, 0, "!%salpha_error.fits", out_image) + 1;
+      alphaname = (char*)malloc(needed_alpha*sizeof(char));
+      snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_error.fits", out_image);
       break;
     case -1:
       break;

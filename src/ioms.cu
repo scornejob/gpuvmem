@@ -28,6 +28,25 @@ void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, freqData data, 
 {
   writeMS(infile, outfile, fields, data, random_probability, verbose_flag);
 };
+
+void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+{
+  OFITS(I, canvas, path, name_image, units, iteration, index, fg_scale, M, N);
+}
+
+void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+{
+  size_t needed;
+  char *full_name;
+
+  needed = snprintf(NULL, 0, "%s_%d.fits", name_image, iteration) + 1;
+  full_name = (char*)malloc(needed*sizeof(char));
+  snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iteration);
+
+  OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
+  free(full_name);
+}
+
 void IoMS::IocloseCanvas(fitsfile *canvas)
 {
   closeCanvas(canvas);
