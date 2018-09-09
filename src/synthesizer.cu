@@ -698,6 +698,8 @@ void MFS::run()
 {
     //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
     printf("\n\nStarting Optimizator\n");
+    optimizator->getObjectiveFuntion()->setIo(iohandler);
+    optimizator->getObjectiveFuntion()->setPrintImages(print_images);
     //optimizator->getObjectiveFuntion()->setIoOrderIterations(IoOrderIterations);
     if(this->Order == NULL){
       if(imagesChanged)
