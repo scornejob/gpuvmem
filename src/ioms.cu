@@ -1,5 +1,11 @@
 #include "ioms.cuh"
 
+extern long M,N;
+extern float fg_scale;
+extern char* mempath;
+extern fitsfile *mod_in;
+extern int iter;
+
 freqData IoMS::IocountVisibilities(char * MS_name, Field *&fields)
 {
   return countVisibilities(MS_name, fields);
@@ -44,6 +50,19 @@ void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *n
   snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iteration);
 
   OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
+  free(full_name);
+}
+
+void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index)
+{
+  size_t needed;
+  char *full_name;
+
+  needed = snprintf(NULL, 0, "%s_%d.fits", name_image, iter) + 1;
+  full_name = (char*)malloc(needed*sizeof(char));
+  snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iter);
+  
+  OFITS(I, mod_in, mempath, full_name, units, iter, index, fg_scale, M, N);
   free(full_name);
 }
 

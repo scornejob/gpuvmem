@@ -190,6 +190,7 @@ public:
   virtual void IocloseCanvas(fitsfile *canvas) = 0;
   virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
   virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
+  virtual void IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index) = 0;
   void setPrintImagesPath(char * pip){this->printImagesPath = pip;};
 protected:
   int *iteration;
@@ -216,6 +217,14 @@ public:
 
   void calcGradient(float *p, float *xi)
   {
+    if(print_images){
+      if(IoOrderIterations == NULL){
+        io->IoPrintMEMImageIteration(p,"I_nu_0","JY/PIXEL",0);
+        io->IoPrintMEMImageIteration(p,"alpha","",1);
+      }else{
+        (IoOrderIterations)(p, io);
+      }
+    }
     restartDPhi();
     for(vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
     {
