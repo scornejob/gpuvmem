@@ -7,13 +7,13 @@
 class ImageProcessor : public VirtualImageProcessor
 {
 public:
-  ImageProcessor();
-  void clip(float *I);
-  void clipWNoise(float *I);
-  void apply_beam(cufftComplex *image, float xobs, float yobs, float freq);
-  void calculateInu(cufftComplex *image, float *I, float freq);
-  void chainRule(float *I, float freq);
-  void configure(int I);
+ImageProcessor();
+void clip(float *I);
+void clipWNoise(float *I);
+void apply_beam(cufftComplex *image, float xobs, float yobs, float freq);
+void calculateInu(cufftComplex *image, float *I, float freq);
+void chainRule(float *I, float freq);
+void configure(int I);
 };
 
 #endif

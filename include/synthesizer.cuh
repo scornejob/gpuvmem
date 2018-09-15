@@ -10,12 +10,15 @@
 class MFS : public Synthesizer
 {
 public:
-  void run();
-  void setOutPut(char * FileName){};
-  void setDevice();
-  void unSetDevice();
-  void configure(int argc, char **argv);
-  void applyFilter(Filter *filter){ filter->applyCriteria(this->visibilities);};
+void run();
+void setOutPut(char * FileName){
+};
+void setDevice();
+void unSetDevice();
+void configure(int argc, char **argv);
+void applyFilter(Filter *filter){
+        filter->applyCriteria(this->visibilities);
+};
 };
 
 #endif

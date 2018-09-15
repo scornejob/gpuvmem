@@ -1,4 +1,4 @@
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
  * Name            : rngs.h  (header file for the library file rngs.c)
  * Author          : Steve Park & Dave Geyer
  * Language        : ANSI C

@@ -38,11 +38,11 @@
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
-   if (code != cudaSuccess)
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
+        if (code != cudaSuccess)
+        {
+                fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+                if (abort) exit(code);
+        }
 }
 
 //Included variable from Makefile using "make NEWCASA=1"
@@ -50,48 +50,48 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 namespace casa = casacore;
 #endif
 
-typedef struct freqData{
-  int n_internal_frequencies;
-  int total_frequencies;
-  int *channels;
-  int nfields;
-  int nsamples;
-  int nstokes;
-  int max_number_visibilities_in_channel;
+typedef struct freqData {
+        int n_internal_frequencies;
+        int total_frequencies;
+        int *channels;
+        int nfields;
+        int nsamples;
+        int nstokes;
+        int max_number_visibilities_in_channel;
 }freqData;
 
-typedef struct observedVisibilities{
-  float *u;
-  float *v;
-  float *weight;
-  cufftComplex *Vo;
-  cufftComplex *Vm;
-  cufftComplex *Vr;
-  float freq;
-  long numVisibilities;
+typedef struct observedVisibilities {
+        float *u;
+        float *v;
+        float *weight;
+        cufftComplex *Vo;
+        cufftComplex *Vm;
+        cufftComplex *Vr;
+        float freq;
+        long numVisibilities;
 
-  int *stokes;
-  int threadsPerBlockUV;
-  int numBlocksUV;
+        int *stokes;
+        int threadsPerBlockUV;
+        int numBlocksUV;
 }Vis;
 
-typedef struct field{
-  int valid_frequencies;
-  double obsra, obsdec;
-  float global_xobs, global_yobs;
-  long *numVisibilitiesPerFreq;
-  Vis *visibilities;
-  Vis *device_visibilities;
-  Vis *gridded_visibilities;
+typedef struct field {
+        int valid_frequencies;
+        double obsra, obsdec;
+        float global_xobs, global_yobs;
+        long *numVisibilitiesPerFreq;
+        Vis *visibilities;
+        Vis *device_visibilities;
+        Vis *gridded_visibilities;
 }Field;
 
-typedef struct canvas_variables{
-  float DELTAX, DELTAY;
-  double ra, dec;
-  int crpix1, crpix2;
-  long M, N;
-  float beam_bmaj, beam_bmin;
-  float beam_noise;
+typedef struct canvas_variables {
+        float DELTAX, DELTAY;
+        double ra, dec;
+        int crpix1, crpix2;
+        long M, N;
+        float beam_bmaj, beam_bmin;
+        float beam_noise;
 }canvasVariables;
 
 __host__ freqData countVisibilities(char * MS_name, Field *&fields);

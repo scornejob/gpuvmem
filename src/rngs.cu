@@ -1,34 +1,34 @@
 /* -------------------------------------------------------------------------
-  Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus,
-  Victor Moral, Fernando Rannou - miguel.carcamo@usach.cl
+   Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus,
+   Victor Moral, Fernando Rannou - miguel.carcamo@usach.cl
 
-  This program includes Numerical Recipes (NR) based routines whose
-  copyright is held by the NR authors. If NR routines are included,
-  you are required to comply with the licensing set forth there.
+   This program includes Numerical Recipes (NR) based routines whose
+   copyright is held by the NR authors. If NR routines are included,
+   you are required to comply with the licensing set forth there.
 
-	Part of the program also relies on an an ANSI C library for multi-stream
-	random number generation from the related Prentice-Hall textbook
-	Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
-  for more information please contact leemis@math.wm.edu
+   Part of the program also relies on an an ANSI C library for multi-stream
+   random number generation from the related Prentice-Hall textbook
+   Discrete-Event Simulation: A First Course by Steve Park and Larry Leemis,
+   for more information please contact leemis@math.wm.edu
 
-  Additionally, this program uses some NVIDIA routines whose copyright is held
-  by NVIDIA end user license agreement (EULA).
+   Additionally, this program uses some NVIDIA routines whose copyright is held
+   by NVIDIA end user license agreement (EULA).
 
-  For the original parts of this code, the following license applies:
+   For the original parts of this code, the following license applies:
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
-* -------------------------------------------------------------------------
+   You should have received a copy of the GNU General Public License
+   along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * -------------------------------------------------------------------------
  * This is an ANSI C library for multi-stream random number generation.
  * The use of this library is recommended as a replacement for the ANSI C
  * rand() and srand() functions, particularly in simulation applications
@@ -74,31 +74,31 @@
 #define DEFAULT    123456789  /* initial seed, use 0 < DEFAULT < MODULUS  */
 
 static long seed[STREAMS] = {DEFAULT};  /* current state of each stream   */
-static int  stream        = 0;          /* stream index, 0 is the default */
-static int  initialized   = 0;          /* test for stream initialization */
+static int stream        = 0;           /* stream index, 0 is the default */
+static int initialized   = 0;           /* test for stream initialization */
 
 
-   double Random(void)
+double Random(void)
 /* ----------------------------------------------------------------
  * Random returns a pseudo-random real number uniformly distributed
  * between 0.0 and 1.0.
  * ----------------------------------------------------------------
  */
 {
-  const long Q = MODULUS / MULTIPLIER;
-  const long R = MODULUS % MULTIPLIER;
+        const long Q = MODULUS / MULTIPLIER;
+        const long R = MODULUS % MULTIPLIER;
         long t;
 
-  t = MULTIPLIER * (seed[stream] % Q) - R * (seed[stream] / Q);
-  if (t > 0)
-    seed[stream] = t;
-  else
-    seed[stream] = t + MODULUS;
-  return ((double) seed[stream] / MODULUS);
+        t = MULTIPLIER * (seed[stream] % Q) - R * (seed[stream] / Q);
+        if (t > 0)
+                seed[stream] = t;
+        else
+                seed[stream] = t + MODULUS;
+        return ((double) seed[stream] / MODULUS);
 }
 
 
-   void PlantSeeds(long x)
+void PlantSeeds(long x)
 /* ---------------------------------------------------------------------
  * Use this function to set the state of all the random number generator
  * streams by "planting" a sequence of states (seeds), one per stream,
@@ -108,27 +108,27 @@ static int  initialized   = 0;          /* test for stream initialization */
  * ---------------------------------------------------------------------
  */
 {
-  const long Q = MODULUS / A256;
-  const long R = MODULUS % A256;
-        int  j;
-        int  s;
+        const long Q = MODULUS / A256;
+        const long R = MODULUS % A256;
+        int j;
+        int s;
 
-  initialized = 1;
-  s = stream;                            /* remember the current stream */
-  SelectStream(0);                       /* change to stream 0          */
-  PutSeed(x);                            /* set seed[0]                 */
-  stream = s;                            /* reset the current stream    */
-  for (j = 1; j < STREAMS; j++) {
-    x = A256 * (seed[j - 1] % Q) - R * (seed[j - 1] / Q);
-    if (x > 0)
-      seed[j] = x;
-    else
-      seed[j] = x + MODULUS;
-   }
+        initialized = 1;
+        s = stream;                      /* remember the current stream */
+        SelectStream(0);                 /* change to stream 0          */
+        PutSeed(x);                      /* set seed[0]                 */
+        stream = s;                      /* reset the current stream    */
+        for (j = 1; j < STREAMS; j++) {
+                x = A256 * (seed[j - 1] % Q) - R * (seed[j - 1] / Q);
+                if (x > 0)
+                        seed[j] = x;
+                else
+                        seed[j] = x + MODULUS;
+        }
 }
 
 
-   void PutSeed(long x)
+void PutSeed(long x)
 /* ---------------------------------------------------------------
  * Use this function to set the state of the current random number
  * generator stream according to the following conventions:
@@ -138,72 +138,72 @@ static int  initialized   = 0;          /* test for stream initialization */
  * ---------------------------------------------------------------
  */
 {
-  char ok = 0;
+        char ok = 0;
 
-  if (x > 0)
-    x = x % MODULUS;                       /* correct if x is too large  */
-  if (x < 0)
-    x = ((unsigned long) time((time_t *) NULL)) % MODULUS;
-  if (x == 0)
-    while (!ok) {
-      printf("\nEnter a positive integer seed (9 digits or less) >> ");
-      scanf("%ld", &x);
-      ok = (0 < x) && (x < MODULUS);
-      if (!ok)
-        printf("\nInput out of range ... try again\n");
-    }
-  seed[stream] = x;
+        if (x > 0)
+                x = x % MODULUS;           /* correct if x is too large  */
+        if (x < 0)
+                x = ((unsigned long) time((time_t *) NULL)) % MODULUS;
+        if (x == 0)
+                while (!ok) {
+                        printf("\nEnter a positive integer seed (9 digits or less) >> ");
+                        scanf("%ld", &x);
+                        ok = (0 < x) && (x < MODULUS);
+                        if (!ok)
+                                printf("\nInput out of range ... try again\n");
+                }
+        seed[stream] = x;
 }
 
 
-   void GetSeed(long *x)
+void GetSeed(long *x)
 /* ---------------------------------------------------------------
  * Use this function to get the state of the current random number
  * generator stream.
  * ---------------------------------------------------------------
  */
 {
-  *x = seed[stream];
+        *x = seed[stream];
 }
 
 
-   void SelectStream(int index)
+void SelectStream(int index)
 /* ------------------------------------------------------------------
  * Use this function to set the current random number generator
  * stream -- that stream from which the next random number will come.
  * ------------------------------------------------------------------
  */
 {
-  stream = ((unsigned int) index) % STREAMS;
-  if ((initialized == 0) && (stream != 0))   /* protect against        */
-    PlantSeeds(DEFAULT);                     /* un-initialized streams */
+        stream = ((unsigned int) index) % STREAMS;
+        if ((initialized == 0) && (stream != 0)) /* protect against        */
+                PlantSeeds(DEFAULT);         /* un-initialized streams */
 }
 
 
-   void TestRandom(void)
+void TestRandom(void)
 /* ------------------------------------------------------------------
  * Use this (optional) function to test for a correct implementation.
  * ------------------------------------------------------------------
  */
 {
-  long   i;
-  long   x;
-  double u;
-  char   ok = 0;
+        long i;
+        long x;
+        double u;
+        char ok = 0;
 
-  SelectStream(0);                  /* select the default stream */
-  PutSeed(1);                       /* and set the state to 1    */
-  for(i = 0; i < 10000; i++)
-    u = Random();
-  GetSeed(&x);                      /* get the new state value   */
-  ok = (x == CHECK);                /* and check for correctness */
+        SelectStream(0);            /* select the default stream */
+        PutSeed(1);                 /* and set the state to 1    */
+        for(i = 0; i < 10000; i++)
+                u = Random();
+        GetSeed(&x);                /* get the new state value   */
+        ok = (x == CHECK);          /* and check for correctness */
 
-  SelectStream(1);                  /* select stream 1                 */
-  PlantSeeds(1);                    /* set the state of all streams    */
-  GetSeed(&x);                      /* get the state of stream 1       */
-  ok = ok && (x == A256);           /* x should be the jump multiplier */
-  if (ok)
-    printf("\n The implementation of rngs.c is correct.\n\n");
-  else
-    printf("\n\a ERROR -- the implementation of rngs.c is not correct.\n\n");
+        SelectStream(1);            /* select stream 1                 */
+        PlantSeeds(1);              /* set the state of all streams    */
+        GetSeed(&x);                /* get the state of stream 1       */
+        ok = ok && (x == A256);     /* x should be the jump multiplier */
+        if (ok)
+                printf("\n The implementation of rngs.c is correct.\n\n");
+        else
+                printf("\n\a ERROR -- the implementation of rngs.c is not correct.\n\n");
 }
