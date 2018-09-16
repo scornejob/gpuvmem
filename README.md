@@ -111,13 +111,13 @@ Usage:
 
 # CONTRIBUTORS
 
-- Miguel Cárcamo
-- Fernando Rannou
-- Pablo Román
-- Simón Casassus
-- Axel Osses
-- Victor Moral
-- Nicolás Muñoz
+- Miguel Cárcamo - Universidad de Santiago de Chile
+- Nicolás Muñoz - Universidad de Santiago de Chile
+- Fernando Rannou - Universidad de Santiago de Chile
+- Pablo Román - Universidad de Santiago de Chile
+- Simón Casassus - Universidad de Chile
+- Axel Osses - Universidad de Chile
+- Victor Moral - Universidad de Chile
 
 # CONTRIBUTION AND BUG REPORTS
 
