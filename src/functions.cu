@@ -1745,7 +1745,7 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 
   I_nu_0 = image2[N*i+j].x;
   //alpha = image2[N*i+j].y;
-  alpha = 0.0f;
+  alpha = 3.5;
 
   nudiv_pow_alpha = powf(nudiv, alpha);
 
