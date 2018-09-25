@@ -138,13 +138,18 @@ cfits:
 	@ mkdir -p lib
 	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
 
-clean:
-	@ echo "Cleaning folders.."
+cleanall:
+	@ echo "Cleaning all folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
 	@ rm -f lib/*.a
 	@ cd cfitsio; make clean
 	@ cd cfitsio; make distclean
+	
+clean:
+	@ echo "Cleaning gpuvmem folders.."
+	@ rm -rf build/*
+	@ rm -rf bin/*
 
 conf:
 	@ echo "Doing configure..."
