@@ -1922,8 +1922,9 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV)
 {
         //Declaring block size and number of blocks for visibilities
-        float sum_inverse_weight = 0.0;
-        float sum_weights = 0.0;
+        float sum_inverse_weight = 0.0f;
+        float sum_weights = 0.0f;
+        float aux_noise = 0.0f;
         long UVpow2;
 
         for(int f=0; f<data.nfields; f++) {
@@ -1944,22 +1945,22 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         }
 
         printf("TOTAL VISIBILITIES: %d\n", *total_visibilities);
+        aux_noise = sqrt(sum_inverse_weight) / *total_visibilities;
         if(verbose_flag) {
-                float aux_noise = sqrt(sum_inverse_weight) / *total_visibilities;
                 printf("Calculated NOISE %e\n", aux_noise);
                 printf("Using canvas NOISE anyway...\n");
                 printf("Canvas NOISE = %e\n", beam_noise);
         }
 
         if(beam_noise == -1) {
-                beam_noise = sqrt(sum_inverse_weight) / *total_visibilities;
+                beam_noise = aux_noise;
                 if(verbose_flag) {
                         printf("No NOISE value detected in canvas...\n");
                         printf("Using NOISE: %e ...\n", beam_noise);
                 }
         }
 
-        return sum_weights;
+        return aux_noise;
 }
 
 __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int idx)
@@ -2303,9 +2304,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
         //cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
         float chi2_t_0, chi2_t_1;
-        float delta_chi2 = 0.0;
-        float p = 0.0;
-        float un_rand = 0.0;
+        float delta_chi2 = 0.0f;
+        float p = 0.0f;
+        float un_rand = 0.0f;
         int accepted = 0;
         int accepted_afterburndown = 0;
 
@@ -2376,7 +2377,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         //printf("chi2_t1: %f\n", chi2_t_1);
                         fprintf(outfile, "%f\n", chi2_t_0);
                         delta_chi2 = chi2_t_1 - chi2_t_0;
-                        if(delta_chi2 <= 0) {
+                        if(delta_chi2 <= 0.0f) {
                                 //printf("Accepted Delta chi2: %f\n", delta_chi2);
                                 gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
                                 /*if(print_images && i%3 == 0)

@@ -368,13 +368,7 @@ __host__ int main(int argc, char **argv) {
     omp_set_num_threads(num_gpus);
   }
 
-   float sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
-   if(verbose_flag){
-     printf("MS File Successfully Read\n");
-     if(beam_noise == -1){
-       printf("Beam noise wasn't provided by the user... Calculating...\n");
-     }
-   }
+   float analytical_noise = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
 
 	if(num_gpus == 1){
     cudaSetDevice(selected);
@@ -792,9 +786,28 @@ __host__ int main(int argc, char **argv) {
 	float fret = 0.0;
 
   float2 theta_init;
-  theta_init.x = MINPIX * fg_scale + fg_scale;
+  //theta_init.x = MINPIX * fg_scale + fg_scale;
+  theta_init.x = analytical_noise;
+  float peak_I_nu_0 = *std::max_element(input_Inu_0,input_Inu_0+(M*N));
   float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
-  theta_init.y = peak_alpha / 1000;
+  //theta_init.y = peak_alpha / 1000;
+  float nu_2 = 0.0f;
+  float nu_1 = 0.0f;
+
+  for (int i = 0; i < data.total_frequencies/2; i++){
+    nu_1 += fields[0].visibilities[i].freq;
+  }
+
+  nu_1 /= data.total_frequencies/2;
+
+  int freq_count;
+  for (int i = data.total_frequencies/2; i < data.total_frequencies; i++){
+    nu_2 += fields[0].visibilities[i].freq;
+  }
+
+  nu_2 /= (data.total_frequencies - data.total_frequencies/2);
+
+  theta_init.y = 2 * (sqrtf(analytical_noise)/peak_I_nu_0) / log(nu_2/nu_1);
   free(input_alpha);
   free(input_Inu_0);
 
@@ -848,7 +861,7 @@ __host__ int main(int argc, char **argv) {
     fprintf(outfile, "0.5*chi2: %f\n", 0.5*final_chi2);
     fprintf(outfile, "Total visibilities: %d\n", total_visibilities);
     fprintf(outfile, "Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
-    fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
+    //fprintf(outfile, "Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
     fprintf(outfile, "S: %f\n", final_H);
     if(reg_term != 1){
       fprintf(outfile, "Normalized S: %f\n", final_H/(M*N));
