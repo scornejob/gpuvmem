@@ -1,11 +1,11 @@
 
-CUFFTFLAG = -lcufft
-CFLAGS = -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
-INC_DIRS = -Iinclude -I/usr/local/include/casacore/
-CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
-LDFLAGS = -lcuda -lcudart
-FOPENFLAG = -Xcompiler -fopenmp -lgomp
-CCFLAG = -lstdc++
+CUFFTFLAG += -lcufft
+CFLAGS += -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
+INC_DIRS += -Iinclude -I/usr/local/include/casacore/
+CFFLAG += -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
+LDFLAGS += -lcuda -lcudart
+FOPENFLAG += -Xcompiler -fopenmp -lgomp
+CCFLAG += -lstdc++
 # Gencode arguments
 SMS ?= 30 35 37 50 52
 
@@ -145,7 +145,7 @@ cleanall:
 	@ rm -f lib/*.a
 	@ cd cfitsio; make clean
 	@ cd cfitsio; make distclean
-	
+
 clean:
 	@ echo "Cleaning gpuvmem folders.."
 	@ rm -rf build/*
