@@ -808,6 +808,8 @@ __host__ int main(int argc, char **argv) {
   nu_2 /= (data.total_frequencies - data.total_frequencies/2);
 
   theta_init.y = 2 * (sqrtf(analytical_noise)/peak_I_nu_0) / log(nu_2/nu_1);
+  printf("I_nu_0 Noise : %f\n", theta_init.x);
+  printf("Alpha Noise : %f\n", theta_init.y);
   free(input_alpha);
   free(input_Inu_0);
 
