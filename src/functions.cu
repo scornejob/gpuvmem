@@ -1968,10 +1968,10 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
         float2 nrandom;
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+        //nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
-        temp[idx].y += nrandom.y;
+        //temp[idx].y += nrandom.y;
 
 }
 
@@ -1980,10 +1980,10 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N){
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         total[N*i+j].x += I[N*i+j].x;
-        total[N*i+j].y += I[N*i+j].y;
+        //total[N*i+j].y += I[N*i+j].y;
 
         total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N){
