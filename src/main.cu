@@ -787,7 +787,8 @@ __host__ int main(int argc, char **argv) {
 
   float2 theta_init;
   //theta_init.x = MINPIX * fg_scale + fg_scale;
-  theta_init.x = analytical_noise;
+  float analytical_noise_jypix = analytical_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
+  theta_init.x = analytical_noise_jypix;
   float peak_I_nu_0 = *std::max_element(input_Inu_0,input_Inu_0+(M*N));
   float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
   //theta_init.y = peak_alpha / 1000;
@@ -807,7 +808,7 @@ __host__ int main(int argc, char **argv) {
 
   nu_2 /= (data.total_frequencies - data.total_frequencies/2);
 
-  theta_init.y = 2 * (analytical_noise/peak_I_nu_0) / logf(nu_2/nu_1);
+  theta_init.y = 2 * (analytical_noise_jypix/peak_I_nu_0) / logf(nu_2/nu_1);
   printf("I_nu_0 Noise : %f\n", theta_init.x);
   printf("Alpha Noise : %f\n", theta_init.y);
   free(input_alpha);

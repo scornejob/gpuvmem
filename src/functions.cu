@@ -2095,7 +2095,7 @@ __host__ float chiCuadrado(float2 *I)
                 }
         }else{
                 for(int f=0; f<data.nfields; f++) {
-      #pragma omp parallel for schedule(static,1)
+                        #pragma omp parallel for schedule(static,1)
                         for (int i = 0; i < data.total_frequencies; i++)
                         {
                                 float partial_chi2 = 0.0;
@@ -2150,7 +2150,7 @@ __host__ float chiCuadrado(float2 *I)
 
                                         //REDUCTIONS
                                         //chi2
-          #pragma omp critical
+                                        #pragma omp critical
                                         {
                                                 resultchi2  += partial_chi2;
                                         }
