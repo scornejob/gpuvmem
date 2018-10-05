@@ -1968,10 +1968,10 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
         float2 nrandom;
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
-        //nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
-        //temp[idx].y += nrandom.y;
+        temp[idx].y += nrandom.y;
 
 }
 
