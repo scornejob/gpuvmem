@@ -2355,8 +2355,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         signal(SIGTERM, sig_handler);
         signal(SIGKILL, sig_handler);
 
+        int second_pass;
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
-
+                second_pass = 0;
                 for(int j = 0; j < valid_pixels; j++) {
 
                         //printf("Changing pixel %d \n", pixels[j]);
@@ -2406,13 +2407,15 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                                 gpuErrchk(cudaDeviceSynchronize());
                                                 accepted_afterburndown++;
                                         }
-
+                                        second_pass++;
                                         //accepted++;
 
                                 }
                         }
+
                 }
                 printf("--------------Iteration %d-----------\n", real_iterations);
+                printf("From %d valid pixels, I passed %d times\n", second_pass);
                 fseek(outfile_its,position_in_file,SEEK_SET);
                 fprintf(outfile_its, "Iterations: %d\n", real_iterations);
                 fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
