@@ -2415,7 +2415,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
                 }
                 printf("--------------Iteration %d-----------\n", real_iterations);
-                printf("From %d valid pixels, I passed %d times\n", second_pass);
+                printf("From %d valid pixels, I passed %d times\n", valid_pixels, second_pass);
                 fseek(outfile_its,position_in_file,SEEK_SET);
                 fprintf(outfile_its, "Iterations: %d\n", real_iterations);
                 fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
