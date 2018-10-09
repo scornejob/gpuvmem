@@ -1262,6 +1262,12 @@ __device__ float AiryDiskBeam(float distance, float lambda, float antenna_diamet
         }
         return atten;
 }
+__device__ float GaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa){
+    float x = (x0 - x_c);
+    float y = (y0 - y_c);
+    float G = amplitude*(x*x/(2*bmaj*bmaj) - bpa*x*y/(bmaj*bmin) - y*y/(2*bmin*bmin));
+    return G;
+}
 
 __device__ float GaussianBeam(float distance, float lambda, float antenna_diameter, float pb_factor)
 {
