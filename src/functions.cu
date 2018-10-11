@@ -1262,11 +1262,13 @@ __device__ float AiryDiskBeam(float distance, float lambda, float antenna_diamet
         }
         return atten;
 }
-__device__ float GaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa){
-    float x = (x0 - x_c);
-    float y = (y0 - y_c);
-    float G = amplitude*(x*x/(2*bmaj*bmaj) - bpa*x*y/(bmaj*bmin) - y*y/(2*bmin*bmin));
-    return G;
+
+__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa)
+{
+        float x = (x0 - x_c);
+        float y = (y0 - y_c);
+        float G = amplitude*expf((x*x/(2*bmaj*bmaj) - bpa*x*y/(bmaj*bmin) - y*y/(2*bmin*bmin)));
+        return G;
 }
 
 __device__ float GaussianBeam(float distance, float lambda, float antenna_diameter, float pb_factor)
@@ -1981,7 +1983,8 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
 
 }
 
-__global__ void sumI(double2 *total, double2 *total2, float2 *I, long N){
+__global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
+{
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -1992,7 +1995,8 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N){
         //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
-__global__ void avgI(double2 *total, double2 *total2, int samples, long N){
+__global__ void avgI(double2 *total, double2 *total2, int samples, long N)
+{
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -2003,6 +2007,29 @@ __global__ void avgI(double2 *total, double2 *total2, int samples, long N){
         total2[N*i+j].x = (total2[N*i+j].x / samples) - (total[N*i+j].x * total[N*i+j].x);
         total2[N*i+j].y = (total2[N*i+j].y / samples) - (total[N*i+j].y * total[N*i+j].y);
 }
+
+__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
+{
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        double2 avg;
+        double2 avg2;
+        double2 cov;
+
+        avg.x = total[N*i+j].x/samples;
+        avg.y = total[N*i+j].y/samples;
+
+        avg2.x = total2[N*i+j].x/samples;
+        avg2.y = total2[N*i+j].y/samples;
+
+        cov.x = avg2.x - (avg.x * avg.x);
+        cov.y = avg2.y - (avg.y * avg.y);
+
+        theta[N*i+j].x = s_d * cov.x;
+        theta[N*i+j].y = s_d * cov.y;
+}
+
 
 __host__ float chiCuadrado(float2 *I)
 {
@@ -2313,17 +2340,19 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         float delta_chi2 = 0.0f;
         float p = 0.0f;
         float un_rand = 0.0f;
-        int accepted = 0;
+        float s_d = (2.4*2.4)/1.0;
         int accepted_afterburndown = 0;
 
 
         /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
+
         gpuErrchk(cudaMalloc((void**)&total_out, sizeof(double2)*M*N));
         gpuErrchk(cudaMemset(total_out, 0, sizeof(double2)*M*N));
         if(checkpoint)
                 gpuErrchk(cudaMemcpy2D(total_out, sizeof(double2), host_total, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
 
         /**************** GPU MEMORY FOR TOTAL OUT ^ 2 I_nu_0 and alpha ***************/
+
         gpuErrchk(cudaMalloc((void**)&total2_out, sizeof(double2)*M*N));
         gpuErrchk(cudaMemset(total2_out, 0, sizeof(double2)*M*N));
         if(checkpoint)
@@ -2364,6 +2393,10 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         int second_pass;
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
                 second_pass = 0;
+                if(real_iterations >= burndown_steps + 100) {
+                  //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
+                  updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, total_out, total2_out, s_d, accepted_afterburndown, N);
+                }
                 for(int j = 0; j < valid_pixels; j++) {
 
                         //printf("Changing pixel %d \n", pixels[j]);
@@ -2395,8 +2428,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                         accepted_afterburndown++;
                                 }
 
-                                //accepted++;
-
                         }
                         else{
                                 //printf("Not Accepted Delta chi2: %f\n", delta_chi2);
@@ -2414,12 +2445,12 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                                 accepted_afterburndown++;
                                         }
                                         second_pass++;
-                                        //accepted++;
 
                                 }
                         }
 
                 }
+
                 printf("--------------Iteration %d-----------\n", real_iterations);
                 printf("From %d valid pixels, I passed %d times\n", valid_pixels, second_pass);
                 fseek(outfile_its,position_in_file,SEEK_SET);

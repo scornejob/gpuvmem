@@ -39,7 +39,7 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float2 *device_dphi, *device_2I;
-float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, nu_0, *device_noise_image, *device_weight_image;
+float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, beam_bpa, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float noise_jypix, fg_scale, final_chi2, final_H, antenna_diameter, pb_factor, pb_cutoff, alpha_start, eta, epsilon, *host_noise_image;
 
@@ -203,6 +203,7 @@ __host__ int main(int argc, char **argv) {
   crpix2 = canvas_vars.crpix2;
   beam_bmaj = canvas_vars.beam_bmaj;
   beam_bmin = canvas_vars.beam_bmin;
+  beam_bpa = canvas_vars.beam_bpa;
   beam_noise = canvas_vars.beam_noise;
 
   data = countVisibilities(msinput, fields);

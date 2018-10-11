@@ -90,8 +90,10 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV);
 __host__ void clipping(cufftComplex *I, int iterations);
 __host__ float deviceReduce(float *in, long N);
+__host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps);
+__host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps);
 
-
+__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa);
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta);
@@ -131,5 +133,3 @@ __global__ void normVectorCalculation(float *normVector, float *gc, long N);
 __global__ void copyImage(cufftComplex *p, float *device_xt, long N);
 __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float nu_0, float fg_scale, float minpix, float eta, long N);
 __global__ void random_init(unsigned int seed, curandState_t* states, long N);
-__host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps);
-__host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps);

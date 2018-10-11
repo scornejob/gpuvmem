@@ -126,6 +126,7 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
   fits_read_key(canvas, TLONG, "NAXIS2", &c_vars.N, NULL, &status_canvas);
   fits_read_key(canvas, TFLOAT, "BMAJ", &c_vars.beam_bmaj, NULL, &status_canvas);
   fits_read_key(canvas, TFLOAT, "BMIN", &c_vars.beam_bmin, NULL, &status_canvas);
+  fits_read_key(canvas, TFLOAT, "BPA", &c_vars.beam_bpa, NULL, &status_canvas);
   fits_read_key(canvas, TFLOAT, "NOISE", &c_vars.beam_noise, NULL, &status_noise);
 
   if (status_canvas) {
