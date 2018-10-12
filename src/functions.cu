@@ -2026,8 +2026,8 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         cov.x = avg2.x - (avg.x * avg.x);
         cov.y = avg2.y - (avg.y * avg.y);
 
-        theta[N*i+j].x = s_d * cov.x;
-        theta[N*i+j].y = s_d * cov.y;
+        theta[N*i+j].x = sqrtf(s_d * cov.x);
+        theta[N*i+j].y = sqrtf(s_d * cov.y);
 }
 
 
