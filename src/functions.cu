@@ -2027,8 +2027,8 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         cov.x = avg2.x - (avg.x * avg.x);
         cov.y = avg2.y - (avg.y * avg.y);
 
-        theta[N*i+j].x = sqrtf(s_d * cov.x);
-        theta[N*i+j].y = sqrtf(s_d * cov.y);
+        theta[N*i+j].x = sqrt(s_d * cov.x);
+        theta[N*i+j].y = sqrt(s_d * cov.y);
 }
 
 
@@ -2341,7 +2341,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         float delta_chi2 = 0.0f;
         float p = 0.0f;
         float un_rand = 0.0f;
-        float s_d = (2.4)/sqrt(M*N);
+        float s_d = (2.4*2.4)/M*N;
         int accepted_afterburndown = 0;
 
 
