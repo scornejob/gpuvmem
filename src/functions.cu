@@ -2341,7 +2341,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         float delta_chi2 = 0.0f;
         float p = 0.0f;
         float un_rand = 0.0f;
-        float s_d = (2.4*2.4)/1.0;
+        float s_d = (2.4)/sqrt(M*N);
         int accepted_afterburndown = 0;
 
 
