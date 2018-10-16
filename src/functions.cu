@@ -86,6 +86,7 @@ void sig_handler(int signo)
                 fseek(outfile_its,position_in_file,SEEK_SET);
                 fprintf(outfile_its, "Iterations: %d\n", real_iterations);
                 fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
+                fflush(outfile_its);
                 double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
                 double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
                 float2toImage(device_2I, mod_in, out_image, checkp, 2, M, N, 1);
@@ -2456,6 +2457,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                 fseek(outfile_its,position_in_file,SEEK_SET);
                 fprintf(outfile_its, "Iterations: %d\n", real_iterations);
                 fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
+                fflush(outfile_its);
                 double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
                 double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
                 float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
