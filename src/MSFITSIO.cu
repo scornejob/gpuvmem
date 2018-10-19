@@ -704,7 +704,6 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
         }
 
         casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Complex comp;
         casa::Vector<casa::Bool> auxbool;
         casa::Vector<float> weights;
         bool flag;
@@ -725,9 +724,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
                                                         if(auxbool[0] == false && weights[sto] > 0.0) {
-                                                                comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
-                                                                comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
-                                                                dataCol[j][sto] = comp;
+                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y);
                                                                 weights[sto] = fields[f].visibilities[g].weight[h];
                                                                 h++;
                                                         }
@@ -770,7 +767,6 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
         }
 
         casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Complex comp;
         casa::Vector<casa::Bool> auxbool;
         casa::Vector<float> weights;
         bool flag;
@@ -791,10 +787,7 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
                                                         if(auxbool[0] == false && weights[sto] > 0.0) {
-                                                                comp.real() = fields[f].visibilities[g].Vm[h].x;
-                                                                comp.imag() = fields[f].visibilities[g].Vm[h].y;
-                                                                dataCol[j][sto] = comp;
-
+                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vm[h].y);
                                                                 h++;
                                                         }
                                                 }
@@ -836,12 +829,11 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
         }
 
         casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Complex comp;
         casa::Vector<casa::Bool> auxbool;
         casa::Vector<float> weights;
         bool flag;
         int spw, field, h = 0, g = 0;
-        float u;
+        float real_n, imag_n;
         SelectStream(0);
         PutSeed(-1);
 
@@ -861,12 +853,9 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
                                                         if(auxbool[0] == false && weights[sto] > 0.0) {
-                                                                u = Normal(0.0, 1.0);
-                                                                comp.real() = fields[f].visibilities[g].Vm[h].x + u * (1/sqrt(weights[sto]));
-                                                                u = Normal(0.0, 1.0);
-                                                                comp.imag() = fields[f].visibilities[g].Vm[h].y + u * (1/sqrt(weights[sto]));
-                                                                dataCol[j][sto] = comp;
-
+                                                                real_n = Normal(0.0, 1.0);
+                                                                imag_n = Normal(0.0, 1.0);
+                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x + real_n * (1/sqrt(weights[sto])), fields[f].visibilities[g].Vm[h].y + imag_n * (1/sqrt(weights[sto])));
                                                                 h++;
                                                         }
                                                 }
@@ -908,7 +897,6 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
         }
 
         casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Complex comp;
         casa::Vector<casa::Bool> auxbool;
         casa::Vector<float> weights;
         bool flag;
@@ -935,13 +923,9 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
                                                         if(auxbool[0] == false && weights[sto] > 0.0) {
                                                                 u = Random();
                                                                 if(u<random_probability) {
-                                                                        comp.real() = fields[f].visibilities[g].Vm[h].x;
-                                                                        comp.imag() = fields[f].visibilities[g].Vm[h].y;
-                                                                        dataCol[j][sto] = comp;
+                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vm[h].y);
                                                                 }else{
-                                                                        comp.real() = fields[f].visibilities[g].Vm[h].x;
-                                                                        comp.imag() = fields[f].visibilities[g].Vm[h].y;
-                                                                        dataCol[j][sto] = comp;
+                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vm[h].y);
                                                                         weights[sto] = 0.0;
                                                                 }
                                                                 h++;
@@ -986,13 +970,12 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
         }
 
         casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Complex comp;
         casa::Vector<casa::Bool> auxbool;
         casa::Vector<float> weights;
         bool flag;
         int spw, field, h = 0, g = 0;
+        float real_n, imag_n;
         float u;
-        float nu;
         SelectStream(0);
         PutSeed(-1);
 
@@ -1014,15 +997,11 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
                                                         if(auxbool[0] == false && weights[sto] > 0.0) {
                                                                 u = Random();
                                                                 if(u<random_probability) {
-                                                                        u = Normal(0.0, 1.0);
-                                                                        comp.real() = fields[f].visibilities[g].Vm[h].x + nu * (1/sqrt(weights[sto]));
-                                                                        u = Normal(0.0, 1.0);
-                                                                        comp.imag() = fields[f].visibilities[g].Vm[h].y + nu * (1/sqrt(weights[sto]));
-                                                                        dataCol[j][sto] = comp;
+                                                                        real_n = Normal(0.0, 1.0);
+                                                                        imag_n = Normal(0.0, 1.0);
+                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x + real_n * (1/sqrt(weights[sto])), fields[f].visibilities[g].Vm[h].y + imag_n * (1/sqrt(weights[sto])));
                                                                 }else{
-                                                                        comp.real() = fields[f].visibilities[g].Vm[h].x;
-                                                                        comp.imag() = fields[f].visibilities[g].Vm[h].y;
-                                                                        dataCol[j][sto] = comp;
+                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vm[h].y);
                                                                         weights[sto] = 0.0;
                                                                 }
                                                                 h++;
