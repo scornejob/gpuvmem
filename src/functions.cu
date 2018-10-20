@@ -2335,6 +2335,11 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 
 __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps)
 {
+        if(num_gpus == 1) {
+                cudaSetDevice(selected);
+        }else{
+                cudaSetDevice(firstgpu);
+        }
         curandState_t *states;
         //*states2;
         cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
