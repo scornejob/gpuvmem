@@ -34,6 +34,7 @@
 #include "frprmn.cuh"
 #include "directioncosines.cuh"
 #include <time.h>
+#include <iostream>
 
 int num_gpus;
 
@@ -50,18 +51,18 @@ __host__ int main(int argc, char **argv) {
         ////CHECK FOR AVAILABLE GPUs
         cudaGetDeviceCount(&num_gpus);
 
-        printf("gpuvmem Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus, Victor Moral, Fernando Rannou, Nicolás Muñoz - miguel.carcamo@protonmail.cl\n");
-        printf("This program comes with ABSOLUTELY NO WARRANTY; for details use option -w\n");
-        printf("This is free software, and you are welcome to redistribute it under certain conditions; use option -c for details.\n\n\n");
+        cout << "gpuvmem Copyright (C) 2016-2017  Miguel Carcamo, Pablo Roman, Simon Casassus, Victor Moral, Fernando Rannou, Nicolás Muñoz - miguel.carcamo@protonmail.cl" << endl;
+        cout << "This program comes with ABSOLUTELY NO WARRANTY; for details use option -w" << endl;
+        cout << "This is free software, and you are welcome to redistribute it under certain conditions; use option -c for details." << endl << endl << endl;
 
 
         if(num_gpus < 1) {
-                printf("No CUDA capable devices were detected\n");
+                cout << "No CUDA capable devices were detected" << endl;
                 return 1;
         }
 
         if (!IsAppBuiltAs64()) {
-                printf("%s is only supported with on 64-bit OSs and the application must be built as a 64-bit target. Test is being waived.\n", argv[0]);
+                cout << argv[0] << " is only supported with on 64-bit OSs and the application must be built as a 64-bit target. Test is being waived." << endl;
                 exit(EXIT_SUCCESS);
         }
 

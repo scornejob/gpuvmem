@@ -25,7 +25,7 @@ void Chi2::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
         {
                 if(penalizatorIndex > (nPenalizators - 1))
                 {
-                        printf("invalid index for penalizator (chi2)\n");
+                        cout << "Invalid index for penalizator (chi2)" << endl;
                         exit(-1);
                 }else{
                         this->penalization_factor = penalizators[penalizatorIndex];

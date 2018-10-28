@@ -108,7 +108,7 @@ __host__ float brent(float ax, float bx, float cx, float tol, float *xmin, float
                         }
                 }
         }
-        printf("Too many iterations in brent\n");
+        cout << "Too many iterations in brent" << endl;
         *xmin=x;
         return fx;
 

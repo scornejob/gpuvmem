@@ -146,11 +146,11 @@ void PutSeed(long x)
                 x = ((unsigned long) time((time_t *) NULL)) % MODULUS;
         if (x == 0)
                 while (!ok) {
-                        printf("\nEnter a positive integer seed (9 digits or less) >> ");
+                        cout << endl << "Enter a positive integer seed (9 digits or less) >> ";
                         scanf("%ld", &x);
                         ok = (0 < x) && (x < MODULUS);
                         if (!ok)
-                                printf("\nInput out of range ... try again\n");
+                                cout << endl << "Input out of range ... try again" << endl;
                 }
         seed[stream] = x;
 }
@@ -203,7 +203,7 @@ void TestRandom(void)
         GetSeed(&x);                /* get the state of stream 1       */
         ok = ok && (x == A256);     /* x should be the jump multiplier */
         if (ok)
-                printf("\n The implementation of rngs.c is correct.\n\n");
+                cout << endl << " The implementation of rngs.c is correct." << endl << endl;
         else
-                printf("\n\a ERROR -- the implementation of rngs.c is not correct.\n\n");
+                cout << endl <<" ERROR -- the implementation of rngs.c is not correct." << endl << endl;
 }

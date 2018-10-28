@@ -39,7 +39,7 @@ void TVariation::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
 
         if(imageIndex > image_count -1 || imageToAdd > image_count -1)
         {
-                printf("There is no image for the provided index (TVariation)\n");
+                cout << "There is no image for the provided index (TVariation)" << endl;
                 exit(-1);
         }
 
@@ -47,7 +47,7 @@ void TVariation::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
         {
                 if(penalizatorIndex > (nPenalizators - 1))
                 {
-                        printf("invalid index for penalizator (TVariation)\n");
+                        cout << "Invalid index for penalizator (TVariation)" << endl;
                         exit(-1);
                 }else{
                         this->penalization_factor = penalizators[penalizatorIndex];

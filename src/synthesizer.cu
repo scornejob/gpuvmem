@@ -94,7 +94,7 @@ void MFS::configure(int argc, char **argv)
         if(image_count > 1 && nu_0 == -1)
         {
                 print_help();
-                printf("for 2 or more images, nu_0 (-F) is mandatory\n");
+                cout << "For 2 or more images, nu_0 (-F) is mandatory" << endl;
                 exit(-1);
         }
         multigpu = 0;
@@ -106,30 +106,30 @@ void MFS::configure(int argc, char **argv)
                 if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
         if(verbose_flag) {
-                printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
-                printf("Number of CUDA devices:\t%d\n", num_gpus);
+                cout << "Number of host CPUs:  "<< omp_get_num_procs() << endl;
+                cout << "Number of CUDA devices:   " < num_gpus << endl;
 
 
                 for(int i = 0; i < num_gpus; i++) {
                         cudaDeviceProp dprop;
                         cudaGetDeviceProperties(&dprop, i);
 
-                        printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop.name, (IsGPUCapableP2P(&dprop) ? "IS " : "NOT"));
+                        cout << "> GPU" << i << " = \"" << dprop.name << "\"" << (IsGPUCapableP2P(&dprop) ? "IS " : "NOT") <<  " capable of Peer-to-Peer (P2P)" << endl;
 
                         //printf("   %d: %s\n", i, dprop.name);
                 }
-                printf("---------------------------\n");
+                cout << "---------------------------" << endl;
         }
 
         if(selected > num_gpus || selected < 0) {
-                printf("ERROR. THE SELECTED GPU DOESN'T EXIST\n");
+                cout << "ERROR. THE SELECTED GPU DOESN'T EXIST" << endl;
                 exit(-1);
         }
 
         readInputDat(inputdat);
         init_beam(t_telescope);
         if(verbose_flag) {
-                printf("Counting data for memory allocation\n");
+                cout << "Counting data for memory allocation" << endl;
         }
 
         canvasVariables canvas_vars = iohandler->IoreadCanvas(modinput, mod_in, b_noise_aux, status_mod_in, verbose_flag);
@@ -151,8 +151,8 @@ void MFS::configure(int argc, char **argv)
         vars_per_field = (VariablesPerField*)malloc(data.nfields*sizeof(VariablesPerField));
 
         if(verbose_flag) {
-                printf("Number of fields = %d\n", data.nfields);
-                printf("Number of frequencies = %d\n", data.total_frequencies);
+                cout << "Number of fields = " << data.nfields << endl;
+                cout << "Number of frequencies = " << data.total_frequencies << endl;
         }
 
         if(strcmp(variables.multigpu, "NULL")!=0) {
@@ -193,18 +193,18 @@ void MFS::configure(int argc, char **argv)
                 }
 
         }else{
-                printf("no penalization factors provided\n");
+                cout << "No penalization factors provided" << endl;
         }
 
         if(multigpu < 0 || multigpu > num_gpus) {
-                printf("ERROR. NUMBER OF GPUS CANNOT BE NEGATIVE OR GREATER THAN THE NUMBER OF GPUS\n");
+                cout << "ERROR. NUMBER OF GPUS CANNOT BE NEGATIVE OR GREATER THAN THE NUMBER OF GPUS" << endl;
                 exit(-1);
         }else{
                 if(multigpu == 0) {
                         num_gpus = 1;
                 }else{
                         if(data.total_frequencies == 1) {
-                                printf("ONLY ONE FREQUENCY. CHANGING NUMBER OF GPUS TO 1\n");
+                                cout << "ONLY ONE FREQUENCY. CHANGING NUMBER OF GPUS TO 1" << endl;
                                 num_gpus = 1;
                         }else{
                                 num_gpus = multigpu;
@@ -215,7 +215,7 @@ void MFS::configure(int argc, char **argv)
 
         //printf("number of FINAL host CPUs:\t%d\n", omp_get_num_procs());
         if(verbose_flag) {
-                printf("Number of CUDA devices and threads: \t%d\n", num_gpus);
+                cout << "Number of CUDA devices and threads: " << num_gpus << endl;
         }
 
         //Check peer access if there is more than 1 GPU
@@ -228,40 +228,49 @@ void MFS::configure(int argc, char **argv)
                         cudaDeviceCanAccessPeer(&canAccessPeer0_x, firstgpu, i);
                         cudaDeviceCanAccessPeer(&canAccessPeerx_0, i, firstgpu);
                         if(verbose_flag) {
-                                printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, firstgpu, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
-                                printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, firstgpu, canAccessPeerx_0 ? "Yes" : "No");
+                                cout << "> Peer-to-Peer (P2P) access from " << dprop0.name;
+                                cout << "(GPU" << firstgpu << ")" << " -> " << dpropX.name << "(GPU" << i << ") : ";
+                                cout << (canAccessPeer0_x ? "Yes" : "No") << endl;
+
+                                cout << "> Peer-to-Peer (P2P) access from " << dpropX.name;
+                                cout << "(GPU" <<  i << ")" << " -> " << dprop0.name << "(GPU" << firstgpu << ") : ";
+                                cout << (canAccessPeerx_0 ? "Yes" : "No") << endl;
+                                //printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dprop0.name, firstgpu, dpropX.name, i, canAccessPeer0_x ? "Yes" : "No");
+                                //printf("> Peer-to-Peer (P2P) access from %s (GPU%d) -> %s (GPU%d) : %s\n", dpropX.name, i, dprop0.name, firstgpu, canAccessPeerx_0 ? "Yes" : "No");
                         }
                         if(canAccessPeer0_x == 0 || canAccessPeerx_0 == 0) {
-                                printf("Two or more SM 2.0 class GPUs are required for %s to run.\n", argv[0]);
-                                printf("Support for UVA requires a GPU with SM 2.0 capabilities.\n");
-                                printf("Peer to Peer access is not available between GPU%d <-> GPU%d, waiving test.\n", 0, i);
+                                cout << "Two or more SM 2.0 class GPUs are required for " << argv[0] << " to run." << endl;
+                                cout << "Support for UVA requires a GPU with SM 2.0 capabilities." << endl;
+                                cout << "Peer to Peer access is not available between GPU0 <-> GPU" << i << ", waiving test." << endl;
                                 exit(EXIT_SUCCESS);
                         }else{
                                 cudaSetDevice(firstgpu);
                                 if(verbose_flag) {
-                                        printf("Granting access from %d to %d...\n",firstgpu, i);
+                                        cout << "Granting access from " << firstgpu << " to " << i << "..." << endl;
                                 }
                                 cudaDeviceEnablePeerAccess(i,0);
                                 cudaSetDevice(i);
                                 if(verbose_flag) {
-                                        printf("Granting access from %d to %d...\n", i, firstgpu);
+                                        cout << "Granting access from " << i << " to " << firstgpu << "..." << endl;
                                 }
                                 cudaDeviceEnablePeerAccess(firstgpu,0);
                                 if(verbose_flag) {
-                                        printf("Checking GPU %d and GPU %d for UVA capabilities...\n", firstgpu, i);
+                                        cout << "Checking GPU " << firstgpu << "and GPU "<< i << " for UVA capabilities..." << endl;
                                 }
                                 const bool has_uva = (dprop0.unifiedAddressing && dpropX.unifiedAddressing);
                                 if(verbose_flag) {
-                                        printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, firstgpu, (dprop0.unifiedAddressing ? "Yes" : "No"));
-                                        printf("> %s (GPU%d) supports UVA: %s\n", dpropX.name, i, (dpropX.unifiedAddressing ? "Yes" : "No"));
+                                        cout << "> " << dprop0.name << " (GPU" << firstgpu << ") supports UVA: " << (dprop0.unifiedAddressing ? "Yes" : "No") << endl;
+                                        //printf("> %s (GPU%d) supports UVA: %s\n", dprop0.name, firstgpu, (dprop0.unifiedAddressing ? "Yes" : "No"));
+                                        cout << "> " << dpropX.name << " (GPU" << i << ") supports UVA: " << (dpropX.unifiedAddressing ? "Yes" : "No") << endl;
+                                        //printf("> %s (GPU%d) supports UVA: %s\n", dpropX.name, i, (dpropX.unifiedAddressing ? "Yes" : "No"));
                                 }
                                 if (has_uva) {
                                         if(verbose_flag) {
-                                                printf("Both GPUs can support UVA, enabling...\n");
+                                                cout << "Both GPUs can support UVA, enabling..." << endl;
                                         }
                                 }
                                 else{
-                                        printf("At least one of the two GPUs does NOT support UVA, waiving test.\n");
+                                        cout << "At least one of the two GPUs does NOT support UVA, waiving test." << endl;
                                         exit(EXIT_SUCCESS);
                                 }
                         }
@@ -303,7 +312,7 @@ void MFS::configure(int argc, char **argv)
 
 
         if(verbose_flag) {
-                printf("Reading visibilities and FITS input files...\n");
+                cout << "Reading visibilities and FITS input files..." << endl;
         }
 
 
@@ -342,9 +351,9 @@ void MFS::setDevice()
 
         sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
         if(verbose_flag) {
-                printf("MS File Successfully Read\n");
+                cout << "MS File Successfully Read" << endl;
                 if(beam_noise == -1) {
-                        printf("Beam noise wasn't provided by the user... Calculating...\n");
+                        cout << "Beam noise wasn't provided by the user... Calculating..." << endl;
                 }
         }
 
@@ -455,7 +464,8 @@ void MFS::setDevice()
         double raimage = ra * RPDEG_D;
         double decimage = dec * RPDEG_D;
         if(verbose_flag) {
-                printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
+                cout << "FITS: Ra: " << raimage << ", dec: " << decimage << endl;
+                //printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
         }
         for(int f=0; f<data.nfields; f++) {
                 double lobs, mobs;
@@ -571,14 +581,14 @@ void MFS::setDevice()
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
                 if ((cufftPlan2d(&plan1GPU, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
-                        printf("cufft plan error\n");
+                        cout << "cufft plan error" << endl;
                         exit(-1);
                 }
         }else{
                 for(int g=0; g<num_gpus; g++) {
                         cudaSetDevice((g%num_gpus) + firstgpu);
                         if ((cufftPlan2d(&vars_gpu[g].plan, N, M, CUFFT_C2C))!= CUFFT_SUCCESS) {
-                                printf("cufft plan error\n");
+                                cout << "cufft plan error" << endl;
                                 exit(-1);
                         }
                 }
@@ -684,8 +694,10 @@ void MFS::setDevice()
         fg_scale = noise_min;
         noise_cut = noise_cut * noise_min;
         if(verbose_flag) {
-                printf("fg_scale = %e\n", fg_scale);
-                printf("noise (Jy/pix) = %e\n", noise_jypix);
+                cout << "fg_scale = " << fg_scale << endl;
+                //printf("fg_scale = %e\n", fg_scale);
+                cout << "noise (Jy/pix) = " << noise_jypix << endl;
+                //printf("noise (Jy/pix) = %e\n", noise_jypix);
         }
         free(host_noise_image);
         cudaFree(device_weight_image);
@@ -697,7 +709,7 @@ void MFS::setDevice()
 void MFS::run()
 {
         //printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
-        printf("\n\nStarting Optimizator\n");
+        cout << endl << endl << "Starting Optimizator" << endl;
         optimizator->getObjectiveFuntion()->setIo(iohandler);
         optimizator->getObjectiveFuntion()->setPrintImages(print_images);
         //optimizator->getObjectiveFuntion()->setIoOrderIterations(IoOrderIterations);
@@ -723,30 +735,30 @@ void MFS::run()
 
         t = clock() - t;
         end = omp_get_wtime();
-        printf("Minimization ended successfully\n\n");
-        printf("Iterations: %d\n", iter);
-        printf("chi2: %f\n", final_chi2);
-        printf("0.5*chi2: %f\n", 0.5*final_chi2);
-        printf("Total visibilities: %d\n", total_visibilities);
-        printf("Reduced-chi2 (Num visibilities): %f\n", (0.5*final_chi2)/total_visibilities);
-        printf("Reduced-chi2 (Weights sum): %f\n", (0.5*final_chi2)/sum_weights);
-        printf("S: %f\n", final_S);
+        cout << "Minimization ended successfully" << endl << endl;
+        cout << "Iterations: " << iter << endl;
+        cout << "chi2: " << final_chi2 << endl;
+        cout << "0.5*chi2: " << 0.5*final_chi2 << endl;
+        cout << "Total visibilities: " << total_visibilities << endl;
+        cout << "Reduced-chi2 (Num visibilities): " << (0.5*final_chi2)/total_visibilities << endl;
+        cout << "Reduced-chi2 (Weights sum): " << (0.5*final_chi2)/sum_weights << endl;
+        cout << "S: " << final_S << endl;
         if(reg_term != 1) {
-                printf("Normalized S: %f\n", final_S/(M*N));
+                cout << "Normalized S: " << final_S/(M*N) << endl;
         }else{
-                printf("Normalized S: %f\n", final_S/(M*M*N*N));
+                cout << "Normalized S: " <<  final_S/(M*M*N*N) << endl;
         }
-        printf("lambda*S: %f\n\n", lambda*final_S);
+        cout << "lambda*S: " << lambda*final_S << endl << endl;
         double time_taken = ((double)t)/CLOCKS_PER_SEC;
         double wall_time = end-start;
-        printf("Total CPU time: %lf\n", time_taken);
-        printf("Wall time: %lf\n\n\n", wall_time);
+        cout << "Total CPU time: " << time_taken << endl;
+        cout << "Wall time: " << wall_time << endl << endl << endl;
 
         if(strcmp(variables.ofile,"NULL") != 0) {
                 FILE *outfile = fopen(variables.ofile, "w");
                 if (outfile == NULL)
                 {
-                        printf("Error opening output file!\n");
+                        cout << "Error opening output file!" << endl;
                         goToError();
                 }
 
@@ -767,7 +779,7 @@ void MFS::run()
                 fclose(outfile);
         }
         //Pass residuals to host
-        printf("Saving final image to disk\n");
+        cout << "Saving final image to disk" << endl;
         if(IoOrderEnd == NULL) {
                 iohandler->IoPrintImage(image->getImage(), mod_in, "", out_image, "JY/PIXEL", iter, 0, fg_scale, M, N);
                 iohandler->IoPrintImage(image->getImage(), mod_in, "", "alpha.fits", "", iter, 1, 0.0, M, N);
@@ -783,7 +795,7 @@ void MFS::run()
                 }
                 /* code for calculate error */
                 /* make void * params */
-                printf("Calculating Error Images\n");
+                cout << "Calculating Error Images" << endl;
                 this->error->calculateErrorImage(this->image, this->visibilities);
                 if(IoOrderError == NULL) {
                         iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_Inu_0.fits", "JY/PIXEL", iter, 0, 0.0, M, N);
@@ -797,9 +809,9 @@ void MFS::run()
         residualsToHost(fields, data, num_gpus, firstgpu);
         if(!gridding)
         {
-                printf("Saving residuals to MS...\n");
+                cout << "Saving residuals to MS..." << endl;
                 iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
-                printf("Residuals saved.\n");
+                cout << "Residuals saved." << endl;
         }
 
 
@@ -808,7 +820,7 @@ void MFS::run()
 void MFS::unSetDevice()
 {
         //Free device and host memory
-        printf("Free device and host memory\n");
+        cout << "Free device and host memory" << endl;
         cufftDestroy(plan1GPU);
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {

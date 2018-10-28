@@ -120,7 +120,7 @@ __host__ void goToError()
                 }
         }
 
-        printf("An error has ocurred, exiting\n");
+        cout << "An error has ocurred, exiting" << endl;
         exit(0);
 
 }
@@ -159,7 +159,7 @@ __host__ void init_beam(int telescope)
                 pb_cutoff = 20.0*RPARCM; /* radians */
                 break;
         default:
-                printf("Telescope type not defined\n");
+                cout << "Telescope type not defined" << endl;
                 goToError();
                 break;
         }
@@ -190,7 +190,7 @@ __host__ void readInputDat(char *file)
         char item[50];
         float status;
         if((fp = fopen(file, "r")) == NULL) {
-                printf("ERROR. The input file wasn't provided by the user.\n");
+                cout << "ERROR. The input file wasn't provided by the user." << endl;
                 goToError();
         }else{
                 while(true) {
@@ -212,7 +212,7 @@ __host__ void readInputDat(char *file)
                                                 random_probability = status;
                                         }
                                 }else{
-                                        printf("Keyword not defined in input\n");
+                                        cout << "Keyword not defined in input" << endl;
                                         goToError();
                                 }
                         }
@@ -221,38 +221,38 @@ __host__ void readInputDat(char *file)
 }
 
 __host__ void print_help() {
-        printf("Example: ./bin/gpuvmem options [ arguments ...]\n");
-        printf("    -h  --help             Shows this\n");
-        printf( "   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
-        printf( "   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
-        printf( "   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-        printf( "   -i  --input            The name of the input file of visibilities(MS)\n");
-        printf( "   -o  --output           The name of the output file of residual visibilities(MS)\n");
-        printf( "   -O  --output-image     The name of the output image FITS file\n");
-        printf("    -I  --inputdat         The name of the input file of parameters\n");
-        printf("    -m  --modin            mod_in_0 FITS file\n");
-        printf("    -n  --noise            Noise Parameter (Optional)\n");
-        printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
-        printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
-        printf("    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)\n");
-        printf("    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)\n");
-        printf("    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)\n");
-        printf("    -f  --file             Output file where final objective function values are saved (Optional)\n");
-        printf("    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)\n");
-        printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
-        printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
-        printf("    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)\n");
-        printf("    -z  --initial-cond     Initial conditions for image/s\n");
-        printf("    -Z  --penalizators     penalizators for Fi\n");
-        printf("    -c  --copyright        Shows copyright conditions\n");
-        printf("    -w  --warranty         Shows no warranty details\n");
-        printf("        --xcorr            Run gpuvmem with cross-correlation\n");
-        printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
-        printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
-        printf("        --clipping         Clips the image to positive values\n");
-        printf("        --print-images     Prints images per iteration\n");
-        printf("        --print-errors     Prints final error images\n");
-        printf("        --verbose          Shows information through all the execution\n");
+        cout << "Example: ./bin/gpuvmem options [ arguments ...]" << endl;
+        cout << "    -h  --help             Shows this" << endl;
+        cout << "   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)" << endl;
+        cout << "   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)" << endl;
+        cout << "   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)" << endl;
+        cout << "   -i  --input            The name of the input file of visibilities(MS)" << endl;
+        cout << "   -o  --output           The name of the output file of residual visibilities(MS)" << endl;
+        cout << "   -O  --output-image     The name of the output image FITS file" << endl;
+        cout << "    -I  --inputdat         The name of the input file of parameters" << endl;
+        cout << "    -m  --modin            mod_in_0 FITS file" << endl;
+        cout << "    -n  --noise            Noise Parameter (Optional)" << endl;
+        cout << "    -N  --noise-cut        Noise-cut Parameter (Optional)" << endl;
+        cout << "    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)" << endl;
+        cout << "    -P  --prior            Prior used to regularize the solution (Default = 0 = Entropy)" << endl;
+        cout << "    -e  --eta              Variable that controls the minimum image value (Default eta = -1.0)" << endl;
+        cout << "    -p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)" << endl;
+        cout << "    -f  --file             Output file where final objective function values are saved (Optional)" << endl;
+        cout << "    -M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)" << endl;
+        cout << "    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)" << endl;
+        cout << "    -t  --iterations       Number of iterations for optimization (Default = 500)" << endl;
+        cout << "    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)" << endl;
+        cout << "    -z  --initial-cond     Initial conditions for image/s" << endl;
+        cout << "    -Z  --penalizators     penalizators for Fi" << endl;
+        cout << "    -c  --copyright        Shows copyright conditions" << endl;
+        cout << "    -w  --warranty         Shows no warranty details" << endl;
+        cout << "        --xcorr            Run gpuvmem with cross-correlation" << endl;
+        cout << "        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction" << endl;
+        cout << "        --apply-noise      Apply random gaussian noise to visibilities" << endl;
+        cout << "        --clipping         Clips the image to positive values" << endl;
+        cout << "        --print-images     Prints images per iteration" << endl;
+        cout << "        --print-errors     Prints final error images" << endl;
+        cout << "        --verbose          Shows information through all the execution" << endl;
 }
 
 __host__ char *strip(const char *string, const char *chars)
@@ -320,8 +320,7 @@ __host__ Vars getOptions(int argc, char **argv) {
         };
 
         if (argc == 1) {
-                printf(
-                        "ERROR. THE PROGRAM HAS BEEN EXECUTED WITHOUT THE NEEDED PARAMETERS OR OPTIONS\n");
+                cout << "ERROR. THE PROGRAM HAS BEEN EXECUTED WITHOUT THE NEEDED PARAMETERS OR OPTIONS" << endl;
                 print_help();
                 exit(EXIT_SUCCESS);
         }
@@ -337,10 +336,10 @@ __host__ Vars getOptions(int argc, char **argv) {
                         /* If this option set a flag, do nothing else now. */
                         if (long_op[option_index].flag != 0)
                                 break;
-                        printf ("option %s", long_op[option_index].name);
+                        cout << "option " << long_op[option_index].name;
                         if (optarg)
-                                printf (" with arg %s", optarg);
-                        printf ("\n");
+                                cout << " with arg " << optarg;
+                        cout << endl;
                         break;
                 case 'h':
                         print_help();
@@ -495,8 +494,8 @@ __host__ void getNumBlocksAndThreads(int n, int maxBlocks, int maxThreads, int &
 
         if (blocks > prop.maxGridSize[0])
         {
-                printf("Grid size <%d> exceeds the device capability <%d>, set block size as %d (original %d)\n",
-                       blocks, prop.maxGridSize[0], threads*2, threads);
+                cout << "Grid size <" << blocks << "> exceeds the device capability <" << prop.maxGridSize[0]
+                 << ">, set block size as " << threads*2 << " (original "<<threads << ")" << endl;
 
                 blocks /= 2;
                 threads *= 2;
@@ -969,16 +968,16 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
 
         if(verbose_flag) {
                 float aux_noise = sqrt(sum_inverse_weight)/ *total_visibilities;
-                printf("Calculated NOISE %e\n", aux_noise);
-                printf("Using canvas NOISE anyway...\n");
-                printf("Canvas NOISE = %e\n", beam_noise);
+                cout << "Calculated NOISE " << aux_noise;
+                cout << "Using canvas NOISE anyway..." << endl;
+                cout << "Canvas NOISE = " << beam_noise << endl;
         }
 
         if(beam_noise == -1) {
                 beam_noise = sqrt(sum_inverse_weight)/ *total_visibilities;
                 if(verbose_flag) {
-                        printf("No NOISE value detected in canvas...\n");
-                        printf("Using NOISE: %e ...\n", beam_noise);
+                        cout << "No NOISE value detected in canvas..." << endl;
+                        cout << "Using NOISE: " << beam_noise << " ..." << endl;
                 }
         }
 
@@ -1989,7 +1988,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
 
                                         //FFT 2D
                                         if ((cufftExecC2C(plan1GPU, (cufftComplex*)device_image, (cufftComplex*)device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
-                                                printf("CUFFT exec error\n");
+                                                cout << "CUFFT exec error" << endl;
                                                 goToError();
                                         }
                                         gpuErrchk(cudaDeviceSynchronize());
@@ -2046,7 +2045,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
 
                                         //FFT 2D
                                         if ((cufftExecC2C(vars_gpu[i%num_gpus].plan, (cufftComplex*)vars_gpu[i%num_gpus].device_image, (cufftComplex*)vars_gpu[i%num_gpus].device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
-                                                printf("CUFFT exec error\n");
+                                                cout << "CUFFT exec error" << endl;
                                                 //return -1 ;
                                                 goToError();
                                         }

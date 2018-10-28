@@ -79,7 +79,7 @@ __host__ void ConjugateGradient::deallocateMemoryGpu()
 
 __host__ void ConjugateGradient::minimizate()
 {
-        printf("\n\nStarting Fletcher Reeves Polak Ribiere method (Conj. Grad.)\n\n");
+        cout << endl << "Starting Fletcher Reeves Polak Ribiere method (Conj. Grad.)" << endl << endl;
         double start, end;
         I = image;
         flag_opt = this->flag;
@@ -92,7 +92,7 @@ __host__ void ConjugateGradient::minimizate()
 
         fp = of->calcFunction(image->getImage());
         if(verbose_flag) {
-                printf("Starting function value = %f\n", fp);
+                cout << "Starting function value = " << fp << endl;
         }
         of->calcGradient(image->getImage(),xi);
         //g=-xi
@@ -108,11 +108,11 @@ __host__ void ConjugateGradient::minimizate()
                 start = omp_get_wtime();
                 iter = i;
                 if(verbose_flag) {
-                        printf("\n\n********** Iteration %d **********\n\n", i);
+                        cout << endl << endl "********** Iteration %d **********" << endl << endl;
                 }
                 linmin(image->getImage(), xi, &fret, NULL);
                 if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {
-                        printf("Exit due to tolerance\n");
+                        cout << "Exit due to tolerance" << endl;
                         of->calcFunction(I->getImage());
                         deallocateMemoryGpu();
                         return;
@@ -120,7 +120,7 @@ __host__ void ConjugateGradient::minimizate()
 
                 fp= of->calcFunction(image->getImage());
                 if(verbose_flag) {
-                        printf("Function value = %f\n", fp);
+                        cout << "Function value = " << fp << endl;
                 }
                 of->calcGradient(image->getImage(),xi);
                 dgg = gg = 0.0;
@@ -137,7 +137,7 @@ __host__ void ConjugateGradient::minimizate()
                 gg = deviceReduce<float>(device_gg_vector, M*N);
                 dgg = deviceReduce<float>(device_dgg_vector, M*N);
                 if(gg == 0.0) {
-                        printf("Exit due to gg = 0\n");
+                        cout << "Exit due to gg = 0" << endl;
                         of->calcFunction(image->getImage());
                         deallocateMemoryGpu();
                         return;
@@ -157,7 +157,7 @@ __host__ void ConjugateGradient::minimizate()
                         printf("Time: %lf seconds\n", i, wall_time);
                 }
         }
-        printf("Too many iterations in frprmn\n");
+        cout << "Too many iterations in frprmn" << endl;
         of->calcFunction(image->getImage());
         deallocateMemoryGpu();
         return;

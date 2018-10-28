@@ -71,7 +71,7 @@ __host__ void linmin(float *p, float *xi, float *fret, float (*func)(float*)) //
 
         *fret = brent(ax, xx, bx, TOL, &xmin, f1dim);
         if(verbose_flag) {
-                printf("xmin = %f\n\n", xmin);
+                cout << "xmin = " << xmin << endl << endl;
         }
 
         //GPU MUL AND ADD

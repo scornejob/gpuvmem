@@ -33,17 +33,17 @@ Gridding::Gridding(int threads)
         if(threads != 1 && threads >= 1)
                 this->threads = threads;
         else if(threads != 1)
-                printf("number of threads seted to 1\n");
+                cout << "Number of threads setted to 1" << endl;
 };
 
 void Gridding::configure(void *params)
 {
         int *threads = (int*) params;
-        printf("number of threads = %d\n", *threads);
+        cout << "Number of threads = " << *threads << endl;
         if(*threads != 1 && *threads >= 1)
                 this->threads = *threads;
         else if(*threads != 1)
-                printf("number of threads seted to 1\n");
+                cout << "Number of threads setted to 1" << endl;
 };
 
 namespace {
