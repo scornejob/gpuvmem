@@ -138,7 +138,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
- - OS: [e.g. iOS]
+ - OS: [e.g. Ubuntu 16.04]
  - CUDA version [e.g. 9]
  - gpuvmem Version [e.g. 22]
 
