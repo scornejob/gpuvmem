@@ -2222,8 +2222,8 @@ __host__ float chiCuadrado(float2 *I)
 __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 {
         curandState_t *states, *states2;
-        cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
-        cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
+        cudaMalloc((void**)&states, M*N*sizeof(curandState_t));
+        cudaMalloc((void**)&states2, M*N*sizeof(curandState_t));
         float chi2_t_0, chi2_t_1;
         float delta_chi2 = 0.0;
         float p = 0.0;
@@ -2335,7 +2335,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 {
         curandState_t *states;
         //*states2;
-        cudaMalloc((void**)&states, N*N*sizeof(curandState_t));
+        cudaMalloc((void**)&states, M*N*sizeof(curandState_t));
         //cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
         float chi2_t_0, chi2_t_1;
         float delta_chi2 = 0.0f;
