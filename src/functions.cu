@@ -2425,6 +2425,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         //printf("chi2_t0: %f\n", chi2_t_0);
                         //printf("chi2_t1: %f\n", chi2_t_1);
                         fprintf(outfile, "%f\n", chi2_t_0);
+                        fflush(outfile);
                         delta_chi2 = chi2_t_1 - chi2_t_0;
                         if(delta_chi2 <= 0.0f) {
                                 //printf("Accepted Delta chi2: %f\n", delta_chi2);
