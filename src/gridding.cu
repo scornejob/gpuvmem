@@ -28,22 +28,23 @@ void Gridding::applyCriteria(Visibilities *v)
         do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N, v->getTotalVisibilities());
         omp_set_num_threads(num_gpus);
 };
+
 Gridding::Gridding(int threads)
 {
         if(threads != 1 && threads >= 1)
                 this->threads = threads;
         else if(threads != 1)
-                printf("number of threads seted to 1\n");
+                printf("Number of threads set to 1\n");
 };
 
 void Gridding::configure(void *params)
 {
         int *threads = (int*) params;
-        printf("number of threads = %d\n", *threads);
+        printf("Number of threads = %d\n", *threads);
         if(*threads != 1 && *threads >= 1)
                 this->threads = *threads;
         else if(*threads != 1)
-                printf("number of threads seted to 1\n");
+                printf("Number of threads set to 1\n");
 };
 
 namespace {
