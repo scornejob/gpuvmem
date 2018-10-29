@@ -32,7 +32,7 @@
 
 extern long M, N, numVisibilities;
 extern int iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-           status_mod_in, verbose_flag, apply_noise, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint;
+           status_mod_in, verbose_flag, apply_noise, adaptive, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -823,6 +823,7 @@ __host__ void print_help() {
         printf("        --clipping         Clips the image to positive values\n");
         printf("        --print-images     Prints images per iteration\n");
         printf("        --checkpoint       Start from a certain iteration\n");
+        printf("        --adaptive         MCMC Noise for each pixel is estimated using the variance of the samples\n");
         printf("        --verbose          Shows information through all the execution\n");
 }
 
@@ -908,6 +909,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                 {"clipping", 0, &clip_flag, 1},
                 {"checkpoint", 0, &checkpoint, 1},
                 {"print-images", 0, &print_images, 1},
+                {"adaptive", 0, &adaptive, 1},
                 /* These options don’t set a flag. */
                 {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                 {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -2333,6 +2335,11 @@ __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps)
 
 __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps)
 {
+        if(num_gpus == 1) {
+                cudaSetDevice(selected);
+        }else{
+                cudaSetDevice(firstgpu);
+        }
         curandState_t *states;
         //*states2;
         cudaMalloc((void**)&states, M*N*sizeof(curandState_t));
@@ -2394,9 +2401,10 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         int second_pass;
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
                 second_pass = 0;
-                if(real_iterations >= burndown_steps + 100) {
-                  //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
-                  updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, total_out, total2_out, s_d, accepted_afterburndown, N);
+                if(adaptive && real_iterations >= burndown_steps + 100) {
+                        //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
+                        updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, total_out, total2_out, s_d, accepted_afterburndown, N);
+                        gpuErrchk(cudaDeviceSynchronize());
                 }
                 for(int j = 0; j < valid_pixels; j++) {
 
