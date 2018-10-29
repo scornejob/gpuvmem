@@ -1,5 +1,29 @@
 # GPUVMEM
 
+# Papers and documentation
+
+- https://doi.org/10.1016/j.ascom.2017.11.003
+
+
+#Citing
+
+If you use GPUVMEM for your research please do not forget to cite Cárcamo et al.
+
+```
+@article{CARCAMO201816,
+title = "Multi-GPU maximum entropy image synthesis for radio astronomy",
+journal = "Astronomy and Computing",
+volume = "22",
+pages = "16 - 27",
+year = "2018",
+issn = "2213-1337",
+doi = "https://doi.org/10.1016/j.ascom.2017.11.003",
+url = "http://www.sciencedirect.com/science/article/pii/S2213133717300094",
+author = "M. Cárcamo and P.E. Román and S. Casassus and V. Moral and F.R. Rannou",
+keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, Image synthesis"
+}
+```
+
 # Installation
 
 1. Download or clone gpuvmem.
@@ -79,7 +103,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     --print-images    Prints images per iteration
     --verbose         Shows information through all the execution
 ```
-# FRAMEWORK USAGE
+# Framework usage
 
 The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding the Fi to the objective function
 
@@ -99,23 +123,23 @@ The configuration of a Fi has as parameters, the index of its penalty factor (-Z
 
 Remember to create the mem folder to save the FITS images
 
-# FIXES
+# Fixes
 
 We have fixed the Makefile and now you can compile gpuvmem using the new version of casacore.
 
-# RESTORING YOUR IMAGE PLEASE SEE CARCAMO ET AL. 2018 FOR MORE INFORMATION
+# TO RESTORE YOUR IMAGE PLEASE SEE CARCAMO ET AL. 2018 FOR MORE INFORMATION
 
-Usage:
+Restoring usage:
 
 `casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output`
 
 # CONTRIBUTORS
 
-- Miguel Cárcamo - Universidad de Santiago de Chile
+- Miguel Cárcamo - Universidad de Santiago de Chile - miguel.carcamo@usach.cl
 - Nicolás Muñoz - Universidad de Santiago de Chile
 - Fernando Rannou - Universidad de Santiago de Chile
 - Pablo Román - Universidad de Santiago de Chile
-- Simón Casassus - Universidad de Chile
+- Simón Casassus - Universidad de Chile -
 - Axel Osses - Universidad de Chile
 - Victor Moral - Universidad de Chile
 
