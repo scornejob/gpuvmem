@@ -328,7 +328,7 @@ void MFS::configure(int argc, char **argv)
 
         if(gridding) {
                 omp_set_num_threads(gridding);
-                do_gridding(fields, &data, deltau, deltav, M, N, &total_visibilities);
+                do_gridding(fields, &data, deltau, deltav, M, N);
                 omp_set_num_threads(num_gpus);
         }
 }

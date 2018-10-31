@@ -25,7 +25,7 @@ void Gridding::applyCriteria(Visibilities *v)
                 }
         }
         omp_set_num_threads(threads);
-        do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N, v->getTotalVisibilities());
+        do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N);
         omp_set_num_threads(num_gpus);
 };
 
