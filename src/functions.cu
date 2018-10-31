@@ -1986,6 +1986,24 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
 
 }
 
+__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float factor, int idx)
+{
+        float2 nrandom;
+
+        nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
+        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+
+        if(mask[idx] == 0.0){
+            temp[idx].y += 10.0*nrandom.y;
+        }else{
+          temp[idx].y += 10.0*nrandom.y;
+        }
+
+        temp[idx].x += nrandom.x;
+
+
+}
+
 __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;

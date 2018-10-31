@@ -63,6 +63,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 -t  --iterations      Number of iterations for optimization (Default = 50)
     --xcorr           Run gpuvmem with cross-correlation
+    --adaptive        Use adaptive MCMC
     --nopositivity    Run gpuvmem using chi2 with no positivity restriction
     --apply-noise     Apply random gaussian noise to visibilities
     --clipping        Clips the image to positive values
