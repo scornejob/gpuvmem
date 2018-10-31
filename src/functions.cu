@@ -2052,7 +2052,7 @@ __global__ void DPhi(float2 *dphi, float *dS, float *dL, long N)
 
 }
 
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N)
 {
   int local_max = 0;
   int max = 0;
@@ -2152,7 +2152,6 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
 
       if(fields[f].numVisibilitiesPerFreq[i] > 0){
         fields[f].numVisibilitiesPerFreq[i] = visCounter;
-        *total_visibilities += visCounter;
       }
     }
 
