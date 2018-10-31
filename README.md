@@ -139,7 +139,7 @@ Restoring usage:
 - Nicolás Muñoz - Universidad de Santiago de Chile
 - Fernando Rannou - Universidad de Santiago de Chile
 - Pablo Román - Universidad de Santiago de Chile
-- Simón Casassus - Universidad de Chile -
+- Simón Casassus - Universidad de Chile
 - Axel Osses - Universidad de Chile
 - Victor Moral - Universidad de Chile
 
