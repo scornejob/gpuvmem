@@ -1816,7 +1816,7 @@ __global__ void changeI(float2 *I, float2 *temp, float2 *theta, curandState_t* s
 }
 
 
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N)
 {
         int local_max = 0;
         int max = 0;
@@ -1916,7 +1916,6 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
 
                         if(fields[f].numVisibilitiesPerFreq[i] > 0) {
                                 fields[f].numVisibilitiesPerFreq[i] = visCounter;
-                                *total_visibilities += visCounter;
                         }
                 }
 
