@@ -32,13 +32,13 @@
 
 extern long M, N, numVisibilities;
 extern int iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-           status_mod_in, verbose_flag, apply_noise, adaptive, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint;
+           status_mod_in, verbose_flag, apply_noise, adaptive, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint, use_mask;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
 
 extern float2 *device_dphi, *device_2I;
-extern float *device_chi2, *device_dchi2, *device_S, *device_S_alpha, *device_dS, *device_dS_alpha, *device_noise_image;
+extern float *device_mask, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, *device_dS, *device_dS_alpha, *device_noise_image;
 extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
              minpix, lambda, ftol, random_probability, final_chi2, nu_0, final_H, alpha_start, eta, epsilon;
 
@@ -910,6 +910,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                 {"checkpoint", 0, &checkpoint, 1},
                 {"print-images", 0, &print_images, 1},
                 {"adaptive", 0, &adaptive, 1},
+                {"use-mask", 0, &use_mask, 1},
                 /* These options don’t set a flag. */
                 {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                 {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -1985,18 +1986,18 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
 
 }
 
-__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float factor, int idx)
+__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float sigma, float factor, int idx)
 {
         float2 nrandom;
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
-        if(mask[idx] == 0.0){
-            temp[idx].y += 10.0*nrandom.y;
-        }else{
-          temp[idx].y += 10.0*nrandom.y;
-        }
+        if(mask[idx] <= 5.0f * sigma)
+                temp[idx].y += nrandom.y;
+        else
+                temp[idx].y += factor*nrandom.y;
+
 
         temp[idx].x += nrandom.x;
 
@@ -2433,8 +2434,13 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         //}
                         gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
 
-                        changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j]);
-                        gpuErrchk(cudaDeviceSynchronize());
+                        if(use_mask) {
+                                changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states, noise_jypix, 10.0, pixels[j]);
+                                gpuErrchk(cudaDeviceSynchronize());
+                        }else{
+                                changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j]);
+                                gpuErrchk(cudaDeviceSynchronize());
+                        }
 
 
                         chi2_t_0 = chiCuadrado(I);

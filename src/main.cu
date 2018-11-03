@@ -39,14 +39,14 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float2 *device_dphi, *device_2I;
-float *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, beam_bpa, nu_0, *device_noise_image, *device_weight_image;
+float *device_mask, *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, beam_bpa, nu_0, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
 float noise_jypix, fg_scale, final_chi2, final_H, antenna_diameter, pb_factor, pb_cutoff, alpha_start, eta, epsilon, *host_noise_image;
 
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, checkpoint = 0, adaptive = 0, gridding, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, checkpoint = 0, adaptive = 0, use_mask=0, gridding, it_maximum, status_mod_in;
 int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels, valid_pixels;
 char *output, *mempath, *out_image;
 
@@ -602,6 +602,11 @@ __host__ int main(int argc, char **argv) {
         gpuErrchk(cudaMemset(device_2I, 0, sizeof(float2)*M*N));
 
         gpuErrchk(cudaMemcpy2D(device_2I, sizeof(float2), host_2I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
+
+        gpuErrchk(cudaMalloc((void**)&device_mask, sizeof(float)*M*N));
+        gpuErrchk(cudaMemset(device_mask, 0, sizeof(float)*M*N));
+
+        gpuErrchk(cudaMemcpy2D(device_mask, sizeof(float),input_Inu_0, sizeof(float), sizeof(float), M*N, cudaMemcpyHostToDevice));
 
         gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(float)*M*N));
         gpuErrchk(cudaMemset(device_noise_image, 0, sizeof(float)*M*N));
