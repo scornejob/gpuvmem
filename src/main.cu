@@ -554,13 +554,13 @@ __host__ int main(int argc, char **argv) {
 
                 /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
                 alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
+                open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
                 snprintf(alpha_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
 
                 I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
                 snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
 
                 open_read_fits<double>(&host_total2_alpha, alpha_total2, M*N, TDOUBLE);
-                open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
                 /////////////////////////////////////////////////////PASSING TO DOUBLE2 ARRAY ///////////////////////////////////////////
                 x = M-1;
                 y = N-1;
@@ -603,10 +603,12 @@ __host__ int main(int argc, char **argv) {
 
         gpuErrchk(cudaMemcpy2D(device_2I, sizeof(float2), host_2I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
-        gpuErrchk(cudaMalloc((void**)&device_mask, sizeof(float)*M*N));
-        gpuErrchk(cudaMemset(device_mask, 0, sizeof(float)*M*N));
+        if(use_mask){
+          gpuErrchk(cudaMalloc((void**)&device_mask, sizeof(float)*M*N));
+          gpuErrchk(cudaMemset(device_mask, 0, sizeof(float)*M*N));
 
-        gpuErrchk(cudaMemcpy2D(device_mask, sizeof(float),input_Inu_0, sizeof(float), sizeof(float), M*N, cudaMemcpyHostToDevice));
+          gpuErrchk(cudaMemcpy2D(device_mask, sizeof(float),input_Inu_0, sizeof(float), sizeof(float), M*N, cudaMemcpyHostToDevice));
+        }
 
         gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(float)*M*N));
         gpuErrchk(cudaMemset(device_noise_image, 0, sizeof(float)*M*N));
