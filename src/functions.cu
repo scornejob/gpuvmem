@@ -1995,9 +1995,9 @@ __global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curand
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
         if(mask[idx] <= 5.0f * sigma)
-                temp[idx].y += nrandom.y;
-        else
                 temp[idx].y += factor*nrandom.y;
+        else
+                temp[idx].y += nrandom.y;
 
 
         temp[idx].x += nrandom.x;
