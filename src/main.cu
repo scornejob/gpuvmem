@@ -501,6 +501,7 @@ __host__ int main(int argc, char **argv) {
         float2 *host_2I = (float2*)malloc(M*N*sizeof(float2));
 
         float *input_Inu_0;
+        float *host_mask;
         float *input_alpha;
 
 
@@ -510,6 +511,9 @@ __host__ int main(int argc, char **argv) {
         open_read_fits<float>(&input_Inu_0, modinput, M*N, TFLOAT);
         open_read_fits<float>(&input_alpha, alpha_name, M*N, TFLOAT);
 
+        if(use_mask)
+          host_mask = (float*)malloc(M*N*sizeof(float));
+
 
         int x = M-1;
         int y = N-1;
@@ -517,6 +521,8 @@ __host__ int main(int argc, char **argv) {
                 for(int j=0; j<N; j++) {
                         host_2I[N*i+j].x = input_Inu_0[N*y+x]; // I_nu
                         host_2I[N*i+j].y = input_alpha[N*y+x];
+                        if(use_mask)
+                          host_mask[N*i+j] = input_Inu_0[N*y+x];
                         x--;
                 }
                 x=M-1;
@@ -607,7 +613,7 @@ __host__ int main(int argc, char **argv) {
           gpuErrchk(cudaMalloc((void**)&device_mask, sizeof(float)*M*N));
           gpuErrchk(cudaMemset(device_mask, 0, sizeof(float)*M*N));
 
-          gpuErrchk(cudaMemcpy2D(device_mask, sizeof(float),input_Inu_0, sizeof(float), sizeof(float), M*N, cudaMemcpyHostToDevice));
+          gpuErrchk(cudaMemcpy2D(device_mask, sizeof(float),host_mask, sizeof(float), sizeof(float), M*N, cudaMemcpyHostToDevice));
         }
 
         gpuErrchk(cudaMalloc((void**)&device_noise_image, sizeof(float)*M*N));
