@@ -32,7 +32,11 @@
  */
 
 #include "linmin.cuh"
+#include <iostream>
 #define TOL 1.0e-7
+
+using std::cout;
+using std::endl;
 
 float *device_pcom;
 float *device_xicom, (*nrfunc)(float*);

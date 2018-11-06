@@ -32,6 +32,10 @@
  */
 
 #include "frprmn.cuh"
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 extern long M;
 extern long N;
@@ -108,7 +112,7 @@ __host__ void ConjugateGradient::minimizate()
                 start = omp_get_wtime();
                 iter = i;
                 if(verbose_flag) {
-                        cout << endl << endl "********** Iteration %d **********" << endl << endl;
+                        cout << endl << endl << "********** Iteration %d **********" << endl << endl;
                 }
                 linmin(image->getImage(), xi, &fret, NULL);
                 if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {

@@ -1,6 +1,9 @@
 #include "synthesizer.cuh"
 #include "imageProcessor.cuh"
+#include <iostream>
 
+using std::cout;
+using std::endl;
 
 long M, N, numVisibilities;
 int iter=0;
@@ -107,7 +110,7 @@ void MFS::configure(int argc, char **argv)
 
         if(verbose_flag) {
                 cout << "Number of host CPUs:  "<< omp_get_num_procs() << endl;
-                cout << "Number of CUDA devices:   " < num_gpus << endl;
+                cout << "Number of CUDA devices:   " << num_gpus << endl;
 
 
                 for(int i = 0; i < num_gpus; i++) {

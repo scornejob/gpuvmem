@@ -1,7 +1,7 @@
 #include "chi2.cuh"
 #include "imageProcessor.cuh"
-#include <iostream>
 #include <fstream>
+
 
 extern long M, N;
 extern int image_count;

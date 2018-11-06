@@ -33,6 +33,10 @@
 
 #include "brent.cuh"
 #include "nrutil.h"
+#include <iostream>
+using std::cout;
+using std::endl;
+
 #define ITMAX 500
 #define CGOLD 0.3819660
 #define ZEPS 1.0e-10

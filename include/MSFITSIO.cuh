@@ -23,6 +23,7 @@
 #include "rngs.cuh"
 #include "rvgs.cuh"
 #include <cufft.h>
+#include <iostream>
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64
@@ -36,6 +37,10 @@
 #define TDBLCOMPLEX 163
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
+using std::cout;
+using std::endl;
+
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
         if (code != cudaSuccess)

@@ -1,4 +1,8 @@
 #include "quadraticpenalization.cuh"
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 extern long M, N;
 extern int image_count;

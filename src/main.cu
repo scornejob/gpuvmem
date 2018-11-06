@@ -34,7 +34,6 @@
 #include "frprmn.cuh"
 #include "directioncosines.cuh"
 #include <time.h>
-#include <iostream>
 
 int num_gpus;
 

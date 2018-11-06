@@ -31,6 +31,9 @@
  * -------------------------------------------------------------------------
  */
 #include "functions.cuh"
+#include <iostream>
+using std::cout;
+using std::endl;
 
 namespace cg = cooperative_groups;
 

@@ -65,6 +65,7 @@
 #include <stdio.h>
 #include <time.h>
 #include "rngs.cuh"
+#include <iostream>
 
 #define MODULUS    2147483647 /* DON'T CHANGE THIS VALUE                  */
 #define MULTIPLIER 48271      /* DON'T CHANGE THIS VALUE                  */
@@ -77,6 +78,8 @@ static long seed[STREAMS] = {DEFAULT};  /* current state of each stream   */
 static int stream        = 0;           /* stream index, 0 is the default */
 static int initialized   = 0;           /* test for stream initialization */
 
+using std::cout;
+using std::endl;
 
 double Random(void)
 /* ----------------------------------------------------------------

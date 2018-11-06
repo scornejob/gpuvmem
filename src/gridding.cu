@@ -1,4 +1,8 @@
 #include "gridding.cuh"
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 extern float deltau, deltav;
 extern long M, N;
