@@ -2011,10 +2011,10 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         total[N*i+j].x += I[N*i+j].x;
-        //total[N*i+j].y += I[N*i+j].y;
+        total[N*i+j].y += I[N*i+j].y;
 
         total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
