@@ -112,7 +112,7 @@ __host__ void ConjugateGradient::minimizate()
                 start = omp_get_wtime();
                 iter = i;
                 if(verbose_flag) {
-                        cout << endl << endl << "********** Iteration %d **********" << endl << endl;
+                        cout << endl << endl << "********** Iteration " << iter << "**********" << endl << endl;
                 }
                 linmin(image->getImage(), xi, &fret, NULL);
                 if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {
@@ -158,7 +158,7 @@ __host__ void ConjugateGradient::minimizate()
                 end = omp_get_wtime();
                 double wall_time = end-start;
                 if(verbose_flag) {
-                        printf("Time: %lf seconds\n", i, wall_time);
+                        cout << "Time:" << wall_time << " seconds" << endl;
                 }
         }
         cout << "Too many iterations in frprmn" << endl;

@@ -483,11 +483,12 @@ void MFS::setDevice()
                         fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
                 }
                 if(verbose_flag) {
-                        printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
+                        cout << "Field " << f << " - Ra: " <<fields[f].obsra<< ", dec: " << fields[f].obsdec << " , x0: " << fields[f].global_xobs << ", y0: " << fields[f].global_yobs << end;
                 }
 
                 if(fields[f].global_xobs < 0 || fields[f].global_xobs > M || fields[f].global_xobs < 0 || fields[f].global_yobs > N) {
-                        printf("Pointing center (%f,%f) is outside the range of the image\n", fields[f].global_xobs, fields[f].global_xobs);
+                        //printf("Pointing center (%f,%f) is outside the range of the image\n", fields[f].global_xobs, fields[f].global_xobs);
+                        cout << "Pointing center (" << fields[f].global_xobs << "," << fields[f].global_xobs << ") is outside the range of the image" << endl;
                         goToError();
                 }
         }

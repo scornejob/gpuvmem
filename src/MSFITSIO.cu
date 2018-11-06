@@ -56,7 +56,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
         freqsAndVisibilities.nsamples = main_tab.nrow();
         if (freqsAndVisibilities.nsamples == 0) {
-                printf("ERROR : nsamples is zero... exiting....\n");
+                cout << "ERROR : nsamples is zero... exiting...." << endl;
                 exit(-1);
         }
 
@@ -179,7 +179,7 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
         c_vars.beam_bmin = c_vars.beam_bmin/ -c_vars.DELTAX;
 
         if(verbose_flag) {
-                printf("FITS Files READ\n");
+                cout << "FITS Files READ" << endl;
         }
 
         return c_vars;
@@ -639,7 +639,7 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
         casa::Table tab_src(dir_origin);
         tab_src.deepCopy(dir_dest,casa::Table::New);
         if (verbose_flag) {
-                printf("Copied\n");
+                xout << "Copied" << endl;
         }
 
 }
@@ -648,7 +648,7 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
 
 __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu)
 {
-        printf("Saving residuals to host memory\n");
+        cout << "Saving residuals to host memory" << endl;
         if(num_gpus == 1) {
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
@@ -689,9 +689,9 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
-                printf("Column %s already exists... skipping creation...\n", out_col);
+                cout << "Column " << out_col << " already exists... skipping creation..." << endl;
         }else{
-                printf("Adding %s to the main table...\n", out_col);
+                cout << "Adding " << out_col << " to the main table..." << endl;
                 main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
                 main_tab.flush();
         }
@@ -699,7 +699,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
         if (column_name!="DATA")
         {
                 query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
+                cout << "Duplicating DATA column into " << out_col << endl;
                 casa::tableCommand(query);
         }
 
@@ -752,9 +752,9 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
-                printf("Column %s already exists... skipping creation...\n", out_col);
+                cout << "Column " << out_col << " already exists... skipping creation..." << endl;
         }else{
-                printf("Adding %s to the main table...\n", out_col);
+                cout << "Adding " << out_col << " to the main table..." << endl;
                 main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
                 main_tab.flush();
         }
@@ -762,7 +762,7 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
         if (column_name!="DATA")
         {
                 query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
+              cout << "Duplicating DATA column into " << out_col << endl;
                 casa::tableCommand(query);
         }
 
@@ -814,9 +814,9 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
-                printf("Column %s already exists... skipping creation...\n", out_col);
+                cout << "Column " << out_col <<  " already exists... skipping creation..." << endl;
         }else{
-                printf("Adding %s to the main table...\n", out_col);
+                cout << "Adding " << out_col << " to the main table..." << endl;
                 main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
                 main_tab.flush();
         }
@@ -824,7 +824,7 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
         if (column_name!="DATA")
         {
                 query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
+                cout << "Duplicating DATA column into " << out_col << endl;
                 casa::tableCommand(query);
         }
 
@@ -882,9 +882,9 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
-                printf("Column %s already exists... skipping creation...\n", out_col);
+                cout << "Column " << out_col << " already exists... skipping creation..." << endl;
         }else{
-                printf("Adding %s to the main table...\n", out_col);
+                cout << "Adding " << out_col << " to the main table..." << endl;
                 main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
                 main_tab.flush();
         }
@@ -892,7 +892,7 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
         if (column_name!="DATA")
         {
                 query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
+                cout << "Duplicating DATA column into " << out_col << endl;
                 casa::tableCommand(query);
         }
 
@@ -955,9 +955,9 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
-                printf("Column %s already exists... skipping creation...\n", out_col);
+                cout << "Column " << out_col  << " already exists... skipping creation..." << endl;
         }else{
-                printf("Adding %s to the main table...\n", out_col);
+                cout << "Adding " << out_col << " to the main table..." << endl;
                 main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
                 main_tab.flush();
         }
@@ -965,7 +965,7 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
         if (column_name!="DATA")
         {
                 query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
+                cout << "Duplicating DATA column into " << out_col << endl;
                 casa::tableCommand(query);
         }
 
@@ -1125,7 +1125,7 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
         case -1:
                 break;
         default:
-                printf("Invalid case to FITS\n");
+                cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
 
@@ -1147,7 +1147,7 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
         case -1:
                 break;
         default:
-                printf("Invalid case to FITS\n");
+                cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
 
@@ -1250,7 +1250,7 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
         case -1:
                 break;
         default:
-                printf("Invalid case to FITS\n");
+                cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
 
@@ -1268,7 +1268,7 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
         case -1:
                 break;
         default:
-                printf("Invalid case to FITS\n");
+                cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
 
@@ -1286,7 +1286,7 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
         case -1:
                 break;
         default:
-                printf("Invalid case to FITS\n");
+                cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
 
