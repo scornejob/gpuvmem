@@ -639,7 +639,7 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
         casa::Table tab_src(dir_origin);
         tab_src.deepCopy(dir_dest,casa::Table::New);
         if (verbose_flag) {
-                xout << "Copied" << endl;
+                cout << "Copied" << endl;
         }
 
 }
