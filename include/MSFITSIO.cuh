@@ -24,6 +24,8 @@
 #include "rvgs.cuh"
 #include <cufft.h>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64

@@ -42,6 +42,7 @@ void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image
 
 void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
 {
+        /*
         size_t needed;
         char *full_name;
 
@@ -50,7 +51,12 @@ void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *n
         snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iteration);
 
         OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
-        free(full_name);
+        free(full_name);*/
+        std::stringstream full_name { };
+        std::string format {".fits"};
+        full_name << name_image << "_" << std::to_string(iteration) << format;
+        OFITS(I, canvas, path, full_name.str(), units, iteration, index, fg_scale, M, N);
+
 }
 
 void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index)

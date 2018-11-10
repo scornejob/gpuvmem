@@ -1019,7 +1019,7 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 }
 
-__host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+__host__ void OFITS(float *I, fitsfile *canvas, char *path, std::string name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
 {
         fitsfile *fpointer;
         int status = 0;
@@ -1028,13 +1028,15 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         size_t needed;
         long naxes[2]={M,N};
         long naxis = 2;
-        char *full_name;
-
+        std::stringstream full_name {};
+        /*
         needed = snprintf(NULL, 0, "!%s%s", path, name_image) + 1;
         full_name = (char*)malloc(needed*sizeof(char));
-        snprintf(full_name, needed*sizeof(char), "!%s%s", path, name_image);
+        snprintf(full_name, needed*sizeof(char), "!%s%s", path, name_image);*/
 
-        fits_create_file(&fpointer, full_name, &status);
+        full_name << "!" << path << name_image;
+
+        fits_create_file(&fpointer, full_name.str(), &status);
         if(status) {
                 fits_report_error(stderr, status); /* print error message */
                 exit(-1);
