@@ -37,7 +37,8 @@ void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, freqData data, 
 
 void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
 {
-        OFITS(I, canvas, path, name_image, units, iteration, index, fg_scale, M, N);
+	string full_name(name_image);
+        OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
 }
 
 void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
@@ -52,13 +53,11 @@ void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *n
 
         OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
         free(full_name);*/
-        std::stringstream full_name;
-        std::string format (".fits");
+        stringstream full_name;
+        string format (".fits");
         full_name << name_image << "_" << iteration << format;
-	char* tmp_full_name = new char[full_name.str().length() + 1];
-        std::copy(full_name.str().c_str(),full_name.str().c_str() + full_name.str().length()+1,tmp_full_name);
-        OFITS(I, canvas, path, tmp_full_name, units, iteration, index, fg_scale, M, N);
-	delete[] tmp_full_name;
+        OFITS(I, canvas, path, full_name.str(), units, iteration, index, fg_scale, M, N);
+
 }
 
 void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index)
@@ -73,13 +72,10 @@ void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int
 
         OFITS(I, mod_in, mempath, full_name, units, iter, index, fg_scale, M, N);
         free(full_name);*/
-	std::stringstream full_name;
-        std::string format (".fits");
+	stringstream full_name;
+        string format (".fits");
         full_name << name_image << "_" << iteration << format;
-	char* tmp_full_name = new char[full_name.str().length() + 1];
-        std::copy(full_name.str().c_str(),full_name.str().c_str() + full_name.str().length()+1,tmp_full_name);
-	OFITS(I, mod_in, mempath, tmp_full_name, units, iter, index, fg_scale, M, N);
-	delete[] tmp_full_name;
+	OFITS(I, mod_in, mempath, full_name.str(), units, iter, index, fg_scale, M, N);
 }
 
 void IoMS::IocloseCanvas(fitsfile *canvas)
