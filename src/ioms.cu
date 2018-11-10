@@ -52,15 +52,18 @@ void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *n
 
         OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
         free(full_name);*/
-        std::stringstream full_name { };
-        std::string format {".fits"};
-        full_name << name_image << "_" << std::to_string(iteration) << format;
-        OFITS(I, canvas, path, full_name.str(), units, iteration, index, fg_scale, M, N);
-
+        std::stringstream full_name;
+        std::string format (".fits");
+        full_name << name_image << "_" << iteration << format;
+	char* tmp_full_name = new char[full_name.str().length() + 1];
+        std::copy(full_name.str().c_str(),full_name.str().c_str() + full_name.str().length()+1,tmp_full_name);
+        OFITS(I, canvas, path, tmp_full_name, units, iteration, index, fg_scale, M, N);
+	delete[] tmp_full_name;
 }
 
 void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index)
 {
+	/*
         size_t needed;
         char *full_name;
 
@@ -69,7 +72,14 @@ void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int
         snprintf(full_name, needed*sizeof(char), "%s_%d.fits", name_image, iter);
 
         OFITS(I, mod_in, mempath, full_name, units, iter, index, fg_scale, M, N);
-        free(full_name);
+        free(full_name);*/
+	std::stringstream full_name;
+        std::string format (".fits");
+        full_name << name_image << "_" << iteration << format;
+	char* tmp_full_name = new char[full_name.str().length() + 1];
+        std::copy(full_name.str().c_str(),full_name.str().c_str() + full_name.str().length()+1,tmp_full_name);
+	OFITS(I, mod_in, mempath, tmp_full_name, units, iter, index, fg_scale, M, N);
+	delete[] tmp_full_name;
 }
 
 void IoMS::IocloseCanvas(fitsfile *canvas)
