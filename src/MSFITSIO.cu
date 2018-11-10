@@ -1035,8 +1035,11 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, std::string name_ima
         snprintf(full_name, needed*sizeof(char), "!%s%s", path, name_image);*/
 
         full_name << "!" << path << name_image;
-
-        fits_create_file(&fpointer, full_name.str(), &status);
+        char* tmp_full_name = new char[full_name.str().length() + 1];
+        std::copy(full_name.str().c_str(),
+            full_name.str().c_str() + full_name.str().length()+1,tmp_full_name);
+        fits_create_file(&fpointer, tmp_full_name, &status);
+        delete[] tmp_full_name;
         if(status) {
                 fits_report_error(stderr, status); /* print error message */
                 exit(-1);
