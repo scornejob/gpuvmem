@@ -210,7 +210,8 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        char *query;
+        //char *query;
+	stringstream query;
         string dir = MS_name;
         casa::Table main_tab(dir);
         casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
