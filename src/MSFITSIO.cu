@@ -37,7 +37,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 {
         freqData freqsAndVisibilities;
         string dir = MS_name;
-        char *query;
+        //char *query;
         casa::Vector<double> pointing;
         casa::Table main_tab(dir);
         casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
@@ -94,7 +94,8 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
         bool flag;
         int counter;
-        size_t needed;
+        //size_t needed;
+        stringstream query;
 
         // Iteration through all fields
 
@@ -102,11 +103,15 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
                 counter = 0;
                 for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
                         // Query for data with forced IF and FIELD
+                        /*
                         needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
+                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);*/
+                        query << "select * from " << MS_name << " where DATA_DESC_ID=" << i << " and FIELD_ID=" << f << " and FLAG_ROW=FALSE";
+                        char* tmp_query = new char[query.str().length() + 1];
+                        copy(query.str().c_str(),query.str().c_str() + query.str().length()+1,tmp_query);
+                        casa::Table query_tab = casa::tableCommand(tmp_query);
+                        delete[] tmp_query;
 
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
                         casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
@@ -238,12 +243,15 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
+                        /*
                         needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
-
+                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);*/
+                        query << "select * from " << MS_name << " where DATA_DESC_ID=" << i << " and FIELD_ID=" << f << " and FLAG_ROW=FALSE";
+                        char* tmp_query = new char[query.str().length() + 1];
+                        copy(query.str().c_str(),query.str().c_str() + query.str().length()+1,tmp_query);
+                        casa::Table query_tab = casa::tableCommand(tmp_query);
+                        delete[] tmp_query;
                         casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
                         casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
@@ -307,7 +315,8 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        char *query;
+        //char *query;
+        stringstream query;
         string dir = MS_name;
         casa::Table main_tab(dir);
         casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
@@ -325,7 +334,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
         casa::Matrix<casa::Bool> flagCol;
 
         bool flag;
-        size_t needed;
+        //size_t needed;
 
         for(int f=0; f < data.nfields; f++) {
                 for(int i = 0; i < data.total_frequencies; i++) {
@@ -339,11 +348,15 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
+                        /*
                         needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
+                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);*/
+                        query << "select * from " << MS_name << " where DATA_DESC_ID=" << i << " and FIELD_ID=" << f << " and FLAG_ROW=FALSE";
+                        char* tmp_query = new char[query.str().length() + 1];
+                        copy(query.str().c_str(),query.str().c_str() + query.str().length()+1,tmp_query);
+                        casa::Table query_tab = casa::tableCommand(tmp_query);
+                        delete[] tmp_query;
 
                         casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
@@ -419,7 +432,8 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        char *query;
+        //char *query;
+        stringstream query;
         string dir = MS_name;
         casa::Table main_tab(dir);
 
@@ -453,11 +467,15 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
+                  /*
                         needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
+                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);*/
+                        query << "select * from " << MS_name << " where DATA_DESC_ID=" << i << " and FIELD_ID=" << f << " and FLAG_ROW=FALSE";
+                        char* tmp_query = new char[query.str().length() + 1];
+                        copy(query.str().c_str(),query.str().c_str() + query.str().length()+1,tmp_query);
+                        casa::Table query_tab = casa::tableCommand(tmp_query);
+                        delete[] tmp_query;
 
                         casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
@@ -537,7 +555,8 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        char *query;
+        //char *query;
+        stringstream query;
         string dir = MS_name;
         casa::Table main_tab(dir);
 
@@ -566,11 +585,15 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
+                  /*
                         needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
+                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);*/
+                        query << "select * from " << MS_name << " where DATA_DESC_ID=" << i << " and FIELD_ID=" << f << " and FLAG_ROW=FALSE";
+                        char* tmp_query = new char[query.str().length() + 1];
+                        copy(query.str().c_str(),query.str().c_str() + query.str().length()+1,tmp_query);
+                        casa::Table query_tab = casa::tableCommand(tmp_query);
+                        delete[] tmp_query;
 
                         casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
