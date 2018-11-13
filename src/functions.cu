@@ -389,7 +389,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                         variables.threshold = atof(optarg);
                         break;
                 case 'p':
-                        variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.path, optarg);
                         break;
                 case 'P':
@@ -402,7 +402,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                         variables.randoms = atof(optarg);
                         break;
                 case 'f':
-                        variables.ofile = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.ofile = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.ofile, optarg);
                         break;
                 case 's':
@@ -424,11 +424,11 @@ __host__ Vars getOptions(int argc, char **argv) {
                         variables.gridding = atoi(optarg);
                         break;
                 case 'z':
-                        variables.initial_values = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.initial_values = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.initial_values, optarg);
                         break;
                 case 'Z':
-                        variables.penalization_factors = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.penalization_factors = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.penalization_factors, optarg);
                         break;
                 case '?':
