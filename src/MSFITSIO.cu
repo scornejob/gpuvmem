@@ -1043,7 +1043,7 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
 
 }
 
-__host__ void OFITS(float *I, fitsfile *canvas, char *path, string name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+__host__ void OFITS(float *I, fitsfile *canvas, string path, string name_image, string units, int iteration, int index, float fg_scale, long M, long N)
 {
         fitsfile *fpointer;
         int status = 0;
