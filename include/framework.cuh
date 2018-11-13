@@ -32,16 +32,16 @@ typedef struct variablesPerField {
 }VariablesPerField;
 
 typedef struct variables {
-        char *input;
-        char *output;
-        char *inputdat;
-        char *modin;
-        char *ofile;
-        char *path;
-        char *output_image;
-        char *multigpu;
-        char *initial_values;
-        char *penalization_factors;
+        string input;
+        string output;
+        string inputdat;
+        string modin;
+        string ofile;
+        string path;
+        string output_image;
+        string multigpu;
+        string initial_values;
+        string penalization_factors;
         int select;
         int blockSizeX;
         int blockSizeY;

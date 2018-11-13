@@ -1111,14 +1111,14 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, string name_image, c
 
 }
 
-__host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, float fg_scale, long M, long N, int option)
+__host__ void float2toImage(float *I, fitsfile *canvas, string out_image, string mempath, int iteration, float fg_scale, long M, long N, int option)
 {
         fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
         int statusI_nu_0 = 0, statusalpha = 0;
         long fpixel = 1;
         long elements = M*N;
-        char *Inu_0_name;
-        char *alphaname;
+        string Inu_0_name;
+        string alphaname;
         size_t needed_I_nu_0;
         size_t needed_alpha;
         long naxes[2]={M,N};
@@ -1135,19 +1135,23 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
 
         switch(option) {
         case 0:
-                needed_alpha = snprintf(NULL, 0, "!%s_alpha.fits", out_image) + 1;
+                /*needed_alpha = snprintf(NULL, 0, "!%s_alpha.fits", out_image) + 1;
                 alphaname = (char*)malloc(needed_alpha*sizeof(char));
-                snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha.fits", out_image);
+                snprintf(alphaname, needed_alpha*sizeof(char), "!%s_alpha.fits", out_image);*/
+                alphaname << "!" << out_image << "_alpha.fits";
                 break;
         case 1:
+                /*
                 needed_alpha = snprintf(NULL, 0, "!%salpha_%d.fits", mempath, iteration) + 1;
                 alphaname = (char*)malloc(needed_alpha*sizeof(char));
-                snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);
+                snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_%d.fits", mempath, iteration);*/
+                alphaname << "!" << mempath << "alpha_" << iteration << ".fits";
                 break;
         case 2:
-                needed_alpha = snprintf(NULL, 0, "!%salpha_error.fits", out_image) + 1;
+                /*needed_alpha = snprintf(NULL, 0, "!%salpha_error.fits", out_image) + 1;
                 alphaname = (char*)malloc(needed_alpha*sizeof(char));
-                snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_error.fits", out_image);
+                snprintf(alphaname, needed_alpha*sizeof(char), "!%salpha_error.fits", out_image);*/
+                alphaname << "!" << out_image << "alpha_error.fits";
                 break;
         case -1:
                 break;
@@ -1158,19 +1162,23 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
 
         switch(option) {
         case 0:
-                needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0.fits", out_image) + 1;
+                /*needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0.fits", out_image) + 1;
                 Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);
+                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0.fits", out_image);*/
+                Inu_0_name << "!" << out_image << "_I_nu_0.fits";
                 break;
         case 1:
-                needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits", mempath, iteration) + 1;
+                /*needed_I_nu_0 = snprintf(NULL, 0, "!%sI_nu_0_%d.fits", mempath, iteration) + 1;
                 Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);
+                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%sI_nu_0_%d.fits", mempath, iteration);*/
+                Inu_0_name << "!" << mempath << "I_nu_0_" << iteration << ".fits";
                 break;
         case 2:
-                needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0_error.fits", out_image) + 1;
+                /*needed_I_nu_0 = snprintf(NULL, 0, "!%s_I_nu_0_error.fits", out_image) + 1;
                 Inu_0_name = (char*)malloc(needed_I_nu_0*sizeof(char));
-                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0_error.fits", out_image);
+                snprintf(Inu_0_name, needed_I_nu_0*sizeof(char), "!%s_I_nu_0_error.fits", out_image);*/
+                Inu_0_name << "!" << out_image << "_I_nu_0_error.fits";
+                break; //NEW LINE ADDED ??
         case -1:
                 break;
         default:
@@ -1237,18 +1245,18 @@ __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*me
 
 }
 
-__host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)
+__host__ void float3toImage(float3 *I, fitsfile *canvas, string out_image, string mempath, int iteration, long M, long N, int option)
 {
         fitsfile *fpointerT, *fpointertau, *fpointerbeta, *fpointer;
         int statusT = 0, statustau = 0, statusbeta = 0;
         long fpixel = 1;
         long elements = M*N;
-        char *Tname;
-        char *tauname;
-        char *betaname;
-        size_t needed_T;
-        size_t needed_tau;
-        size_t needed_beta;
+        string Tname;
+        string tauname;
+        string betaname;
+        //size_t needed_T;
+        //size_t needed_tau;
+        //size_t needed_beta;
         long naxes[2]={M,N};
         long naxis = 2;
         char *Tunit = "K";
@@ -1265,14 +1273,18 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
 
         switch(option) {
         case 0:
+                /*
                 needed_T = snprintf(NULL, 0, "!%s_T.fits", out_image) + 1;
                 Tname = (char*)malloc(needed_T*sizeof(char));
-                snprintf(Tname, needed_T*sizeof(char), "!%s_T.fits", out_image);
+                snprintf(Tname, needed_T*sizeof(char), "!%s_T.fits", out_image);*/
+                Tname << "!" << out_image << "_T.fits";
+
                 break;
         case 1:
-                needed_T = snprintf(NULL, 0, "!%sT_%d.fits", mempath, iteration) + 1;
+                /*needed_T = snprintf(NULL, 0, "!%sT_%d.fits", mempath, iteration) + 1;
                 Tname = (char*)malloc(needed_T*sizeof(char));
-                snprintf(Tname, needed_T*sizeof(char), "!%sT_%d.fits", mempath, iteration);
+                snprintf(Tname, needed_T*sizeof(char), "!%sT_%d.fits", mempath, iteration);*/
+                Tname << "!" << mempath << "T_" << iteration << ".fits";
                 break;
         case -1:
                 break;
@@ -1283,14 +1295,18 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
 
         switch(option) {
         case 0:
+                /*
                 needed_tau = snprintf(NULL, 0, "!%s_tau_0.fits", out_image) + 1;
                 tauname = (char*)malloc(needed_tau*sizeof(char));
-                snprintf(tauname, needed_tau*sizeof(char), "!%s_tau_0.fits", out_image);
+                snprintf(tauname, needed_tau*sizeof(char), "!%s_tau_0.fits", out_image);*/
+                tauname << "!" << out_image << "_tau_0.fits";
                 break;
         case 1:
+                /*
                 needed_tau = snprintf(NULL, 0, "!%stau_0_%d.fits", mempath, iteration) + 1;
                 tauname = (char*)malloc(needed_tau*sizeof(char));
-                snprintf(tauname, needed_tau*sizeof(char), "!%stau_0_%d.fits", mempath, iteration);
+                snprintf(tauname, needed_tau*sizeof(char), "!%stau_0_%d.fits", mempath, iteration);*/
+                tauname << "!" << mempath << "tau_0_" <<iteration << ".fits";
                 break;
         case -1:
                 break;
@@ -1301,14 +1317,18 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
 
         switch(option) {
         case 0:
+                /*
                 needed_beta = snprintf(NULL, 0, "!%s_beta.fits", out_image) + 1;
                 betaname = (char*)malloc(needed_beta*sizeof(char));
-                snprintf(betaname, needed_beta*sizeof(char), "!%s_beta.fits", out_image);
+                snprintf(betaname, needed_beta*sizeof(char), "!%s_beta.fits", out_image);*/
+                betaname << "!" << out_image << "_beta.fits";
                 break;
         case 1:
+                /*
                 needed_beta = snprintf(NULL, 0, "!%sbeta_%d.fits", mempath, iteration) + 1;
                 betaname = (char*)malloc(needed_beta*sizeof(char));
-                snprintf(betaname, needed_beta*sizeof(char), "!%sbeta_%d.fits", mempath, iteration);
+                snprintf(betaname, needed_beta*sizeof(char), "!%sbeta_%d.fits", mempath, iteration);*/
+                betaname << "!" << mempath << "beta_" << iteration << ".fits";
                 break;
         case -1:
                 break;
@@ -1316,10 +1336,20 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
                 cout << "Invalid case to FITS" << endl;
                 exit(-1);
         }
+        char* tmp_Tname = new char[Tname.str().length() + 1];
+        copy(Tname.str().c_str(),Tname.str().c_str() + Tname.str().length()+1,tmp_Tname);
+        char* tmp_tauname = new char[tauname.str().length() + 1];
+        copy(tauname.str().c_str(),tauname.str().c_str() + tauname.str().length()+1,tmp_tauname);
+        char* tmp_betaname = new char[betaname.str().length() + 1];
+        copy(betaname.str().c_str(),betaname.str().c_str() + betaname.str().length()+1,tmp_betaname);
 
-        fits_create_file(&fpointerT, Tname, &statusT);
+        fits_create_file(&fpointerT, tmp_Tname, &statusT);
         fits_create_file(&fpointertau, tauname, &statustau);
         fits_create_file(&fpointerbeta, betaname, &statusbeta);
+
+        delete[] tmp_Tname;
+        delete[] tmp_tauname;
+        delete[] tmp_betaname;
 
         if (statusT || statustau || statusbeta) {
                 fits_report_error(stderr, statusT);
@@ -1377,10 +1407,9 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
         free(host_beta);
         free(host_3Iout);
 
-        free(betaname);
-        free(tauname);
-        free(Tname);
-
+        //free(betaname);
+        //free(tauname);
+        //free(Tname);
 }
 
 __host__ void closeCanvas(fitsfile *canvas)

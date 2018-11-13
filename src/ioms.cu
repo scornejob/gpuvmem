@@ -35,13 +35,13 @@ void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, freqData data, 
         writeMS(infile, outfile, fields, data, random_probability, verbose_flag);
 };
 
-void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+void IoMS::IoPrintImage(float *I, fitsfile *canvas, string path, string name_image, string units, int iteration, int index, float fg_scale, long M, long N)
 {
 	string full_name(name_image);
         OFITS(I, canvas, path, full_name, units, iteration, index, fg_scale, M, N);
 }
 
-void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
+void IoMS::IoPrintImageIteration(float *I, fitsfile *canvas, string path, string name_image, string units, int iteration, int index, float fg_scale, long M, long N)
 {
         /*
         size_t needed;

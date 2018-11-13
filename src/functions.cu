@@ -354,23 +354,23 @@ __host__ Vars getOptions(int argc, char **argv) {
                         print_copyright();
                         exit(EXIT_SUCCESS);
                 case 'i':
-                        variables.input = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.input = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.input, optarg);
                         break;
                 case 'o':
-                        variables.output = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.output = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.output, optarg);
                         break;
                 case 'O':
-                        variables.output_image = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.output_image = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.output_image, optarg);
                         break;
                 case 'I':
-                        variables.inputdat = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.inputdat = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.inputdat, optarg);
                         break;
                 case 'm':
-                        variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
+                        //variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
                         strcpy(variables.modin, optarg);
                         break;
                 case 'n':
