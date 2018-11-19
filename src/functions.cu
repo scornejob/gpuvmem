@@ -275,8 +275,10 @@ __host__ char *strip(const char *string, const char *chars)
 }*/
 __host__ string strip(string stringOld, const char *chars)
 {
+        string stringNew;
         stringOld.erase (remove(stringOld.begin(), stringOld.end(), chars), stringOld.end());
-        return stringOld;
+        stringNew.assign(stringOld);
+        return stringNew;
 }
 
 
