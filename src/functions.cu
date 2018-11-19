@@ -302,7 +302,7 @@ __host__ Vars getOptions(int argc, char **argv) {
         variables.nu_0 = -1;
         variables.threshold = 0.0;
 
-
+        stringstream optargStream;
         long next_op;
         const char* const short_op = "hcwi:o:O:I:m:n:N:r:f:M:s:e:p:P:X:Y:V:t:g:z:T:F:Z:";
 
@@ -361,23 +361,33 @@ __host__ Vars getOptions(int argc, char **argv) {
                         exit(EXIT_SUCCESS);
                 case 'i':
                         //variables.input = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.input, optarg);
+                        optargStream << optarg;
+                        variables.input.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'o':
                         //variables.output = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.output, optarg);
+                        optargStream << optarg;
+                        variables.output.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'O':
                         //variables.output_image = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.output_image, optarg);
+                        optargStream << optarg;
+                        variables.output_image.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'I':
                         //variables.inputdat = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.inputdat, optarg);
+                        optargStream << optarg;
+                        variables.inputdat.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'm':
                         //variables.modin = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.modin, optarg);
+                        optargStream << optarg;
+                        variables.modin.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'n':
                         variables.noise = atof(optarg);
@@ -396,7 +406,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                         break;
                 case 'p':
                         //variables.path = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.path, optarg);
+                        optargStream << optarg;
+                        variables.path.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'P':
                         variables.reg_term = atoi(optarg);;
@@ -409,7 +421,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                         break;
                 case 'f':
                         //variables.ofile = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.ofile, optarg);
+                        optargStream << optarg;
+                        variables.ofile.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 's':
                         variables.select = atoi(optarg);
@@ -431,11 +445,15 @@ __host__ Vars getOptions(int argc, char **argv) {
                         break;
                 case 'z':
                         //variables.initial_values = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.initial_values, optarg);
+                        optargStream << optarg;
+                        variables.initial_values.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case 'Z':
                         //variables.penalization_factors = (char*) malloc((strlen(optarg)+1)*sizeof(char));
-                        strcpy(variables.penalization_factors, optarg);
+                        optargStream << optarg;
+                        variables.penalization_factors.assign(optargStream.str());
+                        optargStream.str(string());
                         break;
                 case '?':
                         print_help();
