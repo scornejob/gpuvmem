@@ -1074,9 +1074,11 @@ __host__ void OFITS(float *I, fitsfile *canvas, string path, string name_image, 
                 exit(-1);
         }
 
-        fits_update_key(fpointer, TSTRING, "BUNIT", units, "Unit of measurement", &status);
+        char* tmp_units = new char[units.length() + 1];
+        copy(units.c_str(),units.c_str() + units.length()+1,tmp_units);
+        fits_update_key(fpointer, TSTRING, "BUNIT", tmp_units, "Unit of measurement", &status);
         fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
-
+        delete[] tmp_units;
         float *host_IFITS = (float*)malloc(M*N*sizeof(float));
 
         //unsigned int offset = M*N*index*sizeof(float);
@@ -1118,8 +1120,8 @@ __host__ void float2toImage(float *I, fitsfile *canvas, string out_image, string
         int statusI_nu_0 = 0, statusalpha = 0;
         long fpixel = 1;
         long elements = M*N;
-        string Inu_0_name;
-        string alphaname;
+        stringstream Inu_0_name;
+        stringstream alphaname;
         size_t needed_I_nu_0;
         size_t needed_alpha;
         long naxes[2]={M,N};
@@ -1187,10 +1189,16 @@ __host__ void float2toImage(float *I, fitsfile *canvas, string out_image, string
                 exit(-1);
         }
 
+        char* tmp_Inu_0_name = new char[Inu_0_name.str().length() + 1];
+        copy(Inu_0_name.str().c_str(),Inu_0_name.str().c_str() + Inu_0_name.str().length()+1,tmp_Inu_0_name);
 
-        fits_create_file(&fpointerI_nu_0, Inu_0_name, &statusI_nu_0);
-        fits_create_file(&fpointeralpha, alphaname, &statusalpha);
+        char* tmp_alphaname = new char[alphaname.str().length() + 1];
+        copy(alphaname.str().c_str(),alphaname.str().c_str() + alphaname.str().length()+1,tmp_alphaname);
 
+        fits_create_file(&fpointerI_nu_0, tmp_Inu_0_name, &statusI_nu_0);
+        fits_create_file(&fpointeralpha, tmp_alphaname, &statusalpha);
+        delete[] tmp_Inu_0_name;
+        delete[] tmp_alphaname;
         if (statusI_nu_0 || statusalpha) {
                 fits_report_error(stderr, statusI_nu_0);
                 fits_report_error(stderr, statusalpha);
@@ -1252,9 +1260,9 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, string out_image, strin
         int statusT = 0, statustau = 0, statusbeta = 0;
         long fpixel = 1;
         long elements = M*N;
-        string Tname;
-        string tauname;
-        string betaname;
+        stringstream Tname;
+        stringstream tauname;
+        stringstream betaname;
         //size_t needed_T;
         //size_t needed_tau;
         //size_t needed_beta;
