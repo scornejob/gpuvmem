@@ -466,9 +466,12 @@ __host__ Vars getOptions(int argc, char **argv) {
                 }
         }
 
-        if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
+        /*if(variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
            strcmp(strip(variables.input, " "),"") == 0 && strcmp(strip(variables.output, " "),"") == 0 && strcmp(strip(variables.output_image, " "),"") == 0 && strcmp(strip(variables.inputdat, " "),"") == 0 ||
-           strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0) {
+           strcmp(strip(variables.modin, " "),"") == 0 && strcmp(strip(variables.path, " "),"") == 0)*/
+           if (variables.blockSizeX == -1 && variables.blockSizeY == -1 && variables.blockSizeV == -1 ||
+              strip(variables.input, " ").compare("") == 0 && strip(variables.output, " ").compare("") == 0 && strip(variables.output_image, " ").compare("")  == 0 && strip(variables.inputdat, " ").compare("") == 0 ||
+              strip(variables.modin, " ").compare("") == 0  && strip(variables.path, " ").compare("") == 0 ) {
                 print_help();
                 exit(EXIT_FAILURE);
         }
@@ -493,7 +496,8 @@ __host__ Vars getOptions(int argc, char **argv) {
                 exit(EXIT_FAILURE);
         }
 
-        if(strcmp(variables.multigpu,"NULL")!=0 && variables.select != 0) {
+        /*if(strcmp(variables.multigpu,"NULL")!=0 && variables.select != 0)*/
+         if(variables.multigpu.compare("NULL")!=0 && variables.select != 0){
                 print_help();
                 exit(EXIT_FAILURE);
         }
