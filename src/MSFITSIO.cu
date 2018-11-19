@@ -1353,8 +1353,8 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, string out_image, strin
         copy(betaname.str().c_str(),betaname.str().c_str() + betaname.str().length()+1,tmp_betaname);
 
         fits_create_file(&fpointerT, tmp_Tname, &statusT);
-        fits_create_file(&fpointertau, tauname, &statustau);
-        fits_create_file(&fpointerbeta, betaname, &statusbeta);
+        fits_create_file(&fpointertau, tmp_tauname, &statustau);
+        fits_create_file(&fpointerbeta, tmp_betaname, &statusbeta);
 
         delete[] tmp_Tname;
         delete[] tmp_tauname;
