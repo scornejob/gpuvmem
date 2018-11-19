@@ -257,7 +257,7 @@ __host__ void print_help() {
         cout << "        --print-errors     Prints final error images" << endl;
         cout << "        --verbose          Shows information through all the execution" << endl;
 }
-
+/*
 __host__ char *strip(const char *string, const char *chars)
 {
         char * newstr = (char*)malloc(strlen(string) + 1);
@@ -272,7 +272,13 @@ __host__ char *strip(const char *string, const char *chars)
 
         newstr[counter] = 0;
         return newstr;
+}*/
+__host__ string strip(string stringOld, const char *chars)
+{
+        stringOld.erase (remove(stringOld.begin(), stringOld.end(), chars), stringOld.end());
+        return stringOld;
 }
+
 
 __host__ Vars getOptions(int argc, char **argv) {
         Vars variables;

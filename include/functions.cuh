@@ -29,7 +29,7 @@ __host__ long NearestPowerOf2(long x);
 __host__ void readInputDat(char *file);
 __host__ void init_beam(int telescope);
 __host__ void print_help();
-__host__ char *strip(const char *string, const char *chars);
+__host__ string strip(string stringOld, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float *I);
 __host__ void dchiCuadrado(float *I, float *dxi2);
