@@ -2030,7 +2030,7 @@ __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
         total2[N*i+j].y = (total2[N*i+j].y / samples) - (total[N*i+j].y * total[N*i+j].y);
 }
 
-__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
+__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float  s_d, int samples, long N)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2048,8 +2048,8 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         cov.x = avg2.x - (avg.x * avg.x);
         cov.y = avg2.y - (avg.y * avg.y);
 
-        theta[N*i+j].x = sqrt(s_d * cov.x);
-        theta[N*i+j].y = sqrt(s_d * cov.y);
+        theta[N*i+j].x = sqrt(s_d * cov.x + s_d * 1E-8);
+        theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
 }
 
 
@@ -2367,7 +2367,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         float delta_chi2 = 0.0f;
         float p = 0.0f;
         float un_rand = 0.0f;
-        float s_d = (2.4*2.4)/(M*N);
+        float s_d = (2.4*2.4)/valid_pixels;
         int accepted_afterburndown = 0;
 
 
