@@ -47,7 +47,8 @@ dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
 int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, checkpoint = 0, adaptive = 0, use_mask=0, gridding, it_maximum, status_mod_in;
-int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, *pixels, valid_pixels;
+int num_gpus, multigpu, firstgpu, selected, t_telescope, reg_term, valid_pixels;
+int2 *pixels;
 char *output, *mempath, *out_image;
 
 double ra, dec;
@@ -763,7 +764,7 @@ __host__ int main(int argc, char **argv) {
 
 
         host_noise_image = (float*)malloc(M*N*sizeof(float));
-        pixels = (int*)malloc(1*sizeof(int));
+        pixels = (int2*)malloc(1*sizeof(int2));
         //pixels[N*i+j] = N*i+j;
         gpuErrchk(cudaMemcpy2D(host_noise_image, sizeof(float), device_noise_image, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToHost));
         float noise_min = *std::min_element(host_noise_image,host_noise_image+(M*N));
@@ -775,8 +776,9 @@ __host__ int main(int argc, char **argv) {
         for(int i=0; i<M; i++) {
                 for(int j=0; j<N; j++) {
                         if(host_noise_image[N*i+j] < noise_cut) {
-                                pixels = (int*)realloc(pixels, (valid_pixels+1)*sizeof(int));
-                                pixels[valid_pixels] = N*i+j;
+                                pixels = (int2*)realloc(pixels, (valid_pixels+1)*sizeof(int2));
+                                pixels[valid_pixels].x = i;
+                                pixels[valid_pixels].y = j;
                                 valid_pixels++;
                         }
                 }

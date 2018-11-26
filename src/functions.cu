@@ -55,7 +55,9 @@ extern fitsfile *mod_in;
 
 extern Field *fields;
 
-extern int flag_opt, *pixels, valid_pixels;
+extern int flag_opt, valid_pixels;
+
+extern int2 *pixels;
 
 extern VariablesPerField *vars_per_field;
 
@@ -851,7 +853,7 @@ void swap (int *a, int *b)
         *b = temp;
 }
 
-void randomize(int arr[], int n)
+void randomize(int2 arr[], int n)
 {
         // Use a different seed value so that we don't get same
         // result each time we run this program
@@ -867,7 +869,8 @@ void randomize(int arr[], int n)
                 int j = Uniform(0.0, (float)i);
 
                 // Swap arr[i] with the element at random index
-                swap(&arr[i], &arr[j]);
+                swap(&arr[i].x, &arr[j].x);
+                swap(&arr[i].y, &arr[j].y);
         }
 }
 
@@ -1975,9 +1978,10 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
-__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int idx)
+__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int2 pix, int N)
 {
         float2 nrandom;
+        int idx = N*pix.x + pix.y;
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
@@ -1987,10 +1991,11 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
 
 }
 
-__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float sigma, float factor, int idx)
+__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float sigma, float factor, int2 pix, int N)
 {
         float2 nrandom;
-
+        int idx = N*pix.x + pix.y;
+        
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
@@ -2436,10 +2441,10 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
 
                         if(use_mask) {
-                                changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states, noise_jypix, 10.0, pixels[j]);
+                                changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states, noise_jypix, 10.0, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
-                                changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j]);
+                                changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
