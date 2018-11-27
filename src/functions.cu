@@ -44,7 +44,7 @@ extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, M
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff, *host_noise_image;
+extern float beam_noise, beam_bmaj, beam_bmin, beam_bpa, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff, *host_noise_image;
 extern double ra, dec;
 
 extern freqData data;
@@ -1978,6 +1978,27 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
+__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states, float bmaj, float bmin, float bpa, float factor, int2 pix, int N)
+{
+        float2 nrandom;
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        int c_i = pix.x;
+        int c_j = pix.y;
+
+        int idx = N*pix.x + pix.y;
+
+        float pix_val = EllipticGaussianKernel(1.0, j, i, c_j, c_i, factor*bmaj, factor*bmin, bpa);
+
+        nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
+        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+
+        temp[N*i+j].x += nrandom.x * pix_val;
+        temp[N*i+j].y += nrandom.y * pix_val;
+
+}
+
 __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int2 pix, int N)
 {
         float2 nrandom;
@@ -1995,7 +2016,7 @@ __global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curand
 {
         float2 nrandom;
         int idx = N*pix.x + pix.y;
-        
+
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
@@ -2444,7 +2465,8 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states, noise_jypix, 10.0, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
-                                changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
+                                //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, 0.3, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
