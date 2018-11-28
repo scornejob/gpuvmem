@@ -1279,9 +1279,9 @@ __device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c
         float sin_bpa = sinf(bpa);
         float sin_bpa_2 = sinf(2.0*bpa);
         float a = (cos_bpa*cos_bpa)/(2.0*bmaj*bmaj) + (sin_bpa*sin_bpa)/(2.0*bmin*bmin);
-        float b = (-1.0*sin_bpa_2)/(4.0*bmaj*bmaj) + sin_bpa_2/(4.0*bmin*bmin);
+        float b = sin_bpa_2/(2.0*bmaj*bmaj) - sin_bpa_2/(2.0*bmin*bmin);
         float c = (sin_bpa*sin_bpa)/(2.0*bmaj*bmaj) + (cos_bpa*cos_bpa)/(2.0*bmin*bmin);
-        float G = amplitude*expf(-(a*x*x + 2.0*b*x*y + c*y*y));
+        float G = amplitude*expf(-a*x*x - b*x*y - c*y*y);
         return G;
 }
 
