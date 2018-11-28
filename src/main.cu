@@ -204,7 +204,7 @@ __host__ int main(int argc, char **argv) {
         crpix2 = canvas_vars.crpix2;
         beam_bmaj = canvas_vars.beam_bmaj;
         beam_bmin = canvas_vars.beam_bmin;
-        beam_bpa = canvas_vars.beam_bpa;
+        beam_bpa = canvas_vars.beam_bpa * RPDEG;
         beam_noise = canvas_vars.beam_noise;
 
         data = countVisibilities(msinput, fields);

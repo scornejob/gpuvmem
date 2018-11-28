@@ -1275,7 +1275,13 @@ __device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c
 {
         float x = (x0 - x_c);
         float y = (y0 - y_c);
-        float G = amplitude*expf((x*x/(2*bmaj*bmaj) - bpa*x*y/(bmaj*bmin) - y*y/(2*bmin*bmin)));
+        float cos_bpa = cosf(bpa);
+        float sin_bpa = sinf(bpa);
+        float sin_bpa_2 = sinf(2*bpa);
+        float a = (cos_bpa*cos_bpa)/(2*bmaj*bmaj) + (sin_bpa*sin_bpa)/(2*bmin*bmin);
+        float b = (-1.0*sin_bpa_2)/(4*bmaj*bmaj) + sin_bpa_2/(4*bmin*bmin);
+        float c = (sin_bpa*sin_bpa)/(2*bmaj*bmaj) + (cos_bpa*cos_bpa)/(2*bmin*bmin);
+        float G = amplitude*expf(-(a*x*x + 2.0*b*x*y + c*y*y));
         return G;
 }
 
@@ -1989,7 +1995,7 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
 
         int idx = N*pix.x + pix.y;
 
-        float pix_val = EllipticGaussianKernel(1.0, j, i, c_j, c_i, factor*bmaj, factor*bmin, bpa);
+        float pix_val = EllipticGaussianKernel(1.0, j, i, c_j, c_i, factor*(bmaj), factor*(bmin), bpa);
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
