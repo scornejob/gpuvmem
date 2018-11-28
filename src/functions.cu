@@ -2472,7 +2472,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, 0.3, pixels[j], N);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
