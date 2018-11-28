@@ -1277,10 +1277,10 @@ __device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c
         float y = (y0 - y_c);
         float cos_bpa = cosf(bpa);
         float sin_bpa = sinf(bpa);
-        float sin_bpa_2 = sinf(2*bpa);
-        float a = (cos_bpa*cos_bpa)/(2*bmaj*bmaj) + (sin_bpa*sin_bpa)/(2*bmin*bmin);
-        float b = (-1.0*sin_bpa_2)/(4*bmaj*bmaj) + sin_bpa_2/(4*bmin*bmin);
-        float c = (sin_bpa*sin_bpa)/(2*bmaj*bmaj) + (cos_bpa*cos_bpa)/(2*bmin*bmin);
+        float sin_bpa_2 = sinf(2.0*bpa);
+        float a = (cos_bpa*cos_bpa)/(2.0*bmaj*bmaj) + (sin_bpa*sin_bpa)/(2.0*bmin*bmin);
+        float b = (-1.0*sin_bpa_2)/(4.0*bmaj*bmaj) + sin_bpa_2/(4.0*bmin*bmin);
+        float c = (sin_bpa*sin_bpa)/(2.0*bmaj*bmaj) + (cos_bpa*cos_bpa)/(2.0*bmin*bmin);
         float G = amplitude*expf(-(a*x*x + 2.0*b*x*y + c*y*y));
         return G;
 }
@@ -1995,7 +1995,13 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
 
         int idx = N*pix.x + pix.y;
 
-        float pix_val = EllipticGaussianKernel(1.0, j, i, c_j, c_i, factor*(bmaj), factor*(bmin), bpa);
+        int x0 = j - (N/2);
+        int y0 = i - (N/2);
+
+        int x_c = c_j - (N/2);
+        int y_c = c_i - (N/2);
+
+        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj), factor*(bmin), bpa);
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
@@ -2472,7 +2478,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, -1.0*beam_bpa, (1.0/3.0), pixels[j], N);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
