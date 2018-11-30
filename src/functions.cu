@@ -2468,8 +2468,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                 }
                 for(int j = 0; j < valid_pixels; j++) {
 
-                        printf("Changing pixel %d %d \n", pixels[j].x, pixels[j].y);
-
                         //if(i>0){
                         //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
                         //  gpuErrchk(cudaDeviceSynchronize());
@@ -2524,7 +2522,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
                                 }
                         }
-                        break;
                 }
 
                 printf("--------------Iteration %d-----------\n", real_iterations);
@@ -2537,7 +2534,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                 double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
                 float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
                 randomize(pixels, valid_pixels);
-                break;
         }
 
         //avgI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, accepted_afterburndown, N);
