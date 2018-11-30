@@ -1271,10 +1271,10 @@ __device__ float AiryDiskBeam(float distance, float lambda, float antenna_diamet
         return atten;
 }
 
-__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa)
+__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa, float DELTAX, float DELTAY)
 {
-        float x = (x0 - x_c);
-        float y = (y0 - y_c);
+        float x = (x0 - x_c) * DELTAX * RPDEG;
+        float y = (y0 - y_c) * DELTAY * RPDEG;
         float cos_bpa = cosf(bpa);
         float sin_bpa = sinf(bpa);
         float sin_bpa_2 = sinf(2.0*bpa);
@@ -1984,7 +1984,7 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
-__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states, float bmaj, float bmin, float bpa, float factor, int2 pix, int N)
+__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states, float bmaj, float bmin, float bpa, float factor, int2 pix, float DELTAX, float DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1995,13 +1995,16 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
 
         int idx = N*pix.x + pix.y;
 
-        int x0 = j - (N/2);
-        int y0 = i - (N/2);
+        int x0 = j - (N/2) + 1;
+        int y0 = i - (N/2) + 1;
 
-        int x_c = c_j - (N/2);
-        int y_c = c_i - (N/2);
+        int x_c = c_j - (N/2) + 1;
+        int y_c = c_i - (N/2) + 1;
 
-        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj), factor*(bmin), bpa);
+        float bmaj_rad = bmaj * -DELTAX * RPDEG;
+        float bmin_rad = bmin * -DELTAX * RPDEG;
+
+        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
 
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
@@ -2478,7 +2481,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], N);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
