@@ -2006,6 +2006,10 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
 
         float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
 
+        if(i==c_i && j == c_j){
+          printf("valor gaussiana %d\n", pix_val);
+        }
+
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
