@@ -824,20 +824,27 @@ __host__ int main(int argc, char **argv) {
 
         nu_2 /= (data.total_frequencies - data.total_frequencies/2);
 
-        theta_init.y = 2 * (analytical_noise_jypix/peak_I_nu_0) / logf(nu_2/nu_1);
+        //theta_init.y = sqrt(2) * (analytical_noise_jypix/peak_I_nu_0) / sqrt(logf(nu_2/nu_1));
         printf("I_nu_0 Noise : %f\n", theta_init.x);
-        printf("Alpha Noise : %f\n", theta_init.y);
+        //printf("Alpha Noise : %f\n", theta_init.y);
         free(input_alpha);
         free(input_Inu_0);
 
         float2 *theta_device;
         float2 *theta_host = (float2*) malloc((M*N)*sizeof(float2));
+        x = M-1;
+        y = N-1;
         for(int i=0; i<M; i++) {
                 for(int j=0; j<N; j++) {
                         theta_host[N*i+j].x = theta_init.x;
-                        theta_host[N*i+j].y = theta_init.y;
+                        theta_host[N*i+j].y = sqrt(2) * (analytical_noise_jypix/input_Inu_0[N*y+x]) / sqrt(logf(nu_2/nu_1));
+                        x--;
                 }
+                x=M-1;
+                y--;
         }
+
+
 
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
