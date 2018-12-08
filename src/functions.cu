@@ -1987,7 +1987,7 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, 
         //nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
-        t//emp[idx].y += nrandom.y;
+      //  temp[idx].y += nrandom.y;
 
 }
 
