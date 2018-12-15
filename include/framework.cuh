@@ -119,6 +119,9 @@ void setDS(float *DS){
         cudaFree(device_DS); this->device_DS = DS;
 };
 virtual float calculateSecondDerivate() = 0;
+float getPenalizationFactor(){
+        return this->penalization_factor;
+}
 protected:
 float *device_S;
 float *device_DS;
@@ -258,7 +261,8 @@ public:
 ObjectiveFunction(){
 };
 void addFi(Fi *fi){
-        fis.push_back(fi);
+        if(fi->getPenalizationFactor())
+                fis.push_back(fi);
 };
 //virtual void print() = 0;
 float calcFunction(float *p)

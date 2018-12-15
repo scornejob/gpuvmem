@@ -143,6 +143,7 @@ cleanall:
 	@ rm -rf build/*
 	@ rm -rf bin/*
 	@ rm -f lib/*.a
+	@ rm -r *.fits
 	@ cd cfitsio; make clean
 	@ cd cfitsio; make distclean
 

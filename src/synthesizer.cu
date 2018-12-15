@@ -564,8 +564,20 @@ void MFS::setDevice()
 
         for(int i = 0; i < image_count; i++)
         {
-                functionPtr[i].newP = defaultNewP;
-                functionPtr[i].evaluateXt = defaultEvaluateXt;
+                if(nopositivity)
+                {
+                        functionPtr[i].evaluateXt = defaultEvaluateXt;
+                        functionPtr[i].newP = defaultNewP;
+                }else{
+                        if(!i)
+                        {
+                              functionPtr[i].evaluateXt = particularEvaluateXt;
+                              functionPtr[i].newP = particularNewP;
+                        }else{
+                              functionPtr[i].evaluateXt = defaultEvaluateXt;
+                              functionPtr[i].newP = defaultNewP;
+                        }
+                }
         }
 
         if(num_gpus == 1) {

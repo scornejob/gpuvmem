@@ -45,7 +45,7 @@ void Laplacian::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
 
         if(penalizatorIndex != -1)
         {
-                if(penalizatorIndex > (nPenalizators - 1))
+                if(penalizatorIndex > (nPenalizators - 1) || penalizatorIndex < 0)
                 {
                         printf("invalid index for penalizator (laplacian)\n");
                         exit(-1);
