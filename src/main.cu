@@ -96,7 +96,7 @@ __host__ int main(int argc, char **argv) {
         //l->configure(1, 0, 0);
         //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
         of->addFi(chi2);
-        of->addFi(e);
+        //of->addFi(e);
         //of->addFi(l);
         sy->getImage()->getFunctionMapping()[0].newP = particularNewP;
         sy->getImage()->getFunctionMapping()[0].evaluateXt = particularEvaluateXt;
