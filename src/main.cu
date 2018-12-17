@@ -838,16 +838,14 @@ __host__ int main(int argc, char **argv) {
                 for(int j=0; j<N; j++) {
                         theta_host[N*i+j].x = theta_init.x;
                         if(input_Inu_0[N*y+x]>= 5*analytical_noise_jypix)
-                          theta_host[N*i+j].y = sqrt(2) * (analytical_noise_jypix/input_Inu_0[N*y+x]) / sqrt(logf(nu_2/nu_1));
+                          theta_host[N*i+j].y = sqrt(2) * (analytical_noise_jypix/input_Inu_0[N*y+x]) / logf(nu_2/nu_1);
                         else
-                          theta_host[N*i+j].y = sqrt(2) * (analytical_noise_jypix/peak_I_nu_0) / sqrt(logf(nu_2/nu_1));
+                          theta_host[N*i+j].y = sqrt(2) * (analytical_noise_jypix/peak_I_nu_0) / logf(nu_2/nu_1);
                         x--;
                 }
                 x=M-1;
                 y--;
         }
-
-
 
         free(input_alpha);
         free(input_Inu_0);
