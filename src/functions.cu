@@ -2009,8 +2009,8 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
         nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
         nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
 
-        temp[N*i+j].x += nrandom.x * pix_val;
-        temp[N*i+j].y += nrandom.y * pix_val;
+        temp[N*i+j].x += nrandom.x; //* pix_val;
+        temp[N*i+j].y += nrandom.y; //* pix_val;
 
 }
 
