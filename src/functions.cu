@@ -1984,7 +1984,7 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
-__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states, float bmaj, float bmin, float bpa, float factor, int2 pix, float DELTAX, float DELTAY, int N)
+__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, float bmaj, float bmin, float bpa, float factor, int2 pix, float DELTAX, float DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2006,34 +2006,38 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
 
         float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
 
-        nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+        //nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
+        //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+
+        nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
+        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+
 
         temp[N*i+j].x += nrandom.x; //* pix_val;
         temp[N*i+j].y += nrandom.y; //* pix_val;
 
 }
 
-__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states, int2 pix, int N)
+__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, int2 pix, int N)
 {
         float2 nrandom;
         int idx = N*pix.x + pix.y;
 
-        nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+        nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
+        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
         temp[idx].y += nrandom.y;
 
 }
 
-__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states, float sigma, float factor, int2 pix, int N)
+__global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curandState_t* states_0, curandState_t* states_1, float sigma, float factor, int2 pix, int N)
 {
         float2 nrandom;
         int idx = N*pix.x + pix.y;
 
-        nrandom.x = curand_normal(&states[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states[idx]) * theta[idx].y;
+        nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
+        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         if(mask[idx] <= 5.0f * sigma)
                 temp[idx].y += factor*nrandom.y;
@@ -2400,9 +2404,11 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         }else{
                 cudaSetDevice(firstgpu);
         }
-        curandState_t *states;
+        curandState_t *states_0;
+        curandState_t *states_1;
         //*states2;
-        cudaMalloc((void**)&states, M*N*sizeof(curandState_t));
+        cudaMalloc((void**)&states_0, M*N*sizeof(curandState_t));
+        cudaMalloc((void**)&states_1, M*N*sizeof(curandState_t));
         //cudaMalloc((void**)&states2, N*N*sizeof(curandState_t));
         float chi2_t_0, chi2_t_1;
         float delta_chi2 = 0.0f;
@@ -2432,7 +2438,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
 
         SelectStream(0);
         PutSeed(-1);
-        random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states, N);
+        random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states_0, N);
+        gpuErrchk(cudaDeviceSynchronize());
+        random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states_1, N);
         gpuErrchk(cudaDeviceSynchronize());
         //random_init<<<numBlocksNN, threadsPerBlockNN>>>(time(0), states2, N);
         //gpuErrchk(cudaDeviceSynchronize());
@@ -2475,11 +2483,11 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
 
                         if(use_mask) {
-                                changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states, noise_jypix, 10.0, pixels[j], N);
+                                changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states_0, states_1, noise_jypix, 10.0, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states, beam_bmaj, beam_bmin, beam_bpa, (1.0/15.0), pixels[j], DELTAX, DELTAY, N);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states_0, states_1, beam_bmaj, beam_bmin, beam_bpa, (1.0/15.0), pixels[j], DELTAX, DELTAY, N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
@@ -2547,6 +2555,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         fclose(outfile);
         fclose(outfile_its);
         cudaFree(temp);
-        cudaFree(states);
+        cudaFree(states_0);
+        cudaFree(states_1);
 
 }
