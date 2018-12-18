@@ -825,7 +825,8 @@ __host__ int main(int argc, char **argv) {
         nu_2 /= (data.total_frequencies - data.total_frequencies/2);
 
         //theta_init.y = sqrt(2) * (analytical_noise_jypix/peak_I_nu_0) / sqrt(logf(nu_2/nu_1));
-        printf("I_nu_0 Noise : %f\n", theta_init.x);
+        printf("I_nu_0 Noise : %e\n", theta_init.x);
+        printf("nu_2: %e, nu_1: %e\n", nu_2, nu_1);
         //printf("Alpha Noise : %f\n", theta_init.y);
 
 
