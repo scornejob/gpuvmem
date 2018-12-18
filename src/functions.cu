@@ -2004,7 +2004,7 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
         float bmaj_rad = bmaj * -DELTAX * RPDEG;
         float bmin_rad = bmin * -DELTAX * RPDEG;
 
-        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
+        //float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
 
         //nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
         //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
