@@ -1984,7 +1984,7 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
-__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, float bmaj, float bmin, float bpa, float factor, int2 pix, float DELTAX, float DELTAY, int N)
+__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float normal_I_nu_0, float normal_alpha, float bmaj, float bmin, float bpa, float factor, int2 pix, float DELTAX, float DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2004,17 +2004,16 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, curan
         float bmaj_rad = bmaj * -DELTAX * RPDEG;
         float bmin_rad = bmin * -DELTAX * RPDEG;
 
-        //float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
+        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
 
         //nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
         //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
-        nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+        nrandom.x = normal_I_nu_0 * theta[idx].x;
+        nrandom.y = normal_alpha * theta[idx].y;
 
-
-        temp[N*i+j].x += nrandom.x; //* pix_val;
-        temp[N*i+j].y += nrandom.y; //* pix_val;
+        temp[N*i+j].x += nrandom.x * pix_val;
+        temp[N*i+j].y += nrandom.y * pix_val;
 
 }
 
@@ -2467,6 +2466,8 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         signal(SIGKILL, sig_handler);
 
         int second_pass;
+        float n_I_nu_0;
+        float n_alpha;
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
                 second_pass = 0;
                 if(adaptive && real_iterations >= burndown_steps + 100) {
@@ -2487,7 +2488,9 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, states_0, states_1, beam_bmaj, beam_bmin, beam_bpa, (1.0/15.0), pixels[j], DELTAX, DELTAY, N);
+                                n_I_nu_0 = Normal(0.0, 1.0);
+                                n_alpha = Normal(0.0, 1.0);
+                                changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, n_I_nu_0, n_alpha, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
 
