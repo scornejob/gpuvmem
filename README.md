@@ -86,7 +86,6 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -x  --minpix          Minimum positive value of a pixel (Optional)
 -n  --noise           Noise parameter (Optional)
 -N  --noise-cut       Noise-cut Parameter (Optional)
--l  --lambda          Lambda Regularization Parameter (Optional)
 -r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)
 -p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
 -e  --eta             Variable that controls the minimum image value (Default eta = -1.0)
