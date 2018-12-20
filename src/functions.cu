@@ -2010,10 +2010,10 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float
         //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
-        nrandom.y = normal_alpha * theta[idx].y;
+        //nrandom.y = normal_alpha * theta[idx].y;
 
         temp[N*i+j].x += nrandom.x * pix_val;
-        temp[N*i+j].y += nrandom.y * pix_val;
+        //temp[N*i+j].y += nrandom.y * pix_val;
 
 }
 
@@ -2055,10 +2055,10 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         total[N*i+j].x += I[N*i+j].x;
-        total[N*i+j].y += I[N*i+j].y;
+        //total[N*i+j].y += I[N*i+j].y;
 
         total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
@@ -2093,7 +2093,7 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         cov.y = avg2.y - (avg.y * avg.y);
 
         theta[N*i+j].x = sqrt(s_d * cov.x + s_d * 1E-8);
-        theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
+        //theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
 }
 
 
