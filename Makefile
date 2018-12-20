@@ -158,7 +158,7 @@ conf:
 co65:
 	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.5 -t 500000000 --verbose --print-images --print-errors
 selfcalband9:
-	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 --verbose -z 0.001 -Z 0.05,0.5 -t 500000000 --print-images
+	@ cuda-memcheck ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 8 -Y 8 -V 256 --verbose -z 0.001 -Z 0.05,0.5 -t 500000000 --print-images
 freq78:
 	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images -z 0.001 -Z 0.1,0.5 -t 500000000
 antennae:
