@@ -1768,10 +1768,6 @@ __global__ void calculateInu(cufftComplex *I_nu, float2 *image2, float nu, float
 
         I_nu[N*i+j].x = I_nu_0 * nudiv_pow_alpha;
 
-        if(I_nu[N*i+j].x < -1.0*eta*minpix) {
-                I_nu[N*i+j].x = -1.0*eta*minpix;
-        }
-
         I_nu[N*i+j].y = 0.0f;
 }
 
@@ -1984,10 +1980,10 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0
         int idx = N*pix.x + pix.y;
 
         nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+        //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
-        temp[idx].y += nrandom.y;
+        //temp[idx].y += nrandom.y;
 
 }
 
@@ -1997,12 +1993,12 @@ __global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curand
         int idx = N*pix.x + pix.y;
 
         nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
-        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+        //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         if(mask[idx] <= 5.0f * sigma)
                 temp[idx].y += factor*nrandom.y;
-        else
-                temp[idx].y += nrandom.y;
+        //else
+                //temp[idx].y += nrandom.y;
 
 
         temp[idx].x += nrandom.x;
@@ -2016,10 +2012,10 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         total[N*i+j].x += I[N*i+j].x;
-        total[N*i+j].y += I[N*i+j].y;
+        //total[N*i+j].y += I[N*i+j].y;
 
         total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
@@ -2028,11 +2024,11 @@ __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         total[N*i+j].x /= samples;
-        total[N*i+j].y /= samples;
+        //total[N*i+j].y /= samples;
         //var_I_nu_0 = (total_I_nu_0_2 / samples) - (total_I_nu_0**2) #GET VARIANCE
         //var_alpha = (total_alpha_2 / samples) - (total_alpha**2) #GET VARIANCE
         total2[N*i+j].x = (total2[N*i+j].x / samples) - (total[N*i+j].x * total[N*i+j].x);
-        total2[N*i+j].y = (total2[N*i+j].y / samples) - (total[N*i+j].y * total[N*i+j].y);
+        //total2[N*i+j].y = (total2[N*i+j].y / samples) - (total[N*i+j].y * total[N*i+j].y);
 }
 
 __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
@@ -2045,16 +2041,16 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         double2 cov;
 
         avg.x = total[N*i+j].x/samples;
-        avg.y = total[N*i+j].y/samples;
+        //avg.y = total[N*i+j].y/samples;
 
         avg2.x = total2[N*i+j].x/samples;
-        avg2.y = total2[N*i+j].y/samples;
+        //avg2.y = total2[N*i+j].y/samples;
 
         cov.x = avg2.x - (avg.x * avg.x);
-        cov.y = avg2.y - (avg.y * avg.y);
+        //cov.y = avg2.y - (avg.y * avg.y);
 
         theta[N*i+j].x = sqrt(s_d * cov.x + s_d * 1E-8);
-        theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
+        //theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
 }
 
 
