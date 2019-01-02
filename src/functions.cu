@@ -2471,25 +2471,23 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 }
 
                         }
-                        //else{
+                        else{
                                 //printf("Not Accepted Delta chi2: %f\n", delta_chi2);
-                                //l = exp(-delta_chi2);
-                                //p = chi2_t_0 / chi2_t_1;
-                              //  un_rand = Random();
-                              //  if(-log(un_rand) >= delta_chi2) {
+                                un_rand = Random();
+                                if(-log(un_rand) >= delta_chi2) {
                                         //printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
-                                      //  gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+                                        gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
                                         /*if(print_images && i%3 == 0)
                                            float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-                                    //    if(real_iterations >= burndown_steps) {
-                                  //              sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
-                                  //              gpuErrchk(cudaDeviceSynchronize());
-                                //                accepted_afterburndown++;
-                              //          }
-                            //            second_pass++;
+                                        if(real_iterations >= burndown_steps) {
+                                                sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
+                                                gpuErrchk(cudaDeviceSynchronize());
+                                                accepted_afterburndown++;
+                                        }
+                                        second_pass++;
 
-                          //      }
-                        //}
+                                }
+                        }
 
                 }
 
