@@ -2011,11 +2011,14 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        total[N*i+j].x += I[N*i+j].x;
-        //total[N*i+j].y += I[N*i+j].y;
+        float square_I_nu_0 = __fmul_rn(I[N*i+j].x, I[N*i+j].x);
+        float square_alpha = __fmul_rn(I[N*i+j].y, I[N*i+j].y);
 
-        total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        total[N*i+j].x = __dadd_rn(total[N*i+j].x, I[N*i+j].x);
+        total[N*i+j].y = __dadd_rn(total[N*i+j].y, I[N*i+j].y);
+
+        total2[N*i+j].x = __dadd_rn(total2[N*i+j].x, square_I_nu_0);
+        total2[N*i+j].y = __dadd_rn(total2[N*i+j].y, square_alpha);
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N)

@@ -1237,6 +1237,7 @@ __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char
         long naxis = 2;
         char *alphaunit = "";
         char *I_unit = "JY/PIXEL";
+        int bitpix_value = DOUBLE_IMG;
 
         double2 *host_2Iout = (double2*)malloc(M*N*sizeof(double2));
 
@@ -1302,6 +1303,10 @@ __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char
 
         fits_update_key(fpointerI_nu_0, TSTRING, "BUNIT", I_unit, "Unit of measurement", &statusI_nu_0);
         fits_update_key(fpointeralpha, TSTRING, "BUNIT", alphaunit, "Unit of measurement", &statusalpha);
+
+        fits_update_key(fpointerI_nu_0, TINT, "BITPIX", &bitpix_value, "", &statusI_nu_0);
+        fits_update_key(fpointeralpha, TINT, "BITPIX", &bitpix_value, "", &statusalpha);
+
 
         int x = M-1;
         int y = N-1;
