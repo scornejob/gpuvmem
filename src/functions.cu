@@ -2010,10 +2010,10 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float
         //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
-        nrandom.y = normal_alpha * theta[idx].y;
+        //nrandom.y = normal_alpha * theta[idx].y;
 
         temp[N*i+j].x += nrandom.x * pix_val;
-        temp[N*i+j].y += nrandom.y * pix_val;
+        //temp[N*i+j].y += nrandom.y * pix_val;
 
 }
 
