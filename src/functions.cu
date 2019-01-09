@@ -2010,10 +2010,10 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float
         //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
-        //nrandom.y = normal_alpha * theta[idx].y;
+        nrandom.y = normal_alpha * theta[idx].y;
 
         temp[N*i+j].x += nrandom.x * pix_val;
-        //temp[N*i+j].y += nrandom.y * pix_val;
+        temp[N*i+j].y += nrandom.y * pix_val;
 
 }
 
@@ -2054,11 +2054,14 @@ __global__ void sumI(double2 *total, double2 *total2, float2 *I, long N)
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        total[N*i+j].x += I[N*i+j].x;
-        //total[N*i+j].y += I[N*i+j].y;
+        float square_I_nu_0 = __fmul_rn(I[N*i+j].x, I[N*i+j].x);
+        float square_alpha = __fmul_rn(I[N*i+j].y, I[N*i+j].y);
 
-        total2[N*i+j].x += I[N*i+j].x * I[N*i+j].x;
-        //total2[N*i+j].y += I[N*i+j].y * I[N*i+j].y;
+        total[N*i+j].x = __dadd_rn(total[N*i+j].x, I[N*i+j].x);
+        total[N*i+j].y = __dadd_rn(total[N*i+j].y, I[N*i+j].y);
+
+        total2[N*i+j].x = __dadd_rn(total2[N*i+j].x, square_I_nu_0);
+        total2[N*i+j].y = __dadd_rn(total2[N*i+j].y, square_alpha);
 }
 
 __global__ void avgI(double2 *total, double2 *total2, int samples, long N)
@@ -2514,7 +2517,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 }
 
                         }
-                        else{
+                        /*else{
                                 //printf("Not Accepted Delta chi2: %f\n", delta_chi2);
                                 //l = exp(-delta_chi2);
                                 //p = chi2_t_0 / chi2_t_1;
@@ -2522,8 +2525,8 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 if(-log(un_rand) > delta_chi2) {
                                         //printf("*****  P = %f > %f   *******\n", -log(un_rand), delta_chi2);
                                         gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-                                        /*if(print_images && i%3 == 0)
-                                           float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
+                                        if(print_images && i%3 == 0)
+                                           float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);
                                         if(real_iterations >= burndown_steps) {
                                                 sumI<<<numBlocksNN, threadsPerBlockNN>>>(total_out, total2_out, I, N);
                                                 gpuErrchk(cudaDeviceSynchronize());
@@ -2532,7 +2535,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                         second_pass++;
 
                                 }
-                        }
+                        }*/
                 }
 
                 printf("--------------Iteration %d-----------\n", real_iterations);
