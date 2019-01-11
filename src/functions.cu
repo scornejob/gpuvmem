@@ -1980,10 +1980,10 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0
         int idx = N*pix.x + pix.y;
 
         nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
-        //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         temp[idx].x += nrandom.x;
-        //temp[idx].y += nrandom.y;
+        temp[idx].y += nrandom.y;
 
 }
 
@@ -1993,12 +1993,12 @@ __global__ void changeGibbsMask(float2 *temp, float2 *theta, float *mask, curand
         int idx = N*pix.x + pix.y;
 
         nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
-        //nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
+        nrandom.y = curand_normal(&states_1[idx]) * theta[idx].y;
 
         if(mask[idx] <= 5.0f * sigma)
                 temp[idx].y += factor*nrandom.y;
-        //else
-                //temp[idx].y += nrandom.y;
+        else
+                temp[idx].y += nrandom.y;
 
 
         temp[idx].x += nrandom.x;
