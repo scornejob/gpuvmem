@@ -2044,16 +2044,16 @@ __global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, floa
         double2 cov;
 
         avg.x = total[N*i+j].x/samples;
-        //avg.y = total[N*i+j].y/samples;
+        avg.y = total[N*i+j].y/samples;
 
         avg2.x = total2[N*i+j].x/samples;
-        //avg2.y = total2[N*i+j].y/samples;
+        avg2.y = total2[N*i+j].y/samples;
 
         cov.x = avg2.x - (avg.x * avg.x);
-        //cov.y = avg2.y - (avg.y * avg.y);
+        cov.y = avg2.y - (avg.y * avg.y);
 
         theta[N*i+j].x = sqrt(s_d * cov.x + s_d * 1E-8);
-        //theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
+        theta[N*i+j].y = sqrt(s_d * cov.y + s_d * 1E-8);
 }
 
 
