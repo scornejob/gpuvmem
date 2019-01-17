@@ -33,9 +33,9 @@
 
 #include "MSFITSIO.cuh"
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields)
+__host__ MSData countVisibilities(char * MS_name, Field *&fields)
 {
-   freqData freqsAndVisibilities;
+   MSData freqsAndVisibilities;
    string dir = MS_name;
    char *query;
    casa::Vector<double> pointing;
@@ -49,7 +49,15 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
    casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
    freqsAndVisibilities.nstokes=n_corr(0);
 
-   freqsAndVisibilities.corr_type = (int*)malloc(nstokes*sizeof(int));
+   freqsAndVisibilities.corr_type = (int*)malloc(freqsAndVisibilities.nstokes*sizeof(int));
+
+   casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
+   casa::Vector<int> polarizations;
+   polarizations=correlation_col(0);
+
+   for(int i=0; i<freqsAndVisibilities.nstokes; i++){
+     freqsAndVisibilities.corr_type[i] = polarizations[i];
+   }
 
    fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
    for(int f=0; f<freqsAndVisibilities.nfields; f++){
@@ -85,11 +93,13 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
 
   freqsAndVisibilities.total_frequencies = total_frequencies;
   for(int f=0; f < freqsAndVisibilities.nfields; f++){
-    fields[f].numVisibilitiesPerFreq = (long**)malloc(freqsAndVisibilities.total_frequencies*sizeof(long*));
+    fields[f].numVisibilitiesPerFreqPerStoke = (long**)malloc(freqsAndVisibilities.total_frequencies*sizeof(long*));
+    fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
     for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++){
-      fields[f].numVisibilitiesPerFreq[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
+      fields[f].numVisibilitiesPerFreqPerStoke[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
+      fields[f].numVisibilitiesPerFreq[i] = 0;
       for(int s = 0; i < freqsAndVisibilities.nstokes; s++)
-        fields[f].numVisibilitiesPerFreq[i][s] = 0;
+        fields[f].numVisibilitiesPerFreqPerStoke[i][s] = 0;
     }
   }
 
@@ -125,6 +135,7 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
               for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   fields[f].numVisibilitiesPerFreqPerStoke[counter+j][sto]++;
+                  fields[f].numVisibilitiesPerFreq[counter+j]++;
               }
             }
           }
@@ -209,7 +220,7 @@ __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&value
 
 }
 
-__host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
+__host__ void readMSMCNoise(char *MS_name, Field *fields, MSData data)
 {
 
   char *error = 0;
@@ -219,12 +230,6 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
   string dir = MS_name;
   casa::Table main_tab(dir);
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-
-  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-  casa::Vector<int> polarizations;
-  polarizations=correlation_col(0);
-
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
   casa::Vector<float> weights;
@@ -237,7 +242,8 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
 
   for(int f=0; f < data.nfields; f++){
     for(int i = 0; i < data.total_frequencies; i++){
-      fields[f].numVisibilitiesPerFreq[i] = 0;
+      for(int s = 0; s < data.nstokes; s++)
+        fields[f].numVisibilitiesPerFreqPerStoke[i][s] = 0;
     }
   }
 
@@ -269,15 +275,15 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
             for(int j=0; j < data.channels[i]; j++){
               for (int sto=0; sto<data.nstokes; sto++) {
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
-                  c = fields[f].numVisibilitiesPerFreq[g+j];
-                  fields[f].visibilities[g+j].u[c] = uvw[0];
-                  fields[f].visibilities[g+j].v[c] = uvw[1];
+                  c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                  fields[f].visibilities[g+j][sto].u[c] = uvw[0];
+                  fields[f].visibilities[g+j][sto].v[c] = uvw[1];
                   u = Normal(0.0, 1.0);
-                  fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                  fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                   u = Normal(0.0, 1.0);
-                  fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                  fields[f].visibilities[g+j].weight[c] = weights[sto];
-                  fields[f].numVisibilitiesPerFreq[g+j]++;
+                  fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                  fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
+                  fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                 }
               }
             }
@@ -295,7 +301,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
       casa::Vector<double> chan_freq_vector;
       chan_freq_vector=chan_freq_col(i);
       for(int j = 0; j < data.channels[i]; j++){
-        fields[f].visibilities[h].freq = chan_freq_vector[j];
+        fields[f].nu[h] = chan_freq_vector[j];
         h++;
       }
     }
@@ -315,7 +321,7 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
   }
 }
 
-__host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability)
+__host__ void readSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability)
 {
   char *error = 0;
   int g = 0, h = 0;
@@ -324,11 +330,6 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
   string dir = MS_name;
   casa::Table main_tab(dir);
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-
-  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-  casa::Vector<int> polarizations;
-  polarizations=correlation_col(0);
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
@@ -342,7 +343,8 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
   for(int f=0; f < data.nfields; f++){
     for(int i = 0; i < data.total_frequencies; i++){
-      fields[f].numVisibilitiesPerFreq[i] = 0;
+      for(int s = 0; s < data.nstokes; s++)
+        fields[f].numVisibilitiesPerFreqPerStoke[i][s] = 0;
     }
   }
 
@@ -375,22 +377,17 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
               for (int sto=0; sto < data.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
+                  c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                  fields[f].visibilities[g+j][sto].u[c] = uvw[0];
+                  fields[f].visibilities[g+j][sto].v[c] = uvw[1];
+                  fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
+                  fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
                   if(u<random_probability){
-                    fields[f].visibilities[g+j].u[c] = uvw[0];
-                    fields[f].visibilities[g+j].v[c] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[c] = weights[sto];
-                    fields[f].numVisibilitiesPerFreq[g+j]++;
+                    fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
                   }else{
-                    c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].u[c] = uvw[0];
-                    fields[f].visibilities[g+j].v[c] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[c] = 0.0;
-                    fields[f].numVisibilitiesPerFreq[g+j]++;
+                    fields[f].visibilities[g+j][sto].weight[c] = 0.0;
                   }
+                  fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                 }
               }
             }
@@ -407,7 +404,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
       casa::Vector<double> chan_freq_vector;
       chan_freq_vector=chan_freq_col(i);
       for(int j = 0; j < data.channels[i]; j++){
-        fields[f].visibilities[h].freq = chan_freq_vector[j];
+        fields[f].nu[h] = chan_freq_vector[j];
         h++;
       }
     }
@@ -428,7 +425,7 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
 
 }
 
-__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability)
+__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability)
 {
   char *error = 0;
   int g = 0, h = 0;
@@ -438,11 +435,6 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
   casa::Table main_tab(dir);
 
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-
-  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-  casa::Vector<int> polarizations;
-  polarizations=correlation_col(0);
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
@@ -490,25 +482,22 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
               for (int sto=0; sto < data.nstokes; sto++){
                 if(flagCol(sto,j) == false && weights[sto] > 0.0){
                   u = Random();
+                  c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                  fields[f].visibilities[g+j][sto].u[c] = uvw[0];
+                  fields[f].visibilities[g+j][sto].v[c] = uvw[1];
                   if(u<random_probability){
-                    c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].u[c] = uvw[0];
-                    fields[f].visibilities[g+j].v[c] = uvw[1];
                     nu = Normal(0.0, 1.0);
-                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                    fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                     nu = Normal(0.0, 1.0);
-                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                    fields[f].visibilities[g+j].weight[c] = weights[sto];
-                    fields[f].numVisibilitiesPerFreq[g+j]++;
+                    fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                    fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
                   }else{
-                    c = fields[f].numVisibilitiesPerFreq[g+j];
-                    fields[f].visibilities[g+j].u[c] = uvw[0];
-                    fields[f].visibilities[g+j].v[c] = uvw[1];
-                    fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
-                    fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
-                    fields[f].visibilities[g+j].weight[c] = 0.0;
-                    fields[f].numVisibilitiesPerFreq[g+j]++;
+                    c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                    fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
+                    fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
+                    fields[f].visibilities[g+j][sto].weight[c] = 0.0;
                   }
+                  fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                 }
               }
             }
@@ -525,7 +514,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
       casa::Vector<double> chan_freq_vector;
       chan_freq_vector=chan_freq_col(i);
       for(int j = 0; j < data.channels[i]; j++){
-        fields[f].visibilities[h].freq = chan_freq_vector[j];
+        fields[f].nu[h] = chan_freq_vector[j];
         h++;
       }
     }
@@ -547,7 +536,7 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
 }
 
 
-__host__ void readMS(char *MS_name, Field *fields, freqData data)
+__host__ void readMS(char *MS_name, Field *fields, MSData data)
 {
 
   char *error = 0;
@@ -558,11 +547,6 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
   casa::Table main_tab(dir);
 
   casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-  casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-
-  casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-  casa::Vector<int> polarizations;
-  polarizations=correlation_col(0);
 
   casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
@@ -638,19 +622,15 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
 
   for(int f=0;f<data.nfields;f++){
     h = 0;
-    fields[f].valid_fields = 0;
+    fields[f].valid_frequencies = 0;
     for(int i = 0; i < data.n_internal_frequencies; i++){
       for(int j = 0; j < data.channels[i]; j++){
-        fields[f].valid_frequencies[h] = 0;
-        for(int sto=0; sto < data.nstokes; sto++){
-            if(fields[f].numVisibilitiesPerFreqPerStoke[h][sto] > 0)
-              fields[f].valid_fields++;
-              fields[f].valid_frequencies[h]++;
-
+        if(fields[f].numVisibilitiesPerFreq[h] > 0){
+          fields[f].valid_frequencies++;
         }
         h++;
+      }
     }
-
   }
 
 
@@ -671,29 +651,33 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
 
 
 
-__host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu)
+__host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu)
 {
   printf("Saving residuals to host memory\n");
   if(num_gpus == 1){
     for(int f=0; f<data.nfields;f++){
       for(int i=0; i<data.total_frequencies; i++){
-        gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
-      }
+        for(int s=0; s<data.nstokes;s++)
+          gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
+        }
     }
   }else{
     for(int f=0; f<data.nfields;f++){
       for(int i=0; i<data.total_frequencies; i++){
         cudaSetDevice((i%num_gpus) + firstgpu);
-        gpuErrchk(cudaMemcpy(fields[f].visibilities[i].Vm, fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyDeviceToHost));
+        for(int s=0; s<data.nstokes; s++)
+          gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
       }
     }
   }
 
   for(int f=0; f<data.nfields;f++){
     for(int i=0; i<data.total_frequencies; i++){
-      for(int j=0; j<fields[f].numVisibilitiesPerFreq[i];j++){
-        if(fields[f].visibilities[i].u[j]<0){
-          fields[f].visibilities[i].Vm[j].y *= -1;
+      for(int s=0; s<data.nstokes; s++){
+        for(int j=0; j<fields[f].numVisibilitiesPerFreqPerStoke[i][s];j++){
+          if(fields[f].visibilities[i][s].u[j]<0){
+            fields[f].visibilities[i][s].Vm[j].y *= -1;
+          }
         }
       }
     }
@@ -701,7 +685,7 @@ __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int fi
 
 }
 
-__host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag)
+__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
 {
   MScopy(infile, outfile, verbose_flag);
   char* out_col = "DATA";
@@ -749,10 +733,10 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false && weights[sto] > 0.0){
                 if(h < fields[f].numVisibilitiesPerFreq[g]){
-                  comp.real() = fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x;
-                  comp.imag() = fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y;
+                  comp.real() = fields[f].visibilities[g][sto].Vo[h].x - fields[f].visibilities[g][sto].Vm[h].x;
+                  comp.imag() = fields[f].visibilities[g][sto].Vo[h].y - fields[f].visibilities[g][sto].Vm[h].y;
                   dataCol[j][sto] = comp;
-                  weights[sto] = fields[f].visibilities[g].weight[h];
+                  weights[sto] = fields[f].visibilities[g][sto].weight[h];
 
                   h++;
                }else{
@@ -777,7 +761,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
 
 }
 
-__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag)
+__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag)
 {
   MScopy(infile, outfile, verbose_flag);
   char* out_col = "DATA";
@@ -824,8 +808,8 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
             for (int sto=0; sto< data.nstokes; sto++){
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false && weights[sto] > 0.0){
-                comp.real() = fields[f].visibilities[g].Vm[h].x;
-                comp.imag() = fields[f].visibilities[g].Vm[h].y;
+                comp.real() = fields[f].visibilities[g][sto].Vm[h].x;
+                comp.imag() = fields[f].visibilities[g][sto].Vm[h].y;
                 dataCol[j][sto] = comp;
 
                 h++;
@@ -843,7 +827,7 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
 
 }
 
-__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag)
+__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag)
 {
   MScopy(infile, outfile, verbose_flag);
   char* out_col = "DATA";
@@ -895,9 +879,9 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
               auxbool = flagCol[j][sto];
               if(auxbool[0] == false && weights[sto] > 0.0){
                 u = Normal(0.0, 1.0);
-                comp.real() = fields[f].visibilities[g].Vm[h].x + u * (1/sqrt(weights[sto]));
+                comp.real() = fields[f].visibilities[g][sto].Vm[h].x + u * (1/sqrt(weights[sto]));
                 u = Normal(0.0, 1.0);
-                comp.imag() = fields[f].visibilities[g].Vm[h].y + u * (1/sqrt(weights[sto]));
+                comp.imag() = fields[f].visibilities[g][sto].Vm[h].y + u * (1/sqrt(weights[sto]));
                 dataCol[j][sto] = comp;
 
                 h++;
@@ -915,7 +899,7 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
 
 }
 
-__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag)
+__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
 {
   MScopy(infile, outfile, verbose_flag);
   char* out_col = "DATA";
@@ -968,12 +952,12 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
               if(auxbool[0] == false && weights[sto] > 0.0){
                 u = Random();
                 if(u<random_probability){
-                  comp.real() = fields[f].visibilities[g].Vm[h].x;
-                  comp.imag() = fields[f].visibilities[g].Vm[h].y;
+                  comp.real() = fields[f].visibilities[g][sto].Vm[h].x;
+                  comp.imag() = fields[f].visibilities[g][sto].Vm[h].y;
                   dataCol[j][sto] = comp;
                 }else{
-                  comp.real() = fields[f].visibilities[g].Vm[h].x;
-                  comp.imag() = fields[f].visibilities[g].Vm[h].y;
+                  comp.real() = fields[f].visibilities[g][sto].Vm[h].x;
+                  comp.imag() = fields[f].visibilities[g][sto].Vm[h].y;
                   dataCol[j][sto] = comp;
                   weights[sto] = 0.0;
                 }
@@ -993,7 +977,7 @@ __host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, f
 }
 
 
-__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag)
+__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
 {
   MScopy(infile, outfile, verbose_flag);
   char* out_col = "DATA";
@@ -1048,13 +1032,13 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
                 u = Random();
                 if(u<random_probability){
                   u = Normal(0.0, 1.0);
-                  comp.real() = fields[f].visibilities[g].Vm[h].x + nu * (1/sqrt(weights[sto]));
+                  comp.real() = fields[f].visibilities[g][sto].Vm[h].x + nu * (1/sqrt(weights[sto]));
                   u = Normal(0.0, 1.0);
-                  comp.imag() = fields[f].visibilities[g].Vm[h].y + nu * (1/sqrt(weights[sto]));
+                  comp.imag() = fields[f].visibilities[g][sto].Vm[h].y + nu * (1/sqrt(weights[sto]));
                   dataCol[j][sto] = comp;
                 }else{
-                  comp.real() = fields[f].visibilities[g].Vm[h].x;
-                  comp.imag() = fields[f].visibilities[g].Vm[h].y;
+                  comp.real() = fields[f].visibilities[g][sto].Vm[h].x;
+                  comp.imag() = fields[f].visibilities[g][sto].Vm[h].y;
                   dataCol[j][sto] = comp;
                   weights[sto] = 0.0;
                 }
@@ -1121,10 +1105,9 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
 
   cufftComplex *host_IFITS;
   host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+  float *image2D = (float*) malloc(M*N*sizeof(float));
   gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
 
-	float* image2D;
-	image2D = (float*) malloc(M*N*sizeof(float));
 
   int x = M-1;
   int y = N-1;

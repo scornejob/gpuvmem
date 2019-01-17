@@ -55,7 +55,7 @@ char *output, *mempath, *out_image;
 
 double ra, dec;
 
-freqData data;
+MSData data;
 
 fitsfile *mod_in;
 
@@ -768,13 +768,14 @@ if(gridding){
   		    cudaSetDevice((i%num_gpus) + firstgpu);
           //cudaFree(vars_per_field[f].device_vars[i].dchi2);
       }
-  		cudaFree(fields[f].device_visibilities[i].u);
-  		cudaFree(fields[f].device_visibilities[i].v);
-  		cudaFree(fields[f].device_visibilities[i].weight);
+      for(int s = 0; s<data.nstokes; s++){
+    		cudaFree(fields[f].device_visibilities[i][s].u);
+    		cudaFree(fields[f].device_visibilities[i][s].v);
+    		cudaFree(fields[f].device_visibilities[i][s].weight);
 
-  		cudaFree(fields[f].device_visibilities[i].Vr);
-  		cudaFree(fields[f].device_visibilities[i].Vo);
-
+    		cudaFree(fields[f].device_visibilities[i][s].Vr);
+    		cudaFree(fields[f].device_visibilities[i][s].Vo);
+      }
   	}
   }
 
@@ -787,12 +788,14 @@ if(gridding){
 
   for(int f=0; f<data.nfields; f++){
   	for(int i=0; i<data.total_frequencies; i++){
-      if(fields[f].numVisibilitiesPerFreq[i] != 0){
-    		free(fields[f].visibilities[i].u);
-    		free(fields[f].visibilities[i].v);
-    		free(fields[f].visibilities[i].weight);
-    		free(fields[f].visibilities[i].Vo);
-        free(fields[f].visibilities[i].Vm);
+      for(int s=0; s<data.nstokes; s++){
+        if(fields[f].numVisibilitiesPerFreqPerStoke[i][s] != 0){
+      		free(fields[f].visibilities[i][s].u);
+      		free(fields[f].visibilities[i][s].v);
+      		free(fields[f].visibilities[i][s].weight);
+      		free(fields[f].visibilities[i][s].Vo);
+          free(fields[f].visibilities[i][s].Vm);
+        }
       }
   	}
   }

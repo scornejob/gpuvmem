@@ -35,6 +35,11 @@
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
 
+//Included variable from Makefile using "make NEWCASA=1"
+#ifdef NEWCASA
+namespace casa = casacore;
+#endif
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -46,7 +51,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 
-typedef struct freqData{
+typedef struct MSDATA{
   int n_internal_frequencies;
   int total_frequencies;
   int *channels;
@@ -56,7 +61,7 @@ typedef struct freqData{
   int *corr_type;
 
   int max_number_visibilities_in_channel_and_stokes;
-}freqData;
+}MSData;
 
 typedef struct observedVisibilities{
   float *u;
@@ -77,6 +82,7 @@ typedef struct field{
   float global_xobs, global_yobs;
   float *nu;
   long **numVisibilitiesPerFreqPerStoke;
+  long *numVisibilitiesPerFreq;
   Vis **visibilities;
   Vis **device_visibilities;
   Vis **gridded_visibilities;
@@ -91,24 +97,24 @@ typedef struct canvas_variables{
   float beam_noise;
 }canvasVariables;
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields);
+__host__ MSData countVisibilities(char * MS_name, Field *&fields);
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
 
-__host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data);
-__host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability);
-__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability);
-__host__ void readMS(char *MS_name, Field *fields, freqData data);
+__host__ void readMSMCNoise(char *MS_name, Field *fields, MSData data);
+__host__ void readSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability);
+__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability);
+__host__ void readMS(char *MS_name, Field *fields, MSData data);
 
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_flag);
 
-__host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu);
+__host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu);
 __host__ void readMS(char *file, char *file2, Field *fields);
-__host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
-__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag);
-__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag);
-__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
-__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
+__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag);
+__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag);
+__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag);
+__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag);
+__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag);
 
 __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int iteration, long M, long N, int option);
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
