@@ -548,7 +548,7 @@ __host__ int main(int argc, char **argv) {
                 host_total2 = (double2*)malloc(M*N*sizeof(double2));
                 ///////////////////////////////////READ TOTAL SUM //////////////////////////////////////////////////////////////////////////////////
                 needed_alpha = snprintf(NULL, 0, "%salpha_%d.fits", checkp, 0) + 1;
-                needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits", checkp, 1) + 1;
+                needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits", checkp, 0) + 1;
 
                 alpha_total = (char*)malloc(needed_alpha*sizeof(char));
                 snprintf(alpha_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
