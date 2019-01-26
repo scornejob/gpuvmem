@@ -548,7 +548,7 @@ __host__ int main(int argc, char **argv) {
                 host_total2 = (double2*)malloc(M*N*sizeof(double2));
                 ///////////////////////////////////READ TOTAL SUM //////////////////////////////////////////////////////////////////////////////////
                 needed_alpha = snprintf(NULL, 0, "%salpha_%d.fits", checkp, 0) + 1;
-                needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits", checkp, 1) + 1;
+                needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits", checkp, 0) + 1;
 
                 alpha_total = (char*)malloc(needed_alpha*sizeof(char));
                 snprintf(alpha_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
@@ -561,13 +561,15 @@ __host__ int main(int argc, char **argv) {
 
                 /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
                 alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
-                open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
                 snprintf(alpha_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
+                open_read_fits<double>(&host_total2_alpha, alpha_total2, M*N, TDOUBLE);
+                
 
                 I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
                 snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
+                open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
 
-                open_read_fits<double>(&host_total2_alpha, alpha_total2, M*N, TDOUBLE);
+                
                 /////////////////////////////////////////////////////PASSING TO DOUBLE2 ARRAY ///////////////////////////////////////////
                 x = M-1;
                 y = N-1;
