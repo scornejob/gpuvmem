@@ -31,6 +31,7 @@ const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
+const float RZ = 1.2196698912665045;
 
 typedef struct varsPerGPU{
   float *device_chi2;

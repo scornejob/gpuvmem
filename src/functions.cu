@@ -47,10 +47,10 @@ minpix, lambda, ftol, random_probability, final_chi2, final_S, eta;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
-extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, beam_fwhm, beam_freq, beam_cutoff;
+extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff;
 extern double ra, dec;
 
-extern freqData data;
+extern MSData data;
 
 extern char* mempath, *out_image;
 
@@ -122,44 +122,44 @@ __host__ void goToError()
 
 __host__ void init_beam(int telescope)
 {
-  switch(telescope) {
-  case 1:
-    beam_fwhm = 33.0*RPARCM;   /* radians CBI2 */
-    beam_freq = 30.0;          /* GHz */
-    beam_cutoff = 90.0*RPARCM; /* radians */
-    break;
-  case 2:
-    beam_fwhm = (8.4220/60)*RPARCM;   /* radians ALMA */
-    beam_freq = 691.4;          /* GHz */
-    beam_cutoff = 1.0*RPARCM; /* radians */
-    break;
-  case 3: //test
-    beam_fwhm = 5*RPARCM;   /* radians CBI2 */
-    beam_freq = 1000;          /* GHz */
-    beam_cutoff = 10*RPARCM; /* radians */
-    break;
-  case 4:
-    beam_fwhm = (9.0/60)*RPARCM*12/22;   /* radians ATCA */
-    beam_freq = 691.4;          /* GHz */
-    beam_cutoff = 1.0*RPARCM; /* radians */
-    break;
-  case 5:
-    beam_fwhm = (9.0/60)*RPARCM*12/25;   /* radians VLA */
-    beam_freq = 691.4;          /* GHz */
-    beam_cutoff = 20.0*RPARCM; /* radians */
-    break;
-  case 6:
-    beam_fwhm = 10.5*RPARCM;   /* radians SZA */
-    beam_freq = 30.9380;          /* GHz */
-    beam_cutoff = 20.0*RPARCM; /* radians */
-    break;
-
-  default:
-    printf("Telescope type not defined\n");
-    goToError();
-    break;
-  }
+        switch(telescope) {
+        case 1:
+                antenna_diameter = 1.4; /* CBI2 Antenna Diameter */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 90.0*RPARCM; /* radians */
+                break;
+        case 2:
+                antenna_diameter = 12.0; /* ALMA Antenna Diameter */
+                pb_factor = 1.13; /* FWHM Factor */
+                pb_cutoff = 1.0*RPARCM; /* radians */
+                break;
+        case 3:
+                antenna_diameter = 22.0; /* ATCA Antenna Diameter */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 1.0*RPARCM; /* radians */
+                break;
+        case 4:
+                antenna_diameter = 25.0; /* VLA Antenna Diameter */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 20.0*RPARCM; /* radians */
+                break;
+        case 5:
+                antenna_diameter = 3.5; /* SZA Antenna Diameter */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 20.0*RPARCM; /* radians */
+                break;
+        case 6:
+                antenna_diameter = 0.9; /* CBI Antenna Diameter */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 20.0*RPARCM; /* radians */
+                break;
+        default:
+                printf("Telescope type not defined\n");
+                goToError();
+                break;
+        }
 }
+
 
 
 __host__ long NearestPowerOf2(long x)
@@ -1385,103 +1385,105 @@ void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
     }
 }
 
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
+__host__ void do_gridding(Field *fields, MSData *data, float deltau, float deltav, int M, int N, int *total_visibilities)
 {
   for(int f=0; f<data->nfields; f++){
   	for(int i=0; i < data->total_frequencies; i++){
-      #pragma omp parallel for schedule(static,1)
-      for(int z=0; z < fields[f].numVisibilitiesPerFreq[i]; z++){
-        int k,j;
-        float u, v, w;
-        cufftComplex Vo;
+      for(int sto=0; sto < data->nstokes; sto++){
+        #pragma omp parallel for schedule(static,1)
+        for(int z=0; z < fields[f].numVisibilitiesPerFreqPerStoke[i][sto]; z++){
+          int k,j;
+          float u, v, w;
+          cufftComplex Vo;
 
-        u  = fields[f].visibilities[i].u[z];
-        v =  fields[f].visibilities[i].v[z];
-        Vo = fields[f].visibilities[i].Vo[z];
-        w = fields[f].visibilities[i].weight[z];
-        //Correct scale and apply hermitian symmetry (it will be applied afterwards)
-        if(u < 0.0){
-          u *= -1.0;
-          v *= -1.0;
-          Vo.y *= -1.0;
-        }
-
-        u *= fields[f].visibilities[i].freq / LIGHTSPEED;
-        v *= fields[f].visibilities[i].freq / LIGHTSPEED;
-
-        j = roundf(u/fabsf(deltau) + N/2);
-    		k = roundf(v/fabsf(deltav) + M/2);
-
-        #pragma omp critical
-        {
-          if(k < M && j < N){
-              fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
-              fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
-              fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+          u  = fields[f].visibilities[i][sto].u[z];
+          v =  fields[f].visibilities[i][sto].v[z];
+          Vo = fields[f].visibilities[i][sto].Vo[z];
+          w = fields[f].visibilities[i][sto].weight[z];
+          //Correct scale and apply hermitian symmetry (it will be applied afterwards)
+          if(u < 0.0){
+            u *= -1.0;
+            v *= -1.0;
+            Vo.y *= -1.0;
           }
-        }
-      }
 
-      int visCounter = 0;
-      #pragma omp parallel for schedule(static,1)
-      for(int k=0; k<M; k++){
-        for(int j=0; j<N; j++){
-          float deltau_meters = fabsf(deltau) * (LIGHTSPEED/fields[f].visibilities[i].freq);
-          float deltav_meters = fabsf(deltav) * (LIGHTSPEED/fields[f].visibilities[i].freq);
+          u *= fields[f].nu[i] / LIGHTSPEED;
+          v *= fields[f].nu[i] / LIGHTSPEED;
 
-          float u_meters = (j - (N/2)) * deltau_meters;
-          float v_meters = (k - (M/2)) * deltav_meters;
+          j = roundf(u/fabsf(deltau) + N/2);
+      		k = roundf(v/fabsf(deltav) + M/2);
 
-          fields[f].gridded_visibilities[i].u[N*k+j] = u_meters;
-          fields[f].gridded_visibilities[i].v[N*k+j] = v_meters;
-
-          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
-          if(weight > 0.0f){
-            fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
-            fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
-            #pragma omp critical
-            {
-                visCounter++;
+          #pragma omp critical
+          {
+            if(k < M && j < N){
+                fields[f].gridded_visibilities[i][sto].Vo[N*k+j].x += w*Vo.x;
+                fields[f].gridded_visibilities[i][sto].Vo[N*k+j].y += w*Vo.y;
+                fields[f].gridded_visibilities[i][sto].weight[N*k+j] += w;
             }
-          }else{
-            fields[f].gridded_visibilities[i].weight[N*k+j] = 0.0f;
           }
         }
-      }
 
-      fields[f].visibilities[i].u = (float*)realloc(fields[f].visibilities[i].u, visCounter*sizeof(float));
-      fields[f].visibilities[i].v = (float*)realloc(fields[f].visibilities[i].v, visCounter*sizeof(float));
+        int visCounter = 0;
+        #pragma omp parallel for schedule(static,1)
+        for(int k=0; k<M; k++){
+          for(int j=0; j<N; j++){
+            float deltau_meters = fabsf(deltau) * (LIGHTSPEED/fields[f].nu[i]);
+            float deltav_meters = fabsf(deltav) * (LIGHTSPEED/fields[f].nu[i]);
 
-      fields[f].visibilities[i].Vo = (cufftComplex*)realloc(fields[f].visibilities[i].Vo, visCounter*sizeof(cufftComplex));
+            float u_meters = (j - (N/2)) * deltau_meters;
+            float v_meters = (k - (M/2)) * deltav_meters;
 
-      fields[f].visibilities[i].Vm = (cufftComplex*)malloc(visCounter*sizeof(cufftComplex));
-      memset(fields[f].visibilities[i].Vm, 0, visCounter*sizeof(cufftComplex));
+            fields[f].gridded_visibilities[i][sto].u[N*k+j] = u_meters;
+            fields[f].gridded_visibilities[i][sto].v[N*k+j] = v_meters;
 
-      fields[f].visibilities[i].weight = (float*)realloc(fields[f].visibilities[i].weight, visCounter*sizeof(float));
-
-      int l = 0;
-      for(int k=0; k<M; k++){
-        for(int j=0; j<N; j++){
-          float weight = fields[f].gridded_visibilities[i].weight[N*k+j];
-          if(weight > 0.0f){
-            fields[f].visibilities[i].u[l] = fields[f].gridded_visibilities[i].u[N*k+j];
-            fields[f].visibilities[i].v[l] = fields[f].gridded_visibilities[i].v[N*k+j];
-            fields[f].visibilities[i].Vo[l].x = fields[f].gridded_visibilities[i].Vo[N*k+j].x;
-            fields[f].visibilities[i].Vo[l].y = fields[f].gridded_visibilities[i].Vo[N*k+j].y;
-            fields[f].visibilities[i].weight[l] = fields[f].gridded_visibilities[i].weight[N*k+j];
-            l++;
+            float weight = fields[f].gridded_visibilities[i][sto].weight[N*k+j];
+            if(weight > 0.0f){
+              fields[f].gridded_visibilities[i][sto].Vo[N*k+j].x /= weight;
+              fields[f].gridded_visibilities[i][sto].Vo[N*k+j].y /= weight;
+              #pragma omp critical
+              {
+                  visCounter++;
+              }
+            }else{
+              fields[f].gridded_visibilities[i][sto].weight[N*k+j] = 0.0f;
+            }
           }
         }
-      }
 
-      free(fields[f].gridded_visibilities[i].u);
-      free(fields[f].gridded_visibilities[i].v);
-      free(fields[f].gridded_visibilities[i].Vo);
-      free(fields[f].gridded_visibilities[i].weight);
+        fields[f].visibilities[i][sto].u = (float*)realloc(fields[f].visibilities[i][sto].u, visCounter*sizeof(float));
+        fields[f].visibilities[i][sto].v = (float*)realloc(fields[f].visibilities[i][sto].v, visCounter*sizeof(float));
 
-      if(fields[f].numVisibilitiesPerFreq[i] > 0){
-        fields[f].numVisibilitiesPerFreq[i] = visCounter;
-        *total_visibilities += visCounter;
+        fields[f].visibilities[i][sto].Vo = (cufftComplex*)realloc(fields[f].visibilities[i][sto].Vo, visCounter*sizeof(cufftComplex));
+
+        fields[f].visibilities[i][sto].Vm = (cufftComplex*)malloc(visCounter*sizeof(cufftComplex));
+        memset(fields[f].visibilities[i][sto].Vm, 0, visCounter*sizeof(cufftComplex));
+
+        fields[f].visibilities[i][sto].weight = (float*)realloc(fields[f].visibilities[i][sto].weight, visCounter*sizeof(float));
+
+        int l = 0;
+        for(int k=0; k<M; k++){
+          for(int j=0; j<N; j++){
+            float weight = fields[f].gridded_visibilities[i][sto].weight[N*k+j];
+            if(weight > 0.0f){
+              fields[f].visibilities[i][sto].u[l] = fields[f].gridded_visibilities[i][sto].u[N*k+j];
+              fields[f].visibilities[i][sto].v[l] = fields[f].gridded_visibilities[i][sto].v[N*k+j];
+              fields[f].visibilities[i][sto].Vo[l].x = fields[f].gridded_visibilities[i][sto].Vo[N*k+j].x;
+              fields[f].visibilities[i][sto].Vo[l].y = fields[f].gridded_visibilities[i][sto].Vo[N*k+j].y;
+              fields[f].visibilities[i][sto].weight[l] = fields[f].gridded_visibilities[i][sto].weight[N*k+j];
+              l++;
+            }
+          }
+        }
+
+        free(fields[f].gridded_visibilities[i][sto].u);
+        free(fields[f].gridded_visibilities[i][sto].v);
+        free(fields[f].gridded_visibilities[i][sto].Vo);
+        free(fields[f].gridded_visibilities[i][sto].weight);
+
+        if(fields[f].numVisibilitiesPerFreqPerStoke[i][sto] > 0){
+          fields[f].numVisibilitiesPerFreqPerStoke[i][sto] = visCounter;
+          *total_visibilities += visCounter;
+        }
       }
     }
   }
@@ -1489,15 +1491,16 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
   int local_max = 0;
   int max = 0;
   for(int f=0; f < data->nfields; f++){
-    local_max = *std::max_element(fields[f].numVisibilitiesPerFreq,fields[f].numVisibilitiesPerFreq+data->total_frequencies);
-    if(local_max > max){
-      max = local_max;
+    for(int i=0; i< data->total_frequencies; i++){
+      local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i],fields[f].numVisibilitiesPerFreqPerStoke[i]+data->nstokes);
+      if(local_max > max){
+        max = local_max;
+      }
     }
   }
-  data->max_number_visibilities_in_channel = max;
 }
 
-__host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV)
+__host__ float calculateNoise(Field *fields, MSData data, int *total_visibilities, int blockSizeV)
 {
   //Declaring block size and number of blocks for visibilities
   float sum_inverse_weight = 0.0;
@@ -1506,20 +1509,21 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
 
   for(int f=0; f<data.nfields; f++){
   	for(int i=0; i< data.total_frequencies; i++){
-      //Calculating beam noise
-      for(int j=0; j< fields[f].numVisibilitiesPerFreq[i]; j++){
-        if(fields[f].visibilities[i].weight[j] > 0.0){
-          sum_inverse_weight += 1/fields[f].visibilities[i].weight[j];
-          sum_weights += fields[f].visibilities[i].weight[j];
-        }
+      for(int sto=0; sto < data.nstokes; sto++)
+        //Calculating beam noise
+        for(int j=0; j< fields[f].numVisibilitiesPerFreqPerStoke[i][sto]; j++){
+          if(fields[f].visibilities[i][sto].weight[j] > 0.0){
+            sum_inverse_weight += 1/fields[f].visibilities[i][sto].weight[j];
+            sum_weights += fields[f].visibilities[i][sto].weight[j];
+          }
+        *total_visibilities += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
+    		UVpow2 = NearestPowerOf2(fields[f].numVisibilitiesPerFreqPerStoke[i][sto]);
+        fields[f].visibilities[i][sto].threadsPerBlockUV = blockSizeV;
+    		fields[f].visibilities[i][sto].numBlocksUV = UVpow2/fields[f].visibilities[i][sto].threadsPerBlockUV;
       }
-      *total_visibilities += fields[f].numVisibilitiesPerFreq[i];
-  		fields[f].visibilities[i].numVisibilities = fields[f].numVisibilitiesPerFreq[i];
-  		UVpow2 = NearestPowerOf2(fields[f].visibilities[i].numVisibilities);
-      fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
-  		fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
     }
   }
+
 
 
   if(verbose_flag){
@@ -1598,43 +1602,66 @@ __global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float 
   }
 }
 
-__device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY)
+__device__ float AiryDiskBeam(float distance, float lambda, float antenna_diameter, float pb_factor)
+{
+        float atten;
+        float r = pb_factor * lambda / antenna_diameter;
+        float bessel_arg = PI*distance/(r/RZ);
+        float bessel_func = j1f(bessel_arg);
+        if(distance == 0.0f) {
+                atten = 1.0f;
+        }else{
+                atten = 4.0f * (bessel_func/bessel_arg) * (bessel_func/bessel_arg);
+        }
+        return atten;
+}
+
+__device__ float GaussianBeam(float distance, float lambda, float antenna_diameter, float pb_factor)
+{
+        float fwhm = pb_factor * lambda / antenna_diameter;
+        float c = 4.0*logf(2.0);
+        float r = distance/fwhm;
+        float atten = expf(-c*r*r);
+        return atten;
+}
+
+__device__ float attenuation(float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY)
 {
 
-		int j = threadIdx.x + blockDim.x * blockIdx.x;
-		int i = threadIdx.y + blockDim.y * blockIdx.y;
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-    float atten_result;
+        float atten_result, atten;
 
-    int x0 = xobs;
-    int y0 = yobs;
-    float x = (j - x0) * DELTAX * RPDEG;
-    float y = (i - y0) * DELTAY * RPDEG;
+        int x0 = xobs;
+        int y0 = yobs;
+        float x = (j - x0) * DELTAX * RPDEG;
+        float y = (i - y0) * DELTAY * RPDEG;
 
-    float arc = sqrtf(x*x+y*y);
-    float c = 4.0*logf(2.0);
-    float a = (beam_fwhm*beam_freq/(freq*1e-9));
-    float r = arc/a;
-    float atten = expf(-c*r*r);
-    if(arc <= beam_cutoff){
-      atten_result = atten;
-    }else{
-      atten_result = 0.0;
-    }
+        float arc = sqrtf(x*x+y*y);
+        float lambda = LIGHTSPEED/freq;
 
-    return atten_result;
+        atten = GaussianBeam(arc, lambda, antenna_diameter, pb_factor);
+
+        if(arc <= pb_cutoff) {
+                atten_result = atten;
+        }else{
+                atten_result = 0.0f;
+        }
+
+        return atten_result;
 }
 
 
 
-__global__ void total_attenuation(float *total_atten, float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N)
+__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N)
 {
-  int j = threadIdx.x + blockDim.x * blockIdx.x;
-  int i = threadIdx.y + blockDim.y * blockIdx.y;
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-  float attenPerFreq = attenuation(beam_fwhm, beam_freq, beam_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
+        float attenPerFreq = attenuation(antenna_diameter, pb_factor, pb_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
-  total_atten[N*i+j] += attenPerFreq;
+        total_atten[N*i+j] += attenPerFreq;
 }
 
 __global__ void mean_attenuation(float *total_atten, int channels, long N)
@@ -1665,31 +1692,16 @@ __global__ void noise_image(float *noise_image, float *weight_image, float noise
   noise_image[N*i+j] = noiseval;
 }
 
-__global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
+__global__ void apply_beam(float antenna_diameter, float pb_factor, float pb_cutoff, cufftComplex *fg_image, cufftComplex *image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
 {
-    int j = threadIdx.x + blockDim.x * blockIdx.x;
-    int i = threadIdx.y + blockDim.y * blockIdx.y;
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
 
+        float atten = attenuation(antenna_diameter, pb_factor, pb_cutoff, freq, xobs, yobs, DELTAX, DELTAY);
 
-    float dx = DELTAX * 60.0;
-    float dy = DELTAY * 60.0;
-    float x = (j - xobs) * dx;
-    float y = (i - yobs) * dy;
-    float arc = RPARCM*sqrtf(x*x+y*y);
-    float c = 4.0*logf(2.0);
-    float a = (beam_fwhm*beam_freq/(freq*1e-9));
-    float r = arc/a;
-    float atten = expf(-c*r*r);
-
-    if(arc <= beam_cutoff){
-      image[N*i+j].x = fg_image[N*i+j].x * fg_scale * atten;
-      image[N*i+j].y = 0.0;
-    }else{
-      image[N*i+j].x = 0.0;
-      image[N*i+j].y = 0.0;
-    }
-
-
+        image[N*i+j].x = fg_image[N*i+j].x * atten * fg_scale;
+        //image[N*i+j].x = image[N*i+j].x * atten;
+        image[N*i+j].y = 0.0;
 }
 
 
@@ -1988,6 +2000,14 @@ __global__ void searchDirection(float *g, float *xi, float *h, long N)
 
   g[N*i+j] = -xi[N*i+j];
   xi[N*i+j] = h[N*i+j] = g[N*i+j];
+}
+
+__global__ void searchDirection_LBFGS(float *xi, long N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  xi[N*i+j] = -xi[N*i+j];
 }
 
 __global__ void newXi(float *g, float *xi, float *h, float gam, long N)
