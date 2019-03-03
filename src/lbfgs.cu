@@ -173,9 +173,69 @@ __host__ void LBFGS::minimizate()
         return;
 };
 
-__host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int N){
-  float *alpha, *aux_vector, *rho_vector;
+__host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int M, int N){
+  float *alpha, *aux_vector;
   float rho, beta;
+  float sy, yy, sy_yy;
+  alpha = (float*)malloc(par_M*sizeof(float));
+
+  gpuErrchk(cudaMalloc((void**)&aux_vector, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(aux_vector, 0, sizeof(float)*M*N));
+
+  for(int k=0; k<par_M; k++){
+    //Rho_k = 1.0/(y_k's_k);
+    for(int i=0; i < I->getImageCount(); i++)
+    {
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
+      rho = 1.0/deviceReduce<float>(aux_vector, M*N);
+
+      //alpha_k = Rho_k x (s_k' * q);
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
+      alpha[k] = rho * deviceReduce<float>(aux_vector, M*N);
+      //q = q - alpha_k * y_k;
+      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[k], d_y, k, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
+    }
+  }
+
+  for(int i=0; i < I->getImageCount(); i++)
+  {
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, 0, M, N, i);
+    gpuErrchk(cudaDeviceSynchronize());
+    sy += deviceReduce<float>(aux_vector, M*N);
+
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, 0, M, N, i);
+    gpuErrchk(cudaDeviceSynchronize());
+    yy += deviceReduce<float>(aux_vector, M*N);
+  }
+  sy_yy = sy/yy;
+  //y_0'y_0
+  //(s_0'y_0)/(y_0'y_0)
+  // r = q x ((s_0'y_0)/(y_0'y_0));
+  for(int i=0; i < I->getImageCount(); i++)
+  {
+    getR<<<numBlocksNN, threadsPerBlockNN>>>(d_q, sy_yy, M, N, i);
+    gpuErrchk(cudaDeviceSynchronize());
+  }
+
+  for (int k = par_M - 1; k >= 0; k--){
+    //Rho_k = 1.0/(y_k's_k);
+    for(int i=0; i < I->getImageCount(); i++)
+    {
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
+      //Calculate rho backwards
+      rho += 1.0/deviceReduce<float>(aux_vector, M*N);
+      //beta = rho * y_k' * r;
+      beta += rho * deviceReduce<float>(aux_vector, M*N);
+      //r = r + s_k * (alpha_k - beta)
+      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, alpha[k]-beta, d_s, k, M, N, i);
+    }
+  }
+  cudaFree(aux_vector);
+  free(alpha);
 }
 
 namespace {

@@ -1536,6 +1536,20 @@ __global__ void getDot_LBFGS_ff (float *aux_vector, float *vec_1, float *vec_2, 
   aux_vector[N*i+j] = vec_1[M*N*image + M*N*k + (N*i+j)]*vec_2[M*N*image + M*N*k + (N*i+j)];
 }
 
+__global__ void updateQ (float *d_q, float alpha, float *d_y, int k, int M, int N, int image){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  d_q[M*N*image+N*i+j] += alpha *d_y[M*N*image + M*N*k + (N*i+j)];
+}
+
+__global__ void getR (float *d_q, float scalar, int M, int N, int image){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  d_q[M*N*image+N*i+j] = d_q[M*N*image+N*i+j] * scalar;
+}
+
 __global__ void calculateSandY (float *d_s, float *d_y, float *p, float *xi, float *p_p, float *xi_p, int iter, int M, int N, int image){
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
