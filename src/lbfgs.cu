@@ -184,5 +184,5 @@ Optimizator *CreateLbfgs()
         return new LBFGS;
 };
 const int LbfgsId = 1;
-const bool RegisteredConjugateGradient = Singleton<OptimizatorFactory>::Instance().RegisterOptimizator(LbfgsId, CreateLbfgs);
+const bool RegisteredLbgs = Singleton<OptimizatorFactory>::Instance().RegisterOptimizator(LbfgsId, CreateLbfgs);
 };
