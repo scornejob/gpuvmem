@@ -2210,6 +2210,43 @@ __global__ void copyImage(cufftComplex *p, float *device_xt, long N)
 }
 
 
+__global__ void getDot_LBFGS_fComplex (float *aux_vector, float *vec_1, cufftComplex *vec_2, int k, int k, int M, int N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  aux_vector[N*i+j] = vec_1[M*N*k+N*i+j]*vec_2[M*N*k+N*i+j].x;
+}
+
+__global__ void getDot_LBFGS_ff (float *aux_vector, float *vec_1, float *vec_2, int k, int k, int M, int N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  aux_vector[N*i+j] = vec_1[M*N*k+N*i+j]*vec_2[M*N*k+N*i+j];
+}
+
+__global__ void updateQ (float *d_q, float alpha, float *d_y, int k, int M, int N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  d_q[N*i+j] += alpha *d_y[M*N*k+N*i+j];
+}
+
+__global__ void getR (float *d_q, float scalar, int N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  d_q[N*i+j] = d_q[N*i+j] * scalar;
+}
+
+__global__ void calculateSandY (cufftComplex *d_s, float *d_y, cufftComplex *p, float *xi, cufftComplex *p_p, float *xi_p, int iter, int M, int N){
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  d_s[N*i+j].x = p[N*i+j].x - p_p[N*i+j].x;
+  d_y[N*i+j] = xi[N*i+j].x - xi_p[N*i+j].x;
+}
+
+
 __host__ float chiCuadrado(cufftComplex *I)
 {
   if(num_gpus == 1){
