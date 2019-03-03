@@ -232,11 +232,12 @@ __host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int
       beta += rho * deviceReduce<float>(aux_vector, M*N);
       //r = r + s_k * (alpha_k - beta)
       updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, alpha[k]-beta, d_s, k, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
     }
   }
   cudaFree(aux_vector);
   free(alpha);
-}
+};
 
 namespace {
 Optimizator *CreateLbfgs()
