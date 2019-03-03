@@ -311,7 +311,7 @@ __host__ void LBFGS_recursion(float *d_y, cufftComplex* d_s, float *d_q, int par
   getR<<<numBlocksNN, threadsPerBlockNN>>>(d_q, sy_yy, N);
   gpuErrchk(cudaDeviceSynchronize());
 
-  for (int k = par_M - 1; i >= 0; i--)
+  for (int k = par_M - 1; k >= 0; k--)
     //Rho_k = 1.0/(y_k's_k);
     getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, N);
     gpuErrchk(cudaDeviceSynchronize());
@@ -378,7 +378,7 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
 			return;
 		}
 
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, 0, N);
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, 0, M, N);
     gpuErrchk(cudaDeviceSynchronize());
     norm = deviceReduce<float>(norm_vector, M*N);
 
