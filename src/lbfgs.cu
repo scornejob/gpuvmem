@@ -127,7 +127,7 @@ __host__ void LBFGS::minimizate()
 
                 for(int i=0; i < image->getImageCount(); i++)
                 {
-                  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, M, N, i);
+                  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, 0, M, N, i);
                   gpuErrchk(cudaDeviceSynchronize());
                   norm += deviceReduce<float>(norm_vector, M*N);
                 }
@@ -186,12 +186,12 @@ __host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int
     //Rho_k = 1.0/(y_k's_k);
     for(int i=0; i < I->getImageCount(); i++)
     {
-      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, M, N, i);
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       rho = 1.0/deviceReduce<float>(aux_vector, M*N);
 
       //alpha_k = Rho_k x (s_k' * q);
-      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, M, N, i);
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, 0, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       alpha[k] = rho * deviceReduce<float>(aux_vector, M*N);
       //q = q - alpha_k * y_k;
@@ -202,11 +202,11 @@ __host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int
 
   for(int i=0; i < I->getImageCount(); i++)
   {
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, 0, M, N, i);
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, 0, 0, M, N, i);
     gpuErrchk(cudaDeviceSynchronize());
     sy += deviceReduce<float>(aux_vector, M*N);
 
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, 0, M, N, i);
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, 0, 0, M, N, i);
     gpuErrchk(cudaDeviceSynchronize());
     yy += deviceReduce<float>(aux_vector, M*N);
   }
@@ -224,7 +224,7 @@ __host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int
     //Rho_k = 1.0/(y_k's_k);
     for(int i=0; i < I->getImageCount(); i++)
     {
-      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, M, N, i);
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       //Calculate rho backwards
       rho += 1.0/deviceReduce<float>(aux_vector, M*N);
