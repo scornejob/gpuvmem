@@ -37,8 +37,8 @@ extern long M;
 extern long N;
 extern int iter;
 
-ObjectiveFunction *testof;
-Image *I;
+extern ObjectiveFunction *testof;
+extern Image *I;
 
 extern dim3 threadsPerBlockNN;
 extern dim3 numBlocksNN;
@@ -48,7 +48,7 @@ extern int blocksVectorNN;
 
 extern float MINPIX, ftol;
 extern int verbose_flag;
-int flag_opt;
+extern int flag_opt;
 
 #define EPS 1.0e-10
 extern int it_maximum;
@@ -74,7 +74,7 @@ __host__ void LBFGS::allocateMemoryGpu()
   gpuErrchk(cudaMalloc((void**)&xi_p, sizeof(float)*M*N*image->getImageCount()));
   gpuErrchk(cudaMemset(xi_p, 0, sizeof(float)*M*N*image->getImageCount()));
 
-  gpuErrchk(cudaMalloc((void**)&norm_vector, sizeof(float)*M*N);
+  gpuErrchk(cudaMalloc((void**)&norm_vector, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(norm_vector, 0, sizeof(float)*M*N));
 };
 __host__ void LBFGS::deallocateMemoryGpu()
@@ -102,8 +102,8 @@ __host__ void LBFGS::minimizate()
         of->calcGradient(image->getImage(),xi);
         //g=-xi
         //xi=h=g
-        gpuErrchk(cudaMemcpy(p_p, sizeof(float), p, sizeof(float), sizeof(float), M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
-        gpuErrchk(cudaMemcpy(xi_p, sizeof(float), xi, sizeof(float), sizeof(float), M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+        gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+        gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
         for(int i=0; i < image->getImageCount(); i++)
         {
@@ -134,7 +134,8 @@ __host__ void LBFGS::minimizate()
 
                 if(norm == 0.0){
                   printf("Exit due to norm = 0\n");
-                  FREEALL_LBFGS
+                  of->calcFunction(image->getImage());
+                  deallocateMemoryGpu();
                   return;
                 }
 
@@ -147,12 +148,12 @@ __host__ void LBFGS::minimizate()
 
                 for(int i=0; i < image->getImageCount(); i++)
                 {
-                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_s, d_y, p, xi, p_p, xi_p, (iter-1)%K, M, N, i);
+                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_s, d_y, image->getImage(), xi, p_p, xi_p, (iter-1)%K, M, N, i);
                   gpuErrchk(cudaDeviceSynchronize());
                 }
 
-                gpuErrchk(cudaMemcpy(p_p, sizeof(float), p, sizeof(float), sizeof(float), M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
-                gpuErrchk(cudaMemcpy(xi_p, sizeof(float), xi, sizeof(float), sizeof(float), M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+                gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+                gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
                 LBFGS_recursion(d_y, d_s, xi_p, std::min(K,i), M, N);
                 for(int i=0; i < image->getImageCount(); i++)
@@ -173,7 +174,7 @@ __host__ void LBFGS::minimizate()
         return;
 };
 
-__host__ void LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int M, int N){
+__host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int M, int N){
   float *alpha, *aux_vector;
   float rho, beta;
   float sy, yy, sy_yy;

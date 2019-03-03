@@ -69,7 +69,7 @@ __host__ int main(int argc, char **argv) {
         enum {MFS}; // Synthesizer
         enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation}; // Fi
         enum {Gridding}; // Filter
-        enum {ConjugateGradient}; // Optimizator
+        enum {ConjugateGradient, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
         enum {MS}; // Io
         enum {SecondDerivative}; // Error calculation

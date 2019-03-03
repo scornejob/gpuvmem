@@ -1529,7 +1529,7 @@ __global__ void searchDirection_LBFGS(float *xi, long N, long M, int image)
   xi[M*N*image+N*i+j] = -xi[M*N*image+N*i+j];
 }
 
-_global_ void getDot_LBFGS_ff (float *aux_vector, float *vec_1, float *vec_2, int k, int h, int M, int N, int image){
+__global__ void getDot_LBFGS_ff(float *aux_vector, float *vec_1, float *vec_2, int k, int h, int M, int N, int image){
   int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 
