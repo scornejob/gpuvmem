@@ -848,10 +848,12 @@ __host__ int main(int argc, char **argv) {
         }
 
 
-
+        printf("Before\n");
 
         free(input_alpha);
         free(input_Inu_0);
+
+        printf("After\n");
 
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
