@@ -75,7 +75,7 @@ __host__ int main(int argc, char **argv) {
         enum {SecondDerivative}; // Error calculation
 
         Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(MFS);
-        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
+        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(LBFGS);
         ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
         Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
         sy->setIoHandler(ioms);

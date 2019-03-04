@@ -100,16 +100,17 @@ __host__ void LBFGS::minimizate()
                 printf("Starting function value = %f\n", fp);
         }
         of->calcGradient(image->getImage(),xi);
-        //g=-xi
-        //xi=h=g
+
+
         gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
         gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
         for(int i=0; i < image->getImageCount(); i++)
         {
-                searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, N, M, i); //Search direction
+                searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, M, N, i); //Search direction
                 gpuErrchk(cudaDeviceSynchronize());
         }
+
         ////////////////////////////////////////////////////////////////
         for(int i=1; i <= it_maximum; i++) {
                 start = omp_get_wtime();
@@ -117,6 +118,8 @@ __host__ void LBFGS::minimizate()
                 if(verbose_flag) {
                         printf("\n\n********** Iteration %d **********\n\n", i);
                 }
+
+
                 linmin(p_p, xi_p, &fret, NULL);
                 if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {
                         printf("Exit due to tolerance\n");
@@ -148,95 +151,130 @@ __host__ void LBFGS::minimizate()
 
                 for(int i=0; i < image->getImageCount(); i++)
                 {
-                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_s, d_y, image->getImage(), xi, p_p, xi_p, (iter-1)%K, M, N, i);
+                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_y, d_s, image->getImage(), xi, p_p, xi_p, (iter-1)%K, M, N, i);
                   gpuErrchk(cudaDeviceSynchronize());
                 }
 
                 gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
                 gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
-                LBFGS_recursion(d_y, d_s, xi_p, std::min(K,i), M, N);
-                for(int i=0; i < image->getImageCount(); i++)
-                {
-                        searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, N, M, i); //Search direction
-                        gpuErrchk(cudaDeviceSynchronize());
-                }
-                gpuErrchk(cudaDeviceSynchronize());
+                LBFGS_recursion(d_y, d_s, xi_p, std::min(K,iter-1), (iter-1)%K, M, N);
+
                 end = omp_get_wtime();
                 double wall_time = end-start;
                 if(verbose_flag) {
                         printf("Time: %lf seconds\n", i, wall_time);
                 }
         }
-        printf("Too many iterations in frprmn\n");
+        printf("Too many iterations in LBFGS\n");
         of->calcFunction(image->getImage());
         deallocateMemoryGpu();
         return;
 };
 
-__host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *d_q, int par_M, int M, int N){
-  float *alpha, *aux_vector;
-  float rho, beta;
-  float sy, yy, sy_yy;
-  alpha = (float*)malloc(par_M*sizeof(float));
+__host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *xi, int par_M, int lbfgs_it, int M, int N){
+  float **alpha, *aux_vector;
+  float *d_r, *d_q;
+  float rho = 0.0f;
+  float beta = 0.0f;
+  float sy = 0.0f;
+  float yy = 0.0f;
+  float sy_yy = 0.0f;
+  alpha = (float**)malloc(image->getImageCount()*sizeof(float*));
+  for(int i=0; i<image->getImageCount();i++){
+    alpha[i] = (float*)malloc(par_M*sizeof(float));
+  }
+
+  for(int i=0; i<image->getImageCount();i++){
+    memset (alpha[i],0,par_M*sizeof(float));
+  }
+
 
   gpuErrchk(cudaMalloc((void**)&aux_vector, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(aux_vector, 0, sizeof(float)*M*N));
+  gpuErrchk(cudaMalloc((void**)&d_q, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMalloc((void**)&d_r, sizeof(float)*M*N*image->getImageCount()));
 
-  for(int k=0; k<par_M; k++){
-    //Rho_k = 1.0/(y_k's_k);
-    for(int i=0; i < I->getImageCount(); i++)
-    {
+  gpuErrchk(cudaMemset(aux_vector, 0, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(d_r, 0, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemcpy(d_q, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+
+
+
+  for(int i=0; i < I->getImageCount(); i++)
+  {
+
+    for(int k = par_M - 1; k >= 0; k--){
+      //Rho_k = 1.0/(y_k's_k);
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       rho = 1.0/deviceReduce<float>(aux_vector, M*N);
-
       //alpha_k = Rho_k x (s_k' * q);
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, 0, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
-      alpha[k] = rho * deviceReduce<float>(aux_vector, M*N);
+      alpha[i][k] = rho * deviceReduce<float>(aux_vector, M*N);
       //q = q - alpha_k * y_k;
-      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[k], d_y, k, M, N, i);
+      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[i][k], d_y, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
     }
   }
 
-  for(int i=0; i < I->getImageCount(); i++)
-  {
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, 0, 0, M, N, i);
-    gpuErrchk(cudaDeviceSynchronize());
-    sy += deviceReduce<float>(aux_vector, M*N);
-
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, 0, 0, M, N, i);
-    gpuErrchk(cudaDeviceSynchronize());
-    yy += deviceReduce<float>(aux_vector, M*N);
-  }
-  sy_yy = sy/yy;
   //y_0'y_0
   //(s_0'y_0)/(y_0'y_0)
-  // r = q x ((s_0'y_0)/(y_0'y_0));
   for(int i=0; i < I->getImageCount(); i++)
   {
-    getR<<<numBlocksNN, threadsPerBlockNN>>>(d_q, sy_yy, M, N, i);
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, lbfgs_it, lbfgs_it, M, N, i);
     gpuErrchk(cudaDeviceSynchronize());
+    sy = deviceReduce<float>(aux_vector, M*N);
+
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, lbfgs_it, lbfgs_it, M, N, i);
+    gpuErrchk(cudaDeviceSynchronize());
+    yy = deviceReduce<float>(aux_vector, M*N);
+
+    if(yy!=0.0)
+      sy_yy += sy/yy;
+    else
+      sy_yy += 0.0f;
   }
 
-  for (int k = par_M - 1; k >= 0; k--){
-    //Rho_k = 1.0/(y_k's_k);
-    for(int i=0; i < I->getImageCount(); i++)
-    {
+
+
+
+  for(int i=0; i < I->getImageCount(); i++)
+  {
+    // r = q x ((s_0'y_0)/(y_0'y_0));
+    getR<<<numBlocksNN, threadsPerBlockNN>>>(d_r, d_q, sy_yy, M, N, i);
+    gpuErrchk(cudaDeviceSynchronize());
+
+    for (int k = 0; k < par_M; k++){
+      //Rho_k = 1.0/(y_k's_k);
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
-      //Calculate rho backwards
-      rho += 1.0/deviceReduce<float>(aux_vector, M*N);
+      //Calculate rho
+      rho = 1.0/deviceReduce<float>(aux_vector, M*N);
       //beta = rho * y_k' * r;
-      beta += rho * deviceReduce<float>(aux_vector, M*N);
+      getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_r, k, 0, M, N, i);
+      gpuErrchk(cudaDeviceSynchronize());
+      beta = rho * deviceReduce<float>(aux_vector, M*N);
       //r = r + s_k * (alpha_k - beta)
-      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, alpha[k]-beta, d_s, k, M, N, i);
+      updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_r, alpha[i][k]-beta, d_s, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
     }
   }
+
+  //Changing the sign to -d_r
+  for(int i=0; i < image->getImageCount(); i++)
+  {
+          searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(d_r, M, N, i); //Search direction
+          gpuErrchk(cudaDeviceSynchronize());
+  }
+
+  gpuErrchk(cudaMemcpy(xi, d_r, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
   cudaFree(aux_vector);
+  cudaFree(d_q);
+  cudaFree(d_r);
+  for(int i=0; i<image->getImageCount();i++){
+    free(alpha[i]);
+  }
   free(alpha);
 };
 
