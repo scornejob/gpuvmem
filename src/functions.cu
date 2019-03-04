@@ -74,6 +74,7 @@ extern double2 *total, *total2;
 
 extern FILE *outfile;
 extern FILE *outfile_its;
+extern FILE *shutdown_file;
 
 extern int position_in_file;
 
@@ -81,19 +82,23 @@ extern int accepted_afterburndown;
 
 extern int real_iterations;
 
+char *shutdown_file_name;
+
 void sig_handler(int signo)
 {
         if(signo == SIGKILL || signo == SIGTERM || signo == SIGINT) {
+                shutdown_file= fopen(shutdown_file_name, "w");
                 printf("--------------Iteration %d-----------\n", real_iterations);
-                fseek(outfile_its,position_in_file,SEEK_SET);
-                fprintf(outfile_its, "Iterations: %d\n", real_iterations);
-                fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
-                fflush(outfile_its);
+                fseek(shutdown_file,position_in_file,SEEK_SET);
+                fprintf(shutdown_file, "Iterations: %d\n", real_iterations);
+                fprintf(shutdown_file, "Accepted after burndown: %d\n", accepted_afterburndown);
+                fflush(shutdown_file);
                 double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
                 double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
                 float2toImage(device_2I, mod_in, out_image, checkp, 2, M, N, 1);
                 fclose(outfile);
                 fclose(outfile_its);
+                fclose(shutdown_file);
                 cudaFree(device_2I);
                 cudaFree(total2_out);
                 cudaFree(total_out);
@@ -2405,11 +2410,14 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         //gpuErrchk(cudaDeviceSynchronize());
         size_t file_chi2_n = snprintf(NULL, 0, "%schi2.txt", checkp) + 1;
         size_t file_iter_n = snprintf(NULL, 0, "%siter.txt", checkp) + 1;
+        size_t file_shutdown_n = snprintf(NULL, 0, "%sshutdown.txt", checkp) + 1;
         char *chi2_file_name = (char*)malloc(sizeof(char)*file_chi2_n);
         char *iter_file_name = (char*)malloc(sizeof(char)*file_iter_n);
+        shutdown_file_name = (char*)malloc(sizeof(char)*file_iter_n);
 
         snprintf(chi2_file_name, file_chi2_n*sizeof(char), "%schi2.txt", checkp, 0);
         snprintf(iter_file_name, file_iter_n*sizeof(char), "%siter.txt", checkp, 0);
+        snprintf(shutdown_file_name, file_shutdown_n*sizeof(char), "%sshutdown.txt", checkp, 0);
 
         if(checkpoint)
                 outfile = fopen(chi2_file_name, "a");
@@ -2421,9 +2429,6 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         position_in_file = ftell(outfile_its);
         randomize(pixels, valid_pixels);
 
-        signal(SIGINT, sig_handler);
-        signal(SIGTERM, sig_handler);
-        signal(SIGKILL, sig_handler);
 
         int second_pass;
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
@@ -2509,10 +2514,15 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         double2toImage(total_out, mod_in, out_image, checkp, 0, M, N, 1);
         double2toImage(total2_out, mod_in, out_image, checkp, 1, M, N, 1);
 
+        signal(SIGINT, sig_handler);
+        signal(SIGTERM, sig_handler);
+        signal(SIGKILL, sig_handler);
+
         fclose(outfile);
         fclose(outfile_its);
         cudaFree(temp);
         cudaFree(states_0);
         cudaFree(states_1);
+
 
 }
