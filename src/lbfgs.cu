@@ -55,7 +55,7 @@ extern int it_maximum;
 
 #define ALPHA 1.e-4
 
-#define FREEALL cudaFree(d_y);cudaFree(d_s);cudaFree(xi);cudaFree(xi_p);cudaFree(p_p);cudaFree(norm_vector);
+#define FREEALL cudaFree(d_y);cudaFree(d_s);cudaFree(xi);cudaFree(xi_old);cudaFree(p_old);cudaFree(norm_vector);
 
 __host__ void LBFGS::allocateMemoryGpu()
 {
@@ -65,14 +65,14 @@ __host__ void LBFGS::allocateMemoryGpu()
   gpuErrchk(cudaMalloc((void**)&d_s, sizeof(float)*M*N*K*image->getImageCount()));
   gpuErrchk(cudaMemset(d_s, 0, sizeof(float)*M*N*K*image->getImageCount()));
 
-  gpuErrchk(cudaMalloc((void**)&p_p, sizeof(float)*M*N*image->getImageCount()));
-  gpuErrchk(cudaMemset(p_p, 0, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMalloc((void**)&p_old, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemset(p_old, 0, sizeof(float)*M*N*image->getImageCount()));
 
   gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N*image->getImageCount()));
   gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N*image->getImageCount()));
 
-  gpuErrchk(cudaMalloc((void**)&xi_p, sizeof(float)*M*N*image->getImageCount()));
-  gpuErrchk(cudaMemset(xi_p, 0, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMalloc((void**)&xi_old, sizeof(float)*M*N*image->getImageCount()));
+  gpuErrchk(cudaMemset(xi_old, 0, sizeof(float)*M*N*image->getImageCount()));
 
   gpuErrchk(cudaMalloc((void**)&norm_vector, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(norm_vector, 0, sizeof(float)*M*N));
@@ -102,12 +102,12 @@ __host__ void LBFGS::minimizate()
         of->calcGradient(image->getImage(),xi);
 
 
-        gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
-        gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+        //gpuErrchk(cudaMemcpy(p_old, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+        //gpuErrchk(cudaMemcpy(xi_old, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
         for(int i=0; i < image->getImageCount(); i++)
         {
-                searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, M, N, i); //Search direction
+                searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi, M, N, i); //Search direction
                 gpuErrchk(cudaDeviceSynchronize());
         }
 
@@ -115,12 +115,16 @@ __host__ void LBFGS::minimizate()
         for(int i=1; i <= it_maximum; i++) {
                 start = omp_get_wtime();
                 iter = i;
+                norm = 0.0f;
                 if(verbose_flag) {
                         printf("\n\n********** Iteration %d **********\n\n", i);
                 }
 
+                gpuErrchk(cudaMemcpy(p_old, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
+                gpuErrchk(cudaMemcpy(xi_old, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
 
-                linmin(p_p, xi_p, &fret, NULL);
+                linmin(image->getImage(), xi, &fret, NULL);
+
                 if (2.0*fabs(fret-fp) <= ftol*(fabs(fret)+fabs(fp)+EPS)) {
                         printf("Exit due to tolerance\n");
                         of->calcFunction(I->getImage());
@@ -130,17 +134,18 @@ __host__ void LBFGS::minimizate()
 
                 for(int i=0; i < image->getImageCount(); i++)
                 {
-                  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, 0, M, N, i);
+                  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi, xi, 0, 0, M, N, i);
                   gpuErrchk(cudaDeviceSynchronize());
                   norm += deviceReduce<float>(norm_vector, M*N);
                 }
 
-                if(norm == 0.0){
+                if(norm <= ftol){
                   printf("Exit due to norm = 0\n");
                   of->calcFunction(image->getImage());
                   deallocateMemoryGpu();
                   return;
                 }
+
 
                 fp= of->calcFunction(image->getImage());
                 if(verbose_flag) {
@@ -148,17 +153,13 @@ __host__ void LBFGS::minimizate()
                 }
                 of->calcGradient(image->getImage(),xi);
 
-
                 for(int i=0; i < image->getImageCount(); i++)
                 {
-                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_y, d_s, image->getImage(), xi, p_p, xi_p, (iter-1)%K, M, N, i);
+                  calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_y, d_s, image->getImage(), xi, p_old, xi_old, (iter-1)%K, M, N, i);
                   gpuErrchk(cudaDeviceSynchronize());
                 }
 
-                gpuErrchk(cudaMemcpy(p_p, image->getImage(), sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
-                gpuErrchk(cudaMemcpy(xi_p, xi, sizeof(float)*M*N*image->getImageCount(), cudaMemcpyDeviceToDevice));
-
-                LBFGS_recursion(d_y, d_s, xi_p, std::min(K,iter-1), (iter-1)%K, M, N);
+                LBFGS_recursion(d_y, d_s, xi, std::min(K,iter), (iter-1)%K, M, N);
 
                 end = omp_get_wtime();
                 double wall_time = end-start;
@@ -176,6 +177,7 @@ __host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *xi, int par_
   float **alpha, *aux_vector;
   float *d_r, *d_q;
   float rho = 0.0f;
+  float rho_den;
   float beta = 0.0f;
   float sy = 0.0f;
   float yy = 0.0f;
@@ -205,13 +207,20 @@ __host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *xi, int par_
 
     for(int k = par_M - 1; k >= 0; k--){
       //Rho_k = 1.0/(y_k's_k);
+      //printf("Image %d, Iter :%d\n", i, k);
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
-      rho = 1.0/deviceReduce<float>(aux_vector, M*N);
+      rho_den = deviceReduce<float>(aux_vector, M*N);
+      if(rho_den != 0.0f)
+        rho = 1.0/rho_den;
+      else
+        rho = 0.0f;
+      //printf("1. rho %f\n", rho);
       //alpha_k = Rho_k x (s_k' * q);
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, 0, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       alpha[i][k] = rho * deviceReduce<float>(aux_vector, M*N);
+      //printf("1. alpha %f\n", alpha[i][k]);
       //q = q - alpha_k * y_k;
       updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[i][k], d_y, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
@@ -234,6 +243,8 @@ __host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *xi, int par_
       sy_yy += sy/yy;
     else
       sy_yy += 0.0f;
+
+    //printf("sy: %f, yy: %f, sy_yy: %f\n",sy, yy, sy_yy);
   }
 
 
@@ -250,11 +261,16 @@ __host__ void LBFGS::LBFGS_recursion(float *d_y, float *d_s, float *xi, int par_
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       //Calculate rho
-      rho = 1.0/deviceReduce<float>(aux_vector, M*N);
+      rho_den = deviceReduce<float>(aux_vector, M*N);
+      if(rho_den != 0.0f)
+        rho = 1.0/rho_den;
+      else
+        rho = 0.0f;
       //beta = rho * y_k' * r;
       getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_r, k, 0, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
       beta = rho * deviceReduce<float>(aux_vector, M*N);
+      //printf("2. image %d - iter %d - rho: %f, alpha: %f, beta: %f, alpha-beta: %f\n", i, k, rho, alpha[i][k], beta, alpha[i][k]-beta);
       //r = r + s_k * (alpha_k - beta)
       updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_r, alpha[i][k]-beta, d_s, k, M, N, i);
       gpuErrchk(cudaDeviceSynchronize());
