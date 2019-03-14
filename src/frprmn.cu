@@ -54,7 +54,7 @@ extern int it_maximum;
 
 
 #define FREEALL cudaFree(device_gg_vector);cudaFree(device_dgg_vector);cudaFree(xi);cudaFree(device_h);cudaFree(device_g);
-#define FREEALL_LBFGS cudaFree(d_y);cudaFree(d_s);cudaFree(xi);cudaFree(xi_p);cudaFree(p_p);cudaFree(norm_vector);
+#define FREEALL_LBFGS cudaFree(d_y);cudaFree(d_s);cudaFree(xi);cudaFree(xi_old);cudaFree(p_old);cudaFree(norm_vector);
 
 
 __host__ void armijoTest(cufftComplex *p, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*))
@@ -270,58 +270,91 @@ __host__ void frprmn(cufftComplex *p, float ftol, float *fret, float (*func)(cuf
   return;
 }
 
-__host__ void LBFGS_recursion(float *d_y, cufftComplex* d_s, float *d_q, int par_M, int M, int N){
+__host__ void LBFGS_recursion(float *d_y, cufftComplex* d_s, float *xi, int par_M, int lbfgs_it, int M, int N){
   float *alpha, *aux_vector;
-  float rho, beta;
-  float sy, yy, sy_yy;
+  float *d_r, *d_q;
+  float rho = 0.0f;
+  float rho_den;
+  float beta = 0.0f;
+  float sy = 0.0f;
+  float yy = 0.0f;
+  float sy_yy = 0.0f;
   alpha = (float*)malloc(par_M*sizeof(float));
+  memset (alpha,0,par_M*sizeof(float));
 
   gpuErrchk(cudaMalloc((void**)&aux_vector, sizeof(float)*M*N));
+  gpuErrchk(cudaMalloc((void**)&d_q, sizeof(float)*M*N));
+  gpuErrchk(cudaMalloc((void**)&d_r, sizeof(float)*M*N));
+
   gpuErrchk(cudaMemset(aux_vector, 0, sizeof(float)*M*N));
-
-
+  gpuErrchk(cudaMemset(d_r, 0, sizeof(float)*M*N));
+  gpuErrchk(cudaMemcpy(d_q, xi, sizeof(float)*M*N, cudaMemcpyDeviceToDevice));
 
   for(int k=0; k<par_M; k++){
     //Rho_k = 1.0/(y_k's_k);
-    getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, M, N);
+    getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_y, k, k, M, N);
     gpuErrchk(cudaDeviceSynchronize());
-    rho = 1.0/deviceReduce<float>(aux_vector, M*N);
+    rho_den = deviceReduce<float>(aux_vector, M*N);
+    if(rho_den != 0.0f)
+      rho = 1.0/rho_den;
+    else
+      rho = 0.0f;
 
     //alpha_k = Rho_k x (s_k' * q);
     getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_q, k, 0, M, N);
     gpuErrchk(cudaDeviceSynchronize());
     alpha[k] = rho * deviceReduce<float>(aux_vector, M*N);
     //q = q - alpha_k * y_k;
-    updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[k], d_y, k, N);
+    updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, -alpha[k], d_y, k, M, N);
     gpuErrchk(cudaDeviceSynchronize());
 
   }
 
   //s0'y_0
-  getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_y, 0, 0, N);
+  getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_y, lbfgs_it, lbfgs_it, M, N);
   gpuErrchk(cudaDeviceSynchronize());
   sy = deviceReduce<float>(aux_vector, M*N);
   //y_0'y_0
-  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, 0, 0, N);
+  getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_y, lbfgs_it, lbfgs_it, M, N);
   gpuErrchk(cudaDeviceSynchronize());
   yy = deviceReduce<float>(aux_vector, M*N);
   //(s_0'y_0)/(y_0'y_0)
-  sy_yy = sy/yy;
+  if(yy!=0.0)
+    sy_yy = sy/yy;
+  else
+    sy_yy = 0.0f;
+
   // r = q x ((s_0'y_0)/(y_0'y_0));
   getR<<<numBlocksNN, threadsPerBlockNN>>>(d_q, sy_yy, N);
   gpuErrchk(cudaDeviceSynchronize());
 
   for (int k = par_M - 1; k >= 0; k--)
+  {
     //Rho_k = 1.0/(y_k's_k);
-    getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_s, k, k, N);
+    getDot_LBFGS_fComplex<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_s, d_y, k, k, M, N);
     gpuErrchk(cudaDeviceSynchronize());
     //Calculate rho backwards
-    rho = 1.0/deviceReduce<float>(aux_vector, M*N);
+    rho_den = deviceReduce<float>(aux_vector, M*N);
+    if(rho_den != 0.0f)
+      rho = 1.0/rho_den;
+    else
+      rho = 0.0f;
+    //beta = rho * y_k' * r;
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(aux_vector, d_y, d_r, k, 0, M, N);
+    gpuErrchk(cudaDeviceSynchronize());
     //beta = rho * y_k' * r;
     beta = rho * deviceReduce<float>(aux_vector, M*N);
     //r = r + s_k * (alpha_k - beta)
-    updateQ<<<numBlocksNN, threadsPerBlockNN>>>(d_q, alpha[k]-beta, d_s, k, N);
+    updateQComplex<<<numBlocksNN, threadsPerBlockNN>>>(d_r, alpha[k]-beta, d_s, k, M, N);
   }
+
+  searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(d_r, N);//Search direction
+  gpuErrchk(cudaDeviceSynchronize());
+
+  gpuErrchk(cudaMemcpy(xi, d_r, sizeof(float)*M*N, cudaMemcpyDeviceToDevice));
+  cudaFree(aux_vector);
+  cudaFree(d_q);
+  cudaFree(d_r);
   cudaFree(aux_vector);
   free(alpha);
 }
@@ -329,9 +362,10 @@ __host__ void LBFGS_recursion(float *d_y, cufftComplex* d_s, float *d_q, int par
 __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cufftComplex*), void (*dfunc)(cufftComplex*, float*), int K)
 {
   cufftComplex *d_s;
-  float *d_y, *xi, *xi_p, *norm_vector;
-  float norm;
-  cufftComplex *p_p;
+  float *d_y, *xi, *xi_old, *norm_vector;
+  float norm, fp;
+  cufftComplex *p_old;
+  double start, end;
 
   gpuErrchk(cudaMalloc((void**)&d_y, sizeof(float)*M*N*K));
   gpuErrchk(cudaMemset(d_y, 0, sizeof(float)*M*N*K));
@@ -339,14 +373,14 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
   gpuErrchk(cudaMalloc((void**)&d_s, sizeof(cufftComplex)*M*N*K));
   gpuErrchk(cudaMemset(d_s, 0, sizeof(cufftComplex)*M*N*K));
 
-  gpuErrchk(cudaMalloc((void**)&p_p, sizeof(cufftComplex)*M*N));
-  gpuErrchk(cudaMemset(p_p, 0, sizeof(cufftComplex)*M*N));
+  gpuErrchk(cudaMalloc((void**)&p_old, sizeof(cufftComplex)*M*N));
+  gpuErrchk(cudaMemset(p_old, 0, sizeof(cufftComplex)*M*N));
 
   gpuErrchk(cudaMalloc((void**)&xi, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(xi, 0, sizeof(float)*M*N));
 
-  gpuErrchk(cudaMalloc((void**)&xi_p, sizeof(float)*M*N));
-  gpuErrchk(cudaMemset(xi_p, 0, sizeof(float)*M*N));
+  gpuErrchk(cudaMalloc((void**)&xi_old, sizeof(float)*M*N));
+  gpuErrchk(cudaMemset(xi_old, 0, sizeof(float)*M*N));
 
   gpuErrchk(cudaMalloc((void**)&norm_vector, sizeof(float)*M*N));
   gpuErrchk(cudaMemset(norm_vector, 0, sizeof(float)*M*N));
@@ -357,10 +391,7 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
   }
   (*dfunc)(p,xi);
 
-  gpuErrchk(cudaMemcpy2D(p_p, sizeof(cufftComplex), p, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToDevice));
-  gpuErrchk(cudaMemcpy2D(xi_p, sizeof(float), xi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
-
-  searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, N);//Search direction
+  searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi, N);//Search direction
   gpuErrchk(cudaDeviceSynchronize());
 
   for(int i=1; i <= it_maximum; i++){
@@ -370,7 +401,10 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
       printf("\n\n********** Iteration %d **********\n\n", i);
     }
 
-    linmin(p_p, xi_p fret, func);
+    gpuErrchk(cudaMemcpy2D(p_old, sizeof(cufftComplex), p, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToDevice));
+    gpuErrchk(cudaMemcpy2D(xi_old, sizeof(float), xi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
+
+    linmin(p, xi, fret, func);
 
     if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPS)) {
       printf("Exit due to tolerance\n");
@@ -378,11 +412,11 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
 			return;
 		}
 
-    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi_p, xi_p, 0, 0, M, N);
+    getDot_LBFGS_ff<<<numBlocksNN, threadsPerBlockNN>>>(norm_vector, xi, xi, 0, 0, M, N);
     gpuErrchk(cudaDeviceSynchronize());
     norm = deviceReduce<float>(norm_vector, M*N);
 
-    if(norm == 0.0){
+    if(norm <= ftol){
       printf("Exit due to norm = 0\n");
       FREEALL_LBFGS
       return;
@@ -394,15 +428,10 @@ __host__ void LBFGS(cufftComplex *p, float ftol, float *fret, float (*func)(cuff
     }
     (*dfunc)(p,xi);
 
-    calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_s, d_y, p, xi, p_p, xi_p, i-1, M, N);
+    calculateSandY<<<numBlocksNN, threadsPerBlockNN>>>(d_s, d_y, p, xi, p_old, xi_old, (iter-1)%K, M, N);
     gpuErrchk(cudaDeviceSynchronize());
 
-    gpuErrchk(cudaMemcpy2D(p_p, sizeof(cufftComplex), p, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToDevice));
-    gpuErrchk(cudaMemcpy2D(xi_p, sizeof(float), xi, sizeof(float), sizeof(float), M*N, cudaMemcpyDeviceToDevice));
-
-    LBFGS_recursion(d_y, d_s, xi_p, std::min(K,i), M, N);
-    searchDirection_LBFGS<<<numBlocksNN, threadsPerBlockNN>>>(xi_p, N);//Search direction
-    gpuErrchk(cudaDeviceSynchronize());
+    LBFGS_recursion(d_y, d_s, xi, std::min(K,iter), (iter-1)%K, M, N);
 
     end = omp_get_wtime();
     double wall_time = end-start;
