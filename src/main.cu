@@ -93,16 +93,16 @@ __host__ int main(int argc, char **argv) {
         Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
         chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
         e->configure(0, 0, 0);
-        //l->configure(1, 0, 0);
+        l->configure(1, 0, 0);
         //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
         of->addFi(chi2);
         of->addFi(e);
-        //of->addFi(l);
+        of->addFi(l);
         //sy->getImage()->getFunctionMapping()[i].evaluateXt = particularEvaluateXt;
         //sy->getImage()->getFunctionMapping()[i].newP = particularNewP;
         //if the nopositivity flag will be run for all images with no posivity,
         //otherwise the first image image will be calculated with postivity and all the others without positivity,
-        //to modify this, use these sentences, where i corresponds to the index of the image ( particular means positivity)
+        //to modify this, use these sentences, where i corresponds to the index of the image ( particularly, means positivity)
         sy->run();
         sy->unSetDevice(); // This routine performs memory cleanup and release
 
