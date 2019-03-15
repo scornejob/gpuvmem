@@ -69,13 +69,13 @@ __host__ int main(int argc, char **argv) {
         enum {MFS}; // Synthesizer
         enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation}; // Fi
         enum {Gridding}; // Filter
-        enum {ConjugateGradient}; // Optimizator
+        enum {ConjugateGradient, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
         enum {MS}; // Io
         enum {SecondDerivative}; // Error calculation
 
         Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(MFS);
-        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(ConjugateGradient);
+        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(LBFGS);
         ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
         Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
         sy->setIoHandler(ioms);
@@ -93,13 +93,16 @@ __host__ int main(int argc, char **argv) {
         Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
         chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
         e->configure(0, 0, 0);
-        //l->configure(1, 0, 0);
+        l->configure(1, 0, 0);
         //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
         of->addFi(chi2);
         of->addFi(e);
-        //of->addFi(l);
-        sy->getImage()->getFunctionMapping()[0].newP = particularNewP;
-        sy->getImage()->getFunctionMapping()[0].evaluateXt = particularEvaluateXt;
+        of->addFi(l);
+        //sy->getImage()->getFunctionMapping()[i].evaluateXt = particularEvaluateXt;
+        //sy->getImage()->getFunctionMapping()[i].newP = particularNewP;
+        //if the nopositivity flag will be run for all images with no posivity,
+        //otherwise the first image image will be calculated with postivity and all the others without positivity,
+        //to modify this, use these sentences, where i corresponds to the index of the image ( particularly, means positivity)
         sy->run();
         sy->unSetDevice(); // This routine performs memory cleanup and release
 

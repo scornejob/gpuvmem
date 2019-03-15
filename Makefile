@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o
+main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -134,6 +134,10 @@ build/frprmn.o: src/frprmn.cu
 	@ echo "Building frprmn"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
+build/lbfgs.o: src/lbfgs.cu
+	@ echo "Building lbfgs"
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/lbfgs.cu -o build/lbfgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
+
 cfits:
 	@ mkdir -p lib
 	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
@@ -143,6 +147,7 @@ cleanall:
 	@ rm -rf build/*
 	@ rm -rf bin/*
 	@ rm -f lib/*.a
+	@ rm -r *.fits
 	@ cd cfitsio; make clean
 	@ cd cfitsio; make distclean
 
@@ -156,7 +161,7 @@ conf:
 	@ ./configure
 
 co65:
-	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.5 -t 500000000 --verbose --print-images --print-errors
+	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.05 -t 500000000 --verbose --print-images --print-errors
 selfcalband9:
 	@ cuda-memcheck ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 8 -Y 8 -V 256 --verbose -z 0.001 -Z 0.05,0.5 -t 500000000 --print-images
 freq78:

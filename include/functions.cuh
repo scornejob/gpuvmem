@@ -107,5 +107,12 @@ __global__ void newPNoPositivity(float *p, float *xi, float xmin, long N, long M
 __global__ void evaluateXtNoPositivity(float *xt, float *pcom, float *xicom, float x, long N, long M, int image);
 __global__ void chainRule2I(float *chain, float *noise, float *I, float nu, float nu_0, float noise_cut, float fg_scale, long N, long M);
 __global__ void DChi2_2I(float *noise, float *chain, float *dchi2, float *dchi2_total, float threshold, int image, long N, long M);
+__global__ void calculateSandY (float *d_y, float *d_s, float *p, float *xi, float *p_old, float *xi_old, int iter, int M, int N, int image);
+__global__ void getR (float *d_r, float *d_q, float scalar, int M, int N, int image);
+__global__ void updateQ (float *d_q, float alpha, float *d_y, int k, int M, int N, int image);
+__global__ void getDot_LBFGS_ff(float *aux_vector, float *vec_1, float *vec_2, int k, int h, int M, int N, int image);
+__global__ void searchDirection_LBFGS(float *xi, long N, long M, int image);
+
+
 
 #endif
