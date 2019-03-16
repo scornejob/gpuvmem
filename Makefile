@@ -98,10 +98,10 @@ conf:
 	@ ./configure
 
 co65:
-	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -g 2 --verbose --print-images
+	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 --verbose --print-images
 selfcalband9:
-	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 -g 2 --verbose --print-images
+	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 --verbose --print-images
 freq78:
-	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose -g 2 --print-images
+	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images
 antennae:
-	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 -g 2 --verbose --print-images
+	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images

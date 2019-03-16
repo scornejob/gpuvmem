@@ -98,11 +98,11 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields)
     for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++){
       fields[f].numVisibilitiesPerFreqPerStoke[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
       fields[f].numVisibilitiesPerFreq[i] = 0;
-      for(int s = 0; i < freqsAndVisibilities.nstokes; s++)
+      for(int s = 0; s < freqsAndVisibilities.nstokes; s++)
         fields[f].numVisibilitiesPerFreqPerStoke[i][s] = 0;
     }
   }
-
+  
   casa::Vector<float> weights;
   casa::Matrix<casa::Bool> flagCol;
 
