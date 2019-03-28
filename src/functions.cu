@@ -32,7 +32,7 @@
 
 extern long M, N, numVisibilities;
 extern int iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, \
-           status_mod_in, verbose_flag, apply_noise, adaptive, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint, use_mask;
+           status_mod_in, verbose_flag, apply_noise, adaptive, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, print_images, checkpoint, use_mask, spec_idx;
 
 extern cufftHandle plan1GPU;
 extern cufftComplex *device_V, *device_Inu;
@@ -920,6 +920,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                 {"print-images", 0, &print_images, 1},
                 {"adaptive", 0, &adaptive, 1},
                 {"use-mask", 0, &use_mask, 1},
+                {"spec_idx", 0, &spec_idx, 1},
                 /* These options don’t set a flag. */
                 {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                 {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
@@ -1979,7 +1980,7 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         return aux_noise;
 }
 
-__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, int2 pix, int N)
+__global__ void changeGibbsSpecIdx(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, int2 pix, int N)
 {
         float2 nrandom;
         int idx = N*pix.x + pix.y;
@@ -1989,6 +1990,17 @@ __global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0
 
         temp[idx].x += nrandom.x;
         temp[idx].y += nrandom.y;
+
+}
+
+__global__ void changeGibbs(float2 *temp, float2 *theta, curandState_t* states_0, curandState_t* states_1, int2 pix, int N)
+{
+        float2 nrandom;
+        int idx = N*pix.x + pix.y;
+
+        nrandom.x = curand_normal(&states_0[idx]) * theta[idx].x;
+
+        temp[idx].x += nrandom.x;
 
 }
 
@@ -2452,8 +2464,13 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                                 changeGibbsMask<<<1, 1>>>(temp, theta, device_mask, states_0, states_1, noise_jypix, 10.0, pixels[j], N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
-                                changeGibbs<<<1, 1>>>(temp, theta, states_0, states_1, pixels[j], N);
-                                gpuErrchk(cudaDeviceSynchronize());
+                                if(spec_idx){
+                                  changeGibbsSpecIdx<<<1, 1>>>(temp, theta, states_0, states_1, pixels[j], N);
+                                  gpuErrchk(cudaDeviceSynchronize());
+                                }else{
+                                  changeGibbs<<<1, 1>>>(temp, theta, states_0, states_1, pixels[j], N);
+                                  gpuErrchk(cudaDeviceSynchronize());
+                                }
                         }
 
 
