@@ -41,7 +41,7 @@ cd gpuvmem
 make
 ```
 
-If you are using the last version of casacore
+If you are using the version 5.4.0 of casacore
  ```
 cd gpuvmem
 ./configure
