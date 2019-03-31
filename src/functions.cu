@@ -830,6 +830,7 @@ __host__ void print_help() {
         printf("        --clipping         Clips the image to positive values\n");
         printf("        --print-images     Prints images per iteration\n");
         printf("        --checkpoint       Start from a certain iteration\n");
+        printf("        --spec_idx         Calculate spectral index image\n");
         printf("        --adaptive         MCMC Noise for each pixel is estimated using the variance of the samples\n");
         printf("        --use-mask         MCMC Noise depends of the signal of the object, more noise will be injected where is no signal\n");
         printf("        --verbose          Shows information through all the execution\n");

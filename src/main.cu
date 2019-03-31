@@ -543,7 +543,7 @@ __host__ int main(int argc, char **argv) {
         char *alpha_total2;
 
 
-
+        printf("cae acá\n")
         if(checkpoint) {
                 host_total = (double2*)malloc(M*N*sizeof(double2));
                 host_total2 = (double2*)malloc(M*N*sizeof(double2));
