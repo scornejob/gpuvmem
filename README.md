@@ -29,7 +29,7 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 1. Download or clone gpuvmem.
 
 2. To compile GPUVMEM you will need:
-- cfitsio - Usually the package is called `libcfitsio-dev`, we also recommend to install `libcfitsio3-dev`
+- cfitsio - Usually the package is called `libcfitsio-dev`.
 - casacore <= 5.4.0 (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using version 5.4.0 of casacore, please compile using the flag NEWCASA=1.
 - CUDA >= 9
 - OpenMP
