@@ -4,7 +4,7 @@
 CUFFTFLAG = -lcufft
 CFLAGS = -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
 INC_DIRS = -Iinclude -I/usr/local/include/casacore/
-CFFLAG = -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
+CFFLAG = -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
 LDFLAGS = -lcuda -lcudart
 FOPENFLAG = -Xcompiler -fopenmp -lgomp
 CCFLAG = -lstdc++
@@ -30,7 +30,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpumfs $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -81,21 +81,10 @@ build/frprmn.o: src/frprmn.cu
 	@ echo "Building frprmn"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
-cfits:
-	@ mkdir -p lib
-	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
-
 clean:
 	@ echo "Cleaning folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
-	@ rm -f lib/*.a
-	@ cd cfitsio; make clean
-	@ cd cfitsio; make distclean
-
-conf:
-	@ echo "Doing configure..."
-	@ ./configure
 
 co65:
 	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -l 0.01 -P 2 --verbose --print-images
