@@ -37,14 +37,12 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 # Compiling
 ```
 cd gpuvmem
-./configure
 make
 ```
 
 If you are using the version 5.4.0 of casacore
  ```
 cd gpuvmem
-./configure
 make NEWCASA=1
 ```
 
