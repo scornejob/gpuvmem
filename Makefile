@@ -1,8 +1,8 @@
 
 CUFFTFLAG += -lcufft
 CFLAGS += -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
-INC_DIRS += -Iinclude -I/usr/local/include/casacore/
-CFFLAG += -Llib -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
+INC_DIRS += -Iinclude -I/usr/local/include/casacore/ -I/usr/include/
+CFFLAG += -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
 LDFLAGS += -lcuda -lcudart
 FOPENFLAG += -Xcompiler -fopenmp -lgomp
 CCFLAG += -lstdc++
@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o cfits build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -138,27 +138,16 @@ build/lbfgs.o: src/lbfgs.cu
 	@ echo "Building lbfgs"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/lbfgs.cu -o build/lbfgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
-cfits:
-	@ mkdir -p lib
-	@ cd cfitsio; make; cp libcfitsio.a ../lib/.
-
 cleanall:
 	@ echo "Cleaning all folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
-	@ rm -f lib/*.a
 	@ rm -r *.fits
-	@ cd cfitsio; make clean
-	@ cd cfitsio; make distclean
 
 clean:
 	@ echo "Cleaning gpuvmem folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
-
-conf:
-	@ echo "Doing configure..."
-	@ ./configure
 
 co65:
 	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.05 -t 500000000 --verbose --print-images --print-errors
