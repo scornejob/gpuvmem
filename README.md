@@ -4,7 +4,7 @@
 
 To compile GPUVMEM you need:
 
-- libcfitsio-dev and libcfitsio3-dev
+- libcfitsio-dev
 - casacore (https://github.com/casacore/casacore)
 - CUDA
 - OpenMP
