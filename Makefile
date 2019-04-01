@@ -3,7 +3,7 @@
 
 CUFFTFLAG += -lcufft
 CFLAGS += -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
-INC_DIRS += -Iinclude -I/usr/local/include/casacore/
+INC_DIRS += -Iinclude -I/usr/local/include/casacore/ -I/usr/include/
 CFFLAG += -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
 LDFLAGS += -lcuda -lcudart
 FOPENFLAG += -Xcompiler -fopenmp -lgomp
@@ -66,11 +66,6 @@ clean:
 	@ echo "Cleaning folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
-
-conf:
-	@ clear
-	@ echo "Doing configure..."
-	@ ./configure
 
 co65:
 	@ clear

@@ -4,6 +4,7 @@
 
 To compile GPUVMEM you need:
 
+- libcfitsio-dev and libcfitsio3-dev
 - casacore (https://github.com/casacore/casacore)
 - CUDA
 - OpenMP
@@ -11,7 +12,6 @@ To compile GPUVMEM you need:
 # Compiling
 ```
 cd gpuvmem
-./configure
 make
 ```
 # Usage
