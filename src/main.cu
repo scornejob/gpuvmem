@@ -806,7 +806,7 @@ __host__ int main(int argc, char **argv) {
 
         float2 theta_init;
         //theta_init.x = MINPIX * fg_scale + fg_scale;
-        float analytical_noise_jypix = analytical_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
+        float analytical_noise_jypix = noise_jypix * sqrtf(PI * (1.0/3.0) * beam_bmaj * (1.0/3.0) * beam_bmin / (4 * log(2) ));
         theta_init.x = analytical_noise_jypix;
         float peak_I_nu_0 = *std::max_element(input_Inu_0,input_Inu_0+(M*N));
         float peak_alpha = *std::max_element(input_alpha,input_alpha+(M*N));
