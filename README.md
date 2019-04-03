@@ -51,9 +51,10 @@ sudo make install
 
 #Now we can use Singularity to shell into the container
 mkdir container # Make a directory in your workspace
-singularity shell shub://miguelcarcamov/container_docker:casacore.gpuvmem
+singularity shell --nv shub://miguelcarcamov/container_docker:casacore.gpuvmem.9.2 #Use this command for CUDA 9.2
+# singularity shell --nv shub://miguelcarcamov/container_docker:casacore.gpuvmem.10.0 #Use this command for CUDA 10.0
 ```
-The gpuvmem binary should be in `/gpuvmem/bin`
+The gpuvmem binary should be in `/gpuvmem/bin`.
 
 # Compiling
 ```
