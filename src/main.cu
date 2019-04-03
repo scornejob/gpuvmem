@@ -808,8 +808,6 @@ __host__ int main(int argc, char **argv) {
         //theta_init.x = MINPIX * fg_scale + fg_scale;
         float analytical_noise_jypix = analytical_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
         float gpuvmem_factor = sqrtf(PI * (1.0/3.0) * beam_bmaj * (1.0/3.0) * beam_bmin / (4 * log(2) ));
-        printf("Factor gpuvmem: %f\n", gpuvmem_factor);
-        exit(-1);
         float analytical_noise_gpuvmem = analytical_noise_jypix * gpuvmem_factor;
         theta_init.x = analytical_noise_gpuvmem;
         float peak_I_nu_0 = *std::max_element(input_Inu_0,input_Inu_0+(M*N));
@@ -845,7 +843,7 @@ __host__ int main(int argc, char **argv) {
         for(int i=0; i<M; i++) {
                 for(int j=0; j<N; j++) {
                         theta_host[N*i+j].x = theta_init.x;
-                        if(input_Inu_0[N*y+x]>= 5*analytical_noise_gpuvmem)
+                        if(input_Inu_0[N*y+x]>= 5*analytical_noise_jypix)
                           theta_host[N*i+j].y = sqrt(2) * (analytical_noise_gpuvmem/input_Inu_0[N*y+x]) / logf(nu_2/nu_1);
                         else
                           theta_host[N*i+j].y = sqrt(2) * (analytical_noise_gpuvmem/peak_I_nu_0) / logf(nu_2/nu_1);
