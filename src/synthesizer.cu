@@ -105,20 +105,30 @@ void MFS::configure(int argc, char **argv)
         if(print_images)
                 if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
+        cudaDeviceProp dprop[num_gpus];
         if(verbose_flag) {
                 printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
                 printf("Number of CUDA devices:\t%d\n", num_gpus);
 
 
                 for(int i = 0; i < num_gpus; i++) {
-                        cudaDeviceProp dprop;
-                        cudaGetDeviceProperties(&dprop, i);
+                        cudaGetDeviceProperties(&dprop[i], i);
 
-                        printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop.name, (IsGPUCapableP2P(&dprop) ? "IS " : "NOT"));
+                        printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop[i].name, (IsGPUCapableP2P(&dprop[i]) ? "IS " : "NOT"));
 
                         //printf("   %d: %s\n", i, dprop.name);
                 }
                 printf("---------------------------\n");
+        }
+
+        if(variables.blockSizeX*variables.blockSizeY >= dprop[0].maxThreadsPerBlock || variables.blockSizeV >= dprop[0].maxThreadsPerBlock){
+            printf("ERROR. The maximum threads per block cannot be greater than %d\n", dprop[0].maxThreadsPerBlock);
+            exit(-1);
+        }
+
+        if(variables.blockSizeX >= dprop[0].maxThreadsDim[0] || variables.blockSizeY >= dprop[0].maxThreadsDim[1] || variables.blockSizeV >= dprop[0].maxThreadsDim[0]){
+          printf("ERROR. The size of the blocksize cannot exceed X: %d Y: %d Z: %d\n", dprop[0].maxThreadsDim[0], dprop[0].maxThreadsDim[1], dprop[0].maxThreadsDim[2]);
+          exit(-1);
         }
 
         if(selected > num_gpus || selected < 0) {
