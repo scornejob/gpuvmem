@@ -156,7 +156,7 @@ __host__ void init_beam(int telescope)
         case 6:
                 antenna_diameter = 0.9; /* CBI Antenna Diameter */
                 pb_factor = 1.22; /* FWHM Factor */
-                pb_cutoff = 20.0*RPARCM; /* radians */
+                pb_cutoff = 80.0*RPARCM; /* radians */
                 break;
         default:
                 printf("Telescope type not defined\n");
