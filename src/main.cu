@@ -69,13 +69,13 @@ __host__ int main(int argc, char **argv) {
         enum {MFS}; // Synthesizer
         enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation}; // Fi
         enum {Gridding}; // Filter
-        enum {ConjugateGradient, LBFGS}; // Optimizator
+        enum {CG, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
         enum {MS}; // Io
         enum {SecondDerivative}; // Error calculation
 
         Synthesizer * sy = Singleton<SynthesizerFactory>::Instance().CreateSynthesizer(MFS);
-        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(LBFGS);
+        Optimizator * cg = Singleton<OptimizatorFactory>::Instance().CreateOptimizator(CG);
         ObjectiveFunction *of = Singleton<ObjectiveFunctionFactory>::Instance().CreateObjectiveFunction(DefaultObjectiveFunction);
         Io *ioms = Singleton<IoFactory>::Instance().CreateIo(MS); // This is the default Io Class
         sy->setIoHandler(ioms);
