@@ -151,4 +151,6 @@ selfcalband9:
 freq78:
 	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images -z 0.001 -Z 0.1,0.5 -t 500000000
 antennae:
-	@ ./bin/gpuvmem s 1 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 0.01,0.5 -t 500000000
+	@ ./bin/gpuvmem -s 0 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 0.01,0.5 -t 500000000
+m87:
+		@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/antennae/m87residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/mod_in_0.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 1e-5,6e-4 -t 500000000
