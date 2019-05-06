@@ -1440,9 +1440,14 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
         }
 
 }
-__device__ float calculateS(float c, float G, float eta, float noise, float noise_cut)
+__device__ float calculateS(float *I, float G, float eta, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+  float c = I[N*M*index+N*i+j];
+
   float S = 0.0f;
+
   if(noise <= noise_cut) {
     S = c * logf((c/G) + (eta + 1.0));
   }
@@ -1455,21 +1460,34 @@ __global__ void SVector(float *S, float *noise, float *I, long N, long M, float 
         int i = threadIdx.y + blockDim.y * blockIdx.y;
         float center = I[N*M*index+N*i+j];
 
-        S[N*i+j] = calculateS(center, MINPIX, eta, noise[N*i+j], noise_cut);
+        S[N*i+j] = calculateS(I, MINPIX, eta, noise[N*i+j], noise_cut, index, M, N);
 }
 
-__device__ float calculateQP(float l, float r, float c, float u, float d, float noise, float noise_cut)
+__device__ float calculateQP(float *I, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+  float c, l, r, d, u;
 
   float qp = 0.0f;
 
+  c = I[N*M*index+N*i+j];
   if(noise <= noise_cut) {
+    if((i>0 && i<N-1) && (j>0 && j<N-1))
+    {
+      l = I[N*M*index+N*i+(j-1)];
+      r = I[N*M*index+N*i+(j+1)];
+      d = I[N*M*index+N*(i+1)+j];
+      u = I[N*M*index+N*(i-1)+j];
 
-    qp = (c - l) * (c - l) +
-         (c - r) * (c - r) +
-         (c - u) * (c - u) +
-         (c - d) * (c - d);
-         qp /= 2.0;
+      qp = (c - l) * (c - l) +
+           (c - r) * (c - r) +
+           (c - u) * (c - u) +
+           (c - d) * (c - d);
+           qp /= 2.0;
+    }else{
+      qp = c;
+    }
   }
 
   return qp;
@@ -1478,30 +1496,31 @@ __global__ void QPVector(float *Q, float *noise, float *I, long N, long M, float
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
-        float center, left, right, down, up;
-        center = I[N*M*index+N*i+j];
 
-        if((i>0 && i<N-1) && (j>0 && j<N-1))
-        {
-          left = I[N*M*index+N*i+(j-1)];
-          right = I[N*M*index+N*i+(j+1)];
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-
-          Q[N*i+j] = calculateQP(left, right, center, up, down, noise[N*i+j], noise_cut);
-        }else
-          Q[N*i+j] = center;
+        Q[N*i+j] = calculateQP(I, noise[N*i+j], noise_cut, index, M, N);
 }
 
-__device__ float calculateTV(float c, float r, float d, float noise, float noise_cut)
+__device__ float calculateTV(float *I, float noise, float noise_cut, int index, int M, int N)
 {
 
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
+  float c, r, d;
   float tv = 0.0f;
+
+  c = I[N*M*index+N*i+j];
   if(noise <= noise_cut) {
-    float dx = c - r;
-    float dy = c - d;
-    tv = sqrtf((dx * dx) + (dy * dy));
+    if(i < N-1 && j < N-1) {
+      r = I[N*M*index+N*i+(j+1)];
+      d = I[N*M*index+N*(i+1)+j];
+
+      float dx = c - r;
+      float dy = c - d;
+      tv = sqrtf((dx * dx) + (dy * dy));
+    }else{
+      tv = c;
+    }
   }
 
   return tv;
@@ -1512,51 +1531,44 @@ __global__ void TVVector(float *TV, float *noise, float *I, long N, long M, floa
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float center, left, right, down, up;
-
-        center = I[N*M*index+N*i+j];
-        if(i < N-1 && j < N-1) {
-          left = I[N*M*index+N*i+(j-1)];
-          right = I[N*M*index+N*i+(j+1)];
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-
-          TV[N*i+j] = calculateTV(center, right, down, noise[N*i+j], noise_cut);
-        }else
-          TV[N*i+j] = center;
+        TV[N*i+j] = calculateTV(I, noise[N*i+j], noise_cut, index, M, N);
 
 }
-__device__ float calculateL(float l, float r, float c, float u, float d, float noise, float noise_cut)
+__device__ float calculateL(float *I, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
   float Dx, Dy;
   float L = 0.0f;
+  float c, l, r, d, u;
+
+  c = I[N*M*index+N*i+j];
   if(noise <= noise_cut)
   {
-    Dx = l - 2 * c + r;
-    Dy = u - 2 * c + d;
-    L = 0.5 * (Dx + Dy) * (Dx + Dy);
+    if((i>0 && i<N-1) && (j>0 && j<N-1)){
+      l = I[N*M*index+N*i+(j-1)];
+      r = I[N*M*index+N*i+(j+1)];
+      d = I[N*M*index+N*(i+1)+j];
+      u = I[N*M*index+N*(i-1)+j];
+
+      Dx = l - 2 * c + r;
+      Dy = u - 2 * c + d;
+      L = 0.5 * (Dx + Dy) * (Dx + Dy);
+    }else{
+      L = c;
+    }
   }
+
   return L;
 }
 
 __global__ void LVector(float *L, float *noise, float *I, long N, long M, float noise_cut, int index)
 {
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-        float center, left, right, down, up;
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        center = I[N*M*index+N*i+j];
-        if((i>0 && i<N-1) && (j>0 && j<N-1)) {
-          left = I[N*M*index+N*i+(j-1)];
-          right = I[N*M*index+N*i+(j+1)];
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-
-          L[N*i+j] = calculateL(left, right, center, up, down, noise[N*i+j], noise_cut);
-        }else{
-          L[N*i+j] = center;
-        }
+  L[N*i+j] = calculateL(I, noise[N*i+j], noise_cut, index, M, N);
 }
 
 __global__ void searchDirection(float *g, float *xi, float *h, long N)
@@ -1650,39 +1662,51 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 }
 
-__device__ float calculateDS(float c, float G, float eta, float lambda, float noise, float noise_cut)
+__device__ float calculateDS(float *I, float G, float eta, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
   float dS = 0.0f;
 
+  float c = I[N*M*index+N*i+j];
   if(noise <= noise_cut){
-    if(c != 0.0f)
-      dS = (logf((c / G) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*G) / c)));
-    else
-      dS = logf((c / G));
-
+      dS = logf((c / G) + (eta+1.0)) + 1.0/(1.0 + (((eta+1.0)*G) / c));
   }
 
   dS *= lambda;
   return dS;
 }
-__global__ void DS(float *dS, float *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N, long M, int image)
+__global__ void DS(float *dS, float *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N, long M, int index)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float center;
-        center = I[N*M*image+N*i+j];
-
-        dS[N*i+j]  = calculateDS(center, MINPIX, eta, lambda, noise[N*i+j], noise_cut);
+        dS[N*i+j]  = calculateDS(I, MINPIX, eta, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
 
-__device__ float calculateDQ(float l, float r, float c, float u, float d, float lambda, float noise, float noise_cut)
+__device__ float calculateDQ(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
   float dQ = 0.0f;
+  float c, d, u, r, l;
+
+  c = I[N*M*index+N*i+j];
 
   if(noise <= noise_cut)
   {
-    dQ = 2 * (4 * c - d + u + r + l);
+    if((i>0 && i<N-1) && (j>0 && j<N-1)) {
+      d = I[N*M*index+N*(i+1)+j];
+      u = I[N*M*index+N*(i-1)+j];
+      r = I[N*M*index+N*i+(j+1)];
+      l = I[N*M*index+N*i+(j-1)];
+
+      dQ = 2 * (4 * c - d + u + r + l);
+    }else{
+      dQ = c;
+    }
   }
 
   dQ *= lambda;
@@ -1695,37 +1719,32 @@ __global__ void DQ(float *dQ, float *I, float *noise, float noise_cut, float lam
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float center, down, up, right, left, dl_corner, dr_corner, lu_corner, ru_corner, down2, up2, left2, right2;
-        center = I[N*M*index+N*i+j];
 
-        if((i>0 && i<N-1) && (j>0 && j<N-1)) {
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-          right = I[N*M*index+N*i+(j+1)];
-          left = I[N*M*index+N*i+(j-1)];
-          dl_corner = I[N*M*index+N*(i+1)+(j-1)];
-          dr_corner = I[N*M*index+N*(i+1)+(j+1)];
-          lu_corner = I[N*M*index+N*(i-1)+(j-1)];
-          ru_corner = I[N*M*index+N*(i-1)+(j+1)];
-          down2 = I[N*M*index+N*(i+2)+j];
-          up2 = I[N*M*index+N*(i-2)+j];
-          left2 = I[N*M*index+N*i+(j-2)];
-          right2 = I[N*M*index+N*i+(j+2)];
+        dQ[N*i+j] = calculateDQ(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 
-          dQ[N*i+j] = calculateDQ(left, right, center, up, down, lambda, noise[N*i+j], noise_cut);
-        }else{
-          dQ[N*i+j] = lambda * center;
-        }
 }
 
-__device__ float calculateDTV(float l, float r, float c, float u, float d, float ru_corner, float dl_corner, float lambda, float noise, float noise_cut)
+__device__ float calculateDTV(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
+
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+  float c, d, u, r, l, dl_corner, ru_corner;
 
   float num0, num1, num2;
   float den0, den1, den2;
   float dtv = 0.0f;
 
+  c = I[N*M*index+N*i+j];
   if(noise <= noise_cut) {
+    if((i>0 && i<N-1) && (j>0 && j<N-1)) {
+                  d = I[N*M*index+N*(i+1)+j];
+                  u = I[N*M*index+N*(i-1)+j];
+                  r = I[N*M*index+N*i+(j+1)];
+                  l = I[N*M*index+N*i+(j-1)];
+                  dl_corner = I[N*M*index+N*(i+1)+(j-1)];
+                  ru_corner = I[N*M*index+N*(i-1)+(j+1)];
+
                   num0 = 2 * c - r - d;
                   num1 = c - l;
                   num2 = c - u;
@@ -1743,6 +1762,9 @@ __device__ float calculateDTV(float l, float r, float c, float u, float d, float
                   }else{
                           dtv = num0/sqrtf(den0) + num1/sqrtf(den1) + num2/sqrtf(den2);
                   }
+      }else{
+        dtv = c;
+      }
   }
 
   dtv *= lambda;
@@ -1754,39 +1776,45 @@ __global__ void DTV(float *dTV, float *I, float *noise, float noise_cut, float l
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
-        float center, down, up, right, left, dl_corner, dr_corner, lu_corner, ru_corner, down2, up2, left2, right2;
+        float center, down, up, right, left, dl_corner, ru_corner;
 
-        center = I[N*M*index+N*i+j];
-        if((i>0 && i<N-1) && (j>0 && j<N-1)) {
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-          right = I[N*M*index+N*i+(j+1)];
-          left = I[N*M*index+N*i+(j-1)];
-          dl_corner = I[N*M*index+N*(i+1)+(j-1)];
-          dr_corner = I[N*M*index+N*(i+1)+(j+1)];
-          lu_corner = I[N*M*index+N*(i-1)+(j-1)];
-          ru_corner = I[N*M*index+N*(i-1)+(j+1)];
-          down2 = I[N*M*index+N*(i+2)+j];
-          up2 = I[N*M*index+N*(i-2)+j];
-          left2 = I[N*M*index+N*i+(j-2)];
-          right2 = I[N*M*index+N*i+(j+2)];
 
-          dTV[N*i+j] = calculateDTV(left, right, center, up, down, ru_corner, dl_corner, lambda, noise[N*i+j], noise_cut);
-        }else
-          dTV[N*i+j] = lambda * center;
-
+        dTV[N*i+j] = calculateDTV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
-__device__ float calculateDL(float l, float r, float c, float u, float d, float l2, float r2, float u2, float d2, float dl_corner, float dr_corner, float lu_corner, float ru_corner, float lambda, float noise, float noise_cut)
+__device__ float calculateDL(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float c, d, u, r, l, dl_corner, dr_corner, lu_corner, ru_corner, d2, u2, l2, r2;
 
   float dL = 0.0f;
 
+  c = I[N*M*index+N*i+j];
+
   if(noise <= noise_cut)
   {
-            dL = 20 * c -
-                 8 * (d - r - u - l) +
-                 2 * (dl_corner + dr_corner + lu_corner + ru_corner) +
-                 d2 + r2 + u2 + l2;
+    if((i>1 && i<N-2) && (j>1 && j<N-2)) {
+      d = I[N*M*index+N*(i+1)+j];
+      u = I[N*M*index+N*(i-1)+j];
+      r = I[N*M*index+N*i+(j+1)];
+      l = I[N*M*index+N*i+(j-1)];
+      dl_corner = I[N*M*index+N*(i+1)+(j-1)];
+      dr_corner = I[N*M*index+N*(i+1)+(j+1)];
+      lu_corner = I[N*M*index+N*(i-1)+(j-1)];
+      ru_corner = I[N*M*index+N*(i-1)+(j+1)];
+      d2 = I[N*M*index+N*(i+2)+j];
+      u2 = I[N*M*index+N*(i-2)+j];
+      l2 = I[N*M*index+N*i+(j-2)];
+      r2 = I[N*M*index+N*i+(j+2)];
+
+      dL = 20 * c -
+           8 * (d - r - u - l) +
+           2 * (dl_corner + dr_corner + lu_corner + ru_corner) +
+           d2 + r2 + u2 + l2;
+      }else
+        dL = 0.0f;
+
   }
 
   dL *= lambda;
@@ -1799,28 +1827,7 @@ __global__ void DL(float *dL, float *I, float *noise, float noise_cut, float lam
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float center, down, up, right, left, dl_corner, dr_corner, lu_corner, ru_corner, down2, up2, left2, right2;
-        center = I[N*M*index+N*i+j];
-
-        if((i>1 && i<N-2) && (j>1 && j<N-2)) {
-          down = I[N*M*index+N*(i+1)+j];
-          up = I[N*M*index+N*(i-1)+j];
-          right = I[N*M*index+N*i+(j+1)];
-          left = I[N*M*index+N*i+(j-1)];
-          dl_corner = I[N*M*index+N*(i+1)+(j-1)];
-          dr_corner = I[N*M*index+N*(i+1)+(j+1)];
-          lu_corner = I[N*M*index+N*(i-1)+(j-1)];
-          ru_corner = I[N*M*index+N*(i-1)+(j+1)];
-          down2 = I[N*M*index+N*(i+2)+j];
-          up2 = I[N*M*index+N*(i-2)+j];
-          left2 = I[N*M*index+N*i+(j-2)];
-          right2 = I[N*M*index+N*i+(j+2)];
-
-          dL[N*i+j] = calculateDL(left, right, center, up, down, left2, right2, up2, down2, dl_corner, dr_corner, lu_corner, ru_corner, lambda, noise[N*i+j], noise_cut);
-       }else{
-         dL[N*i+j] = 0.0f;
-       }
-
+        dL[N*i+j] = calculateDL(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
 
 
