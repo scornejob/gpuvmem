@@ -251,7 +251,6 @@ __host__ void print_help() {
         printf("    -Z  --penalizators     penalizators for Fi\n");
         printf("    -c  --copyright        Shows copyright conditions\n");
         printf("    -w  --warranty         Shows no warranty details\n");
-        printf("        --xcorr            Run gpuvmem with cross-correlation\n");
         printf("        --nopositivity     Run gpuvmem using chi2 with no posititivy restriction\n");
         printf("        --apply-noise      Apply random gaussian noise to visibilities\n");
         printf("        --clipping         Clips the image to positive values\n");
