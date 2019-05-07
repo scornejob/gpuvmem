@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/squaredtotalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -53,6 +53,11 @@ build/entropy.o: src/entropy.cu
 	@ echo "Building entropy"
 	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/entropy.cu -o build/entropy.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
+
+build/squaredtotalvariation.o: src/squaredtotalvariation.cu
+	@ echo "Building squared total variation"
+	@ mkdir -p build
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/squaredtotalvariation.cu -o build/squaredtotalvariation.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/quadraticpenalization.o: src/quadraticpenalization.cu
 	@ echo "Building quadratic penalization"

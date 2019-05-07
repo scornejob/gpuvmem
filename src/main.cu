@@ -67,7 +67,7 @@ __host__ int main(int argc, char **argv) {
 
 //// AVAILABLE CLASSES
         enum {MFS}; // Synthesizer
-        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation}; // Fi
+        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, SquaredTotalVariation}; // Fi
         enum {Gridding}; // Filter
         enum {CG, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
@@ -90,14 +90,17 @@ __host__ int main(int argc, char **argv) {
         sy->setDevice(); // This routine sends the data to GPU memory
         Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
         Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
-        Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
+        //Fi *stv = Singleton<FiFactory>::Instance().CreateFi(SquaredTotalVariation);
+        //Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
         chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
         e->configure(0, 0, 0);
-        l->configure(1, 0, 0);
+        //stv->configure(1, 0, 0);
+        //l->configure(2, 0, 0);
         //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
         of->addFi(chi2);
         of->addFi(e);
-        of->addFi(l);
+        //of->addFi(stv);
+        //of->addFi(l);
         //sy->getImage()->getFunctionMapping()[i].evaluateXt = particularEvaluateXt;
         //sy->getImage()->getFunctionMapping()[i].newP = particularNewP;
         //if the nopositivity flag will be run for all images with no posivity,

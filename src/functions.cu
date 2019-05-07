@@ -1539,6 +1539,42 @@ __global__ void TVVector(float *TV, float *noise, float *I, long N, long M, floa
         TV[N*i+j] = calculateTV(I, noise[N*i+j], noise_cut, index, M, N);
 
 }
+
+__device__ float calculateSTV(float *I, float noise, float noise_cut, int index, int M, int N)
+{
+
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float c, r, d;
+  float tv = 0.0f;
+
+  c = I[N*M*index+N*i+j];
+  if(noise <= noise_cut) {
+    if(i < N-1 && j < N-1) {
+      r = I[N*M*index+N*i+(j+1)];
+      d = I[N*M*index+N*(i+1)+j];
+
+      float dx = c - r;
+      float dy = c - d;
+      tv = dx * dx + dy * dy;
+    }else{
+      tv = c;
+    }
+  }
+
+  return tv;
+}
+
+__global__ void STVVector(float *STV, float *noise, float *I, long N, long M, float noise_cut, int index)
+{
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        STV[N*i+j] = calculateTV(I, noise[N*i+j], noise_cut, index, M, N);
+
+}
+
 __device__ float calculateL(float *I, float noise, float noise_cut, int index, int M, int N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1786,6 +1822,46 @@ __global__ void DTV(float *dTV, float *I, float *noise, float noise_cut, float l
 
         dTV[N*i+j] = calculateDTV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
+
+__device__ float calculateDSTV(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
+{
+
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+  float c, d, u, r, l, dl_corner, ru_corner;
+
+  float dstv = 0.0f;
+
+  c = I[N*M*index+N*i+j];
+  if(noise <= noise_cut) {
+    if((i>0 && i<N-1) && (j>0 && j<N-1)) {
+      d = I[N*M*index+N*(i+1)+j];
+      u = I[N*M*index+N*(i-1)+j];
+      r = I[N*M*index+N*i+(j+1)];
+      l = I[N*M*index+N*i+(j-1)];
+
+      dstv = 8.0f*c - 2.0f*(u + l + d + r);
+    }else{
+      dstv = c;
+    }
+  }
+
+  dstv *= lambda;
+
+  return dstv;
+
+}
+
+__global__ void DSTV(float *dSTV, float *I, float *noise, float noise_cut, float lambda, long N, long M, int index)
+{
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+        float center, down, up, right, left, dl_corner, ru_corner;
+
+
+        dSTV[N*i+j] = calculateDSTV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
+}
+
 __device__ float calculateDL(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2618,6 +2694,39 @@ __host__ void DTVariation(float *I, float *dgi, float penalization_factor, int m
         if(iter > 0 && penalization_factor)
         {
                 DTV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
+                gpuErrchk(cudaDeviceSynchronize());
+        }
+};
+
+__host__ float squaredTotalVariation(float *I, float * ds, float penalization_factor, int mod, int order, int index)
+{
+        if(num_gpus == 1) {
+                cudaSetDevice(selected);
+        }else{
+                cudaSetDevice(firstgpu);
+        }
+
+        float resultS = 0;
+        if(iter > 0 && penalization_factor)
+        {
+                STVVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
+                gpuErrchk(cudaDeviceSynchronize());
+                resultS  = deviceReduce<float>(ds, M*N);
+        }
+        final_S = resultS;
+        return resultS;
+};
+
+__host__ void DSTVariation(float *I, float *dgi, float penalization_factor, int mod, int order, int index)
+{
+        if(num_gpus == 1) {
+                cudaSetDevice(selected);
+        }else{
+                cudaSetDevice(firstgpu);
+        }
+        if(iter > 0 && penalization_factor)
+        {
+                DSTV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
         }
 };
