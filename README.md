@@ -68,6 +68,7 @@ t_telescope        2
 4. VLA
 5. SZA
 6. CBI
+7. EHT
 
 
 # Use GPUVMEM:
