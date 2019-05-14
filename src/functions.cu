@@ -156,7 +156,7 @@ __host__ void init_beam(int telescope)
         case 6:
                 antenna_diameter = 0.9; /* CBI Antenna Diameter */
                 pb_factor = 1.22; /* FWHM Factor */
-                pb_cutoff = 80.0*RPARCM; /* radians */
+                pb_cutoff = 45.0*RPARCM; /* radians */
                 break;
         case 7:
                 antenna_diameter = 1.0726e7; /* EHT Antenna Diameter according to the paper */
@@ -2248,7 +2248,7 @@ __global__ void alpha_Noise(float *noise_I, float *images, float nu, float nu_0,
                         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
                         sum_noise += w[v] * (atten * I_nu * fg_scale + dchi2);
                 }
-                if(sum_noise <= 0)
+                if(sum_noise <= 0.0f)
                         noise_I[N*M+N*i+j]+= 0.0f;
                 else
                         noise_I[N*M+N*i+j] += log_nu * log_nu * atten * I_nu * fg_scale * sum_noise;
