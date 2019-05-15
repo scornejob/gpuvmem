@@ -10,7 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8c2ef9f5-a540-414d-b248-2232580cbc11" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/testing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bin/gpuvmem" beforeDir="false" afterPath="$PROJECT_DIR$/bin/gpuvmem" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/MSFITSIO.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/MSFITSIO.cu" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/functions.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/functions.cu" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -22,12 +24,16 @@
     <option name="formatViaClangd" value="false" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main.cu">
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/functions.cu">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-257">
-              <caret line="43" selection-start-line="43" selection-end-line="43" />
+            <state relative-caret-position="518">
+              <caret line="2367" column="49" lean-forward="true" selection-start-line="2367" selection-start-column="49" selection-end-line="2367" selection-end-column="49" />
+              <folding>
+                <element signature="e#69339#69364#0" expanded="true" />
+                <element signature="e#83817#83856#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -35,75 +41,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/MSFITSIO.cu">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="16245">
-              <caret line="1083" column="12" selection-start-line="1083" selection-start-column="12" selection-end-line="1083" selection-end-column="12" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/functions.cu">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="478">
-              <caret line="1793" column="111" lean-forward="true" selection-start-line="1793" selection-start-column="111" selection-end-line="1793" selection-end-column="111" />
-              <folding>
-                <element signature="e#2776#2785#0" expanded="true" />
-                <element signature="e#3149#3151#0" expanded="true" />
-                <element signature="e#49671#49718#0" expanded="true" />
-                <element signature="e#51162#51523#0" expanded="true" />
-                <element signature="e#52409#52418#0" expanded="true" />
-                <element signature="e#56795#56819#0" expanded="true" />
-                <element signature="e#70834#70859#0" expanded="true" />
-                <element signature="e#82744#82783#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Makefile">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1395">
-              <caret line="93" column="197" selection-start-line="93" selection-start-column="197" selection-end-line="93" selection-end-column="197" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/include/functions.cuh">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="600">
-              <caret line="40" column="25" selection-start-line="40" selection-start-column="25" selection-end-line="40" selection-end-column="25" />
-              <folding>
-                <element signature="e#2187#2196#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/linmin.cu">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="900">
-              <caret line="60" column="57" selection-start-line="60" selection-start-column="57" selection-end-line="60" selection-end-column="57" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/frprmn.cu">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4995">
-              <caret line="333" column="4" selection-start-line="333" selection-start-column="4" selection-end-line="333" selection-end-column="4" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/f1dim.cu">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="735">
-              <caret line="49" column="58" selection-start-line="49" selection-start-column="58" selection-end-line="49" selection-end-column="58" />
+            <state relative-caret-position="124">
+              <caret line="1028" column="14" selection-start-line="1028" selection-start-column="14" selection-end-line="1028" selection-end-column="162" />
             </state>
           </provider>
         </entry>
@@ -112,8 +51,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>dirty</find>
-      <find>gridde</find>
       <find>griddedVisi</find>
       <find>residuals</find>
       <find>do_gridd</find>
@@ -132,16 +69,18 @@
       <find>plan1GPU</find>
       <find>PHASE_R</find>
       <find>blockSize</find>
-      <find>apply_beam</find>
       <find>cuff</find>
       <find>host_I</find>
       <find>cufftComplex</find>
       <find>clip</find>
       <find>fitsOut</find>
-      <find>phase_rotate</find>
       <find>plan</find>
       <find>device_fg_image</find>
       <find>device_fg</find>
+      <find>vis_mod</find>
+      <find>fftshift</find>
+      <find>apply_beam</find>
+      <find>phase_rotate</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -156,9 +95,9 @@
         <option value="$PROJECT_DIR$/src/f1dim.cu" />
         <option value="$PROJECT_DIR$/src/frprmn.cu" />
         <option value="$PROJECT_DIR$/Makefile" />
-        <option value="$PROJECT_DIR$/src/MSFITSIO.cu" />
         <option value="$PROJECT_DIR$/include/functions.cuh" />
         <option value="$PROJECT_DIR$/src/main.cu" />
+        <option value="$PROJECT_DIR$/src/MSFITSIO.cu" />
         <option value="$PROJECT_DIR$/src/functions.cu" />
       </list>
     </option>
@@ -173,7 +112,22 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="gpuvmem" type="b2602c69:ProjectViewProjectNode" />
+              <item name="gpuvmem" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="gpuvmem" type="b2602c69:ProjectViewProjectNode" />
+              <item name="gpuvmem" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
       <pane id="Scope" />
     </panes>
   </component>
@@ -234,7 +188,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="56886000" />
+    <option name="totallyTimeSpent" value="63571000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -249,7 +203,7 @@
     <frame x="0" y="0" width="1920" height="1080" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.12646745" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.12753469" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -261,7 +215,7 @@
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32912722" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.32912722" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.19327731" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.19348055" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="bottom" id="Tail" order="11" />
       <window_info anchor="right" id="Compiler Explorer" order="0" side_tool="true" />
@@ -332,13 +286,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/MSFITSIO.cu">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="16245">
-          <caret line="1083" column="12" selection-start-line="1083" selection-start-column="12" selection-end-line="1083" selection-end-column="12" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Makefile">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1395">
@@ -384,19 +331,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/MSFITSIO.cu">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="124">
+          <caret line="1028" column="14" selection-start-line="1028" selection-start-column="14" selection-end-line="1028" selection-end-column="162" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/functions.cu">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="478">
-          <caret line="1793" column="111" lean-forward="true" selection-start-line="1793" selection-start-column="111" selection-end-line="1793" selection-end-column="111" />
+        <state relative-caret-position="518">
+          <caret line="2367" column="49" lean-forward="true" selection-start-line="2367" selection-start-column="49" selection-end-line="2367" selection-end-column="49" />
           <folding>
-            <element signature="e#2776#2785#0" expanded="true" />
-            <element signature="e#3149#3151#0" expanded="true" />
-            <element signature="e#49671#49718#0" expanded="true" />
-            <element signature="e#51162#51523#0" expanded="true" />
-            <element signature="e#52409#52418#0" expanded="true" />
-            <element signature="e#56795#56819#0" expanded="true" />
-            <element signature="e#70834#70859#0" expanded="true" />
-            <element signature="e#82744#82783#0" expanded="true" />
+            <element signature="e#69339#69364#0" expanded="true" />
+            <element signature="e#83817#83856#0" expanded="true" />
           </folding>
         </state>
       </provider>

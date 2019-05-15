@@ -1081,7 +1081,7 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
   int y = N-1;
   for(int i=0; i < M; i++){
 		for(int j=0; j < N; j++){
-			  image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j].x * fg_scale;
+			  image2D[N*(y-i)+(x-j)] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
 		}
 	}
 

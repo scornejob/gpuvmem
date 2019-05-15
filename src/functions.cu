@@ -1311,77 +1311,16 @@ __host__ T deviceReduce(T *in, long N)
 	return sum;
 }
 
-template <typename T, typename C>
-__host__
-void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
+__global__ void fftshift_2D(cufftComplex *data, int N1, int N2)
 {
-    // 2D Slice & 1D Line
-    int sLine = N;
-    int sSlice = M * N;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
 
-    // Transformations Equations
-    int sEq1 = (sSlice + sLine) / 2;
-    int sEq2 = (sSlice - sLine) / 2;
+    if (i < N1 && j < N2) {
+        float a = 1-2*((i+j)&1);
 
-    for(int i = 0; i < M; i++){
-      for(int j = 0; j < N; j++){
-        // Thread Index (2D)
-        int xIndex =  j;
-        int yIndex = i;
-
-        // Thread Index Converted into 1D Index
-        int index = (yIndex * N) + xIndex;
-
-        T regTemp;
-        C uTemp;
-        C vTemp;
-        C wTemp;
-
-        if (xIndex < N / 2)
-        {
-          if (yIndex < M / 2)
-          {
-            regTemp = data[index];
-            uTemp = u[index];
-            vTemp = v[index];
-            wTemp = w[index];
-
-            // First Quad
-            data[index] = data[index + sEq1];
-            u[index] = u[index + sEq1];
-            v[index] = v[index + sEq1];
-            w[index] = w[index + sEq1];
-
-            // Third Quad
-            data[index + sEq1] = regTemp;
-            u[index + sEq1] = uTemp;
-            v[index + sEq1] = vTemp;
-            w[index + sEq1] = wTemp;
-          }
-        }
-        else
-        {
-          if (yIndex < M / 2)
-          {
-            regTemp = data[index];
-            uTemp = u[index];
-            vTemp = v[index];
-            wTemp = w[index];
-
-            // Second Quad
-            data[index] = data[index + sEq2];
-            v[index] = u[index + sEq2];
-            u[index] = v[index + sEq2];
-            w[index] = w[index + sEq2];
-
-            // Fourth Quad
-            data[index + sEq2] = regTemp;
-            u[index + sEq2] = uTemp;
-            v[index + sEq2] = vTemp;
-            w[index + sEq2] = wTemp;
-          }
-        }
-      }
+        data[N2*i+j].x *= a;
+        data[N2*i+j].y *= a;
     }
 }
 
@@ -1758,8 +1697,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
          long i1, i2, j1, j2;
          float du, dv, u, v;
          cufftComplex v11, v12, v21, v22;
-         float Zreal;
-         float Zimag;
+         cufftComplex Z;
 
          if (i < numVisibilities) {
 
@@ -1790,23 +1728,68 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
                                  v21 = V[N*j1 + i2]; /* [i2, j1] */
                                  v22 = V[N*j2 + i2]; /* [i2, j2] */
 
-                                 Zreal = (1-du)*(1-dv)*v11.x + (1-du)*dv*v12.x + du*(1-dv)*v21.x + du*dv*v22.x;
-                                 Zimag = (1-du)*(1-dv)*v11.y + (1-du)*dv*v12.y + du*(1-dv)*v21.y + du*dv*v22.y;
+                                 Z.x = (1-du)*(1-dv)*v11.x + (1-du)*dv*v12.x + du*(1-dv)*v21.x + du*dv*v22.x;
+                                 Z.y = (1-du)*(1-dv)*v11.y + (1-du)*dv*v12.y + du*(1-dv)*v21.y + du*dv*v22.y;
 
-                                 Vm[i].x = Zreal;
-                                 Vm[i].y = Zimag;
+                                 Vm[i] = Z;
                          }else{
                                  weight[i] = 0.0f;
                          }
                  }else{
-                         //Vm[i].x = 0.0f;
-                         //Vm[i].y = 0.0f;
                          weight[i] = 0.0f;
                  }
 
          }
 
  }
+
+
+__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
+{
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    long i0, i1, j0, j1, j, k;
+    float2 uv;
+    cufftComplex a00, a10, a01, a11;
+    cufftComplex Z;
+
+    if (i < numVisibilities) {
+
+        uv.x = Ux[i]/fabs(deltau);
+        uv.y = Vx[i]/fabs(deltav);
+
+        j = roundf(uv.x + N/2);
+        k = roundf(uv.y + N/2);
+
+        i0 = k;
+        i1 = (k+1);
+        j0 = j;
+        j1 = (j+1);
+
+        if (i0 < N && i1 < N && j0 < N && j1 < N) {
+            /* Bilinear interpolation */
+            //a00
+            a00 = V[N*i0 + j0];
+            //a10
+            a10.x = V[N*i1 + j0].x - a00.x;
+            a10.y = V[N*i1 + j0].y - a00.y;
+            //a01
+            a01.x = V[N*i0 + j1].x - a00.x;
+            a01.y = V[N*i0 + j1].y - a00.y;
+            //a11
+            a11.x = V[N*i1 + j1].x - a00.x - (V[N*i1 + j0].x + V[N*i0 + j1].x);
+            a11.y = V[N*i1 + j1].y - a00.y - (V[N*i1 + j0].y + V[N*i0 + j1].y);
+
+            Z.x = a00.x + a10.x * uv.x + a01.x * uv.y + a11.x * uv.x * uv.y;
+            Z.y = a00.y + a10.y * uv.x + a01.y * uv.y + a11.y * uv.x * uv.y;
+
+            Vm[i] = Z;
+        }else{
+            weight[i] = 0.0f;
+        }
+
+    }
+
+}
 
 
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities){
@@ -2358,7 +2341,7 @@ __host__ float chiCuadrado(cufftComplex *I)
 
             gpuErrchk(cudaMemset(vars_gpu[i%num_gpus].device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
 
-          	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(antenna_diameter, pb_factor, pb_cutoff, vars_gpu[i%num_gpus].device_image, device_fg_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].nu[i], DELTAX, DELTAY);
+          	apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(antenna_diameter, pb_factor, pb_cutoff, device_fg_image, vars_gpu[i%num_gpus].device_image, N, fields[f].global_xobs, fields[f].global_yobs, fg_scale, fields[f].nu[i], DELTAX, DELTAY);
           	gpuErrchk(cudaDeviceSynchronize());
 
           	//FFT 2D
