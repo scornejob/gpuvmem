@@ -10,17 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8c2ef9f5-a540-414d-b248-2232580cbc11" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/gpuvmem.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/functions.cuh" beforeDir="false" afterPath="$PROJECT_DIR$/include/functions.cuh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/MSFITSIO.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/MSFITSIO.cu" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/f1dim.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/f1dim.cu" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/frprmn.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/frprmn.cu" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/functions.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/functions.cu" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.cu" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cu" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testing.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -37,7 +27,7 @@
         <entry file="file://$PROJECT_DIR$/src/main.cu">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-257">
-              <caret line="43" column="27" selection-start-line="43" selection-start-column="18" selection-end-line="43" selection-end-column="27" />
+              <caret line="43" selection-start-line="43" selection-end-line="43" />
             </state>
           </provider>
         </entry>
@@ -54,10 +44,17 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/functions.cu">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="295">
-              <caret line="1799" selection-start-line="1799" selection-end-line="1799" />
+            <state relative-caret-position="478">
+              <caret line="1793" column="111" lean-forward="true" selection-start-line="1793" selection-start-column="111" selection-end-line="1793" selection-end-column="111" />
               <folding>
-                <element signature="e#71604#71629#0" expanded="true" />
+                <element signature="e#2776#2785#0" expanded="true" />
+                <element signature="e#3149#3151#0" expanded="true" />
+                <element signature="e#49671#49718#0" expanded="true" />
+                <element signature="e#51162#51523#0" expanded="true" />
+                <element signature="e#52409#52418#0" expanded="true" />
+                <element signature="e#56795#56819#0" expanded="true" />
+                <element signature="e#70834#70859#0" expanded="true" />
+                <element signature="e#82744#82783#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -106,7 +103,7 @@
         <entry file="file://$PROJECT_DIR$/src/f1dim.cu">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="735">
-              <caret line="49" column="51" selection-start-line="49" selection-start-column="51" selection-end-line="49" selection-end-column="51" />
+              <caret line="49" column="58" selection-start-line="49" selection-start-column="58" selection-end-line="49" selection-end-column="58" />
             </state>
           </provider>
         </entry>
@@ -166,7 +163,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="394" />
     <option name="width" value="1717" />
     <option name="height" value="965" />
@@ -176,27 +173,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="gpuvmem" type="b2602c69:ProjectViewProjectNode" />
-              <item name="gpuvmem" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="gpuvmem" type="b2602c69:ProjectViewProjectNode" />
-              <item name="gpuvmem" type="462c0819:PsiDirectoryNode" />
-              <item name="include" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="gpuvmem" type="b2602c69:ProjectViewProjectNode" />
-              <item name="gpuvmem" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
+      <pane id="ProjectPane" />
       <pane id="Scope" />
     </panes>
   </component>
@@ -252,12 +229,12 @@
       <workItem from="1557754733143" duration="5021000" />
       <workItem from="1557838230923" duration="26149000" />
       <workItem from="1557867326222" duration="9995000" />
-      <workItem from="1557929184603" duration="5960000" />
+      <workItem from="1557929184603" duration="6414000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="56432000" />
+    <option name="totallyTimeSpent" value="56886000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -269,7 +246,8 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1920" height="1080" extended-state="7" />
+    <frame x="0" y="0" width="1920" height="1080" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.12646745" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -283,7 +261,7 @@
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32912722" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.32912722" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.19348055" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.19327731" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="bottom" id="Tail" order="11" />
       <window_info anchor="right" id="Compiler Explorer" order="0" side_tool="true" />
@@ -395,23 +373,30 @@
     <entry file="file://$PROJECT_DIR$/src/f1dim.cu">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="735">
-          <caret line="49" column="51" selection-start-line="49" selection-start-column="51" selection-end-line="49" selection-end-column="51" />
+          <caret line="49" column="58" selection-start-line="49" selection-start-column="58" selection-end-line="49" selection-end-column="58" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main.cu">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-257">
-          <caret line="43" column="27" selection-start-line="43" selection-start-column="18" selection-end-line="43" selection-end-column="27" />
+          <caret line="43" selection-start-line="43" selection-end-line="43" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/functions.cu">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="295">
-          <caret line="1799" selection-start-line="1799" selection-end-line="1799" />
+        <state relative-caret-position="478">
+          <caret line="1793" column="111" lean-forward="true" selection-start-line="1793" selection-start-column="111" selection-end-line="1793" selection-end-column="111" />
           <folding>
-            <element signature="e#71604#71629#0" expanded="true" />
+            <element signature="e#2776#2785#0" expanded="true" />
+            <element signature="e#3149#3151#0" expanded="true" />
+            <element signature="e#49671#49718#0" expanded="true" />
+            <element signature="e#51162#51523#0" expanded="true" />
+            <element signature="e#52409#52418#0" expanded="true" />
+            <element signature="e#56795#56819#0" expanded="true" />
+            <element signature="e#70834#70859#0" expanded="true" />
+            <element signature="e#82744#82783#0" expanded="true" />
           </folding>
         </state>
       </provider>

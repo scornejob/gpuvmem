@@ -1723,13 +1723,13 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
     float du = xphs/(float)M;
     float dv = yphs/(float)N;
 
-    if(j < M/2){
+    if(j < M/2 + 1){
       u = du * j;
     }else{
       u = du * (j-M);
     }
 
-    if(i < N/2){
+    if(i < N/2 + 1){
       v = dv * i;
     }else{
       v = dv * (i-N);
@@ -1757,7 +1757,7 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
          int i = threadIdx.x + blockDim.x * blockIdx.x;
          long i1, i2, j1, j2;
          float du, dv, u, v;
-         float v11, v12, v21, v22;
+         cufftComplex v11, v12, v21, v22;
          float Zreal;
          float Zimag;
 
@@ -1769,11 +1769,11 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
                  if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
 
                          if(u < 0.0) {
-                                 u = N + u;
+                                 u += N;
                          }
 
                          if(v < 0.0) {
-                                 v = N + v;
+                                 v += N;
                          }
 
                          i1 = u;
@@ -1784,18 +1784,14 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
                          dv = v - j1;
 
                          if (i1 >= 0 && i1 < N && i2 >= 0 && i2 < N && j1 >= 0 && j1 < N && j2 >= 0 && j2 < N) {
-                                 /* Bilinear interpolation: real part */
-                                 v11 = V[N*j1 + i1].x; /* [i1, j1] */
-                                 v12 = V[N*j2 + i1].x; /* [i1, j2] */
-                                 v21 = V[N*j1 + i2].x; /* [i2, j1] */
-                                 v22 = V[N*j2 + i2].x; /* [i2, j2] */
-                                 Zreal = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
-                                 /* Bilinear interpolation: imaginary part */
-                                 v11 = V[N*j1 + i1].y; /* [i1, j1] */
-                                 v12 = V[N*j2 + i1].y; /* [i1, j2] */
-                                 v21 = V[N*j1 + i2].y; /* [i2, j1] */
-                                 v22 = V[N*j2 + i2].y; /* [i2, j2] */
-                                 Zimag = (1-du)*(1-dv)*v11 + (1-du)*dv*v12 + du*(1-dv)*v21 + du*dv*v22;
+                                 /* Bilinear interpolation */
+                                 v11 = V[N*j1 + i1]; /* [i1, j1] */
+                                 v12 = V[N*j2 + i1]; /* [i1, j2] */
+                                 v21 = V[N*j1 + i2]; /* [i2, j1] */
+                                 v22 = V[N*j2 + i2]; /* [i2, j2] */
+
+                                 Zreal = (1-du)*(1-dv)*v11.x + (1-du)*dv*v12.x + du*(1-dv)*v21.x + du*dv*v22.x;
+                                 Zimag = (1-du)*(1-dv)*v11.y + (1-du)*dv*v12.y + du*(1-dv)*v21.y + du*dv*v22.y;
 
                                  Vm[i].x = Zreal;
                                  Vm[i].y = Zimag;
