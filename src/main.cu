@@ -90,18 +90,14 @@ __host__ int main(int argc, char **argv) {
         sy->setDevice(); // This routine sends the data to GPU memory
         Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
         Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
-        Fi *stv = Singleton<FiFactory>::Instance().CreateFi(SquaredTotalVariation);
-        Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
-
+        //Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
         chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
         e->configure(0, 0, 0);
-        stv->configure(1, 1, 1);
-        l->configure(2, 1, 1);
+        //l->configure(1, 0, 0);
         //e->setPenalizationFactor(0.01); // If not used -Z (Fi.configure(-1,x,x))
         of->addFi(chi2);
         of->addFi(e);
-        of->addFi(stv);
-        of->addFi(l);
+        //of->addFi(l);
         //sy->getImage()->getFunctionMapping()[i].evaluateXt = particularEvaluateXt;
         //sy->getImage()->getFunctionMapping()[i].newP = particularNewP;
         //if the nopositivity flag is on  all images will run with no posivity,

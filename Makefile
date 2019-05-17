@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/squaredtotalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -143,19 +143,22 @@ build/lbfgs.o: src/lbfgs.cu
 	@ echo "Building lbfgs"
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/lbfgs.cu -o build/lbfgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
+cleanall:
+	@ echo "Cleaning all folders.."
+	@ rm -rf build/*
+	@ rm -rf bin/*
+	@ rm -r *.fits
+
 clean:
 	@ echo "Cleaning gpuvmem folders.."
 	@ rm -rf build/*
 	@ rm -rf bin/*
-	@ rm *.fits
 
 co65:
-	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.0001 -t 500000000 --verbose --print-images --print-errors
+	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01 -g 2 -R 2.0 -t 500000000 -g 2 --verbose
 selfcalband9:
 	@ cuda-memcheck ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 8 -Y 8 -V 256 --verbose -z 0.001 -Z 0.05,0.5 -t 500000000 --print-images
 freq78:
-	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -t 5000 -P 0 --verbose --print-images -z 0.001 -Z 0.1,0.5 -t 500000000
+	@ ./bin/gpuvmem -i ./tests/FREQ78/FREQ78.ms -o ./tests/FREQ78/FREQ78_out.ms -O ./tests/FREQ78/mod_out.fits -m ./tests/FREQ78/mod_in_0.fits -I ./tests/FREQ78/input.dat -p ./tests/FREQ78/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.005 -t 500000000 -g 2 -R 0.0 --verbose --print-images
 antennae:
-	@ ./bin/gpuvmem -s 0 -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 0.01,0.5 -t 500000000
-m87:
-		@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/M87/residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/mod_in_0.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 1e-5,6e-4 -t 500000000
+	@ ./bin/gpuvmem -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256  -z 0.001 -Z 0.05 -t 500000000 --verbose --print-images

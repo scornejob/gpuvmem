@@ -47,13 +47,13 @@ typedef struct variables {
         int blockSizeY;
         int blockSizeV;
         int it_max;
-        int reg_term;
         int gridding;
         float noise;
         float noise_cut;
         float randoms;
         float eta;
         float nu_0;
+        float robust_param;
         float threshold;
 } Vars;
 

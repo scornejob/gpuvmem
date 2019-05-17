@@ -1,6 +1,6 @@
 #include "gridding.cuh"
 
-extern float deltau, deltav;
+extern float deltau, deltav, robust_param;
 extern long M, N;
 extern int num_gpus;
 
@@ -21,11 +21,12 @@ void Gridding::applyCriteria(Visibilities *v)
                         memset(v->getFields()[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
                         memset(v->getFields()[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
                         memset(v->getFields()[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
+                        memset(v->getFields()[f].gridded_visibilities[i].S, 0, M*N*sizeof(int));
                         memset(v->getFields()[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
                 }
         }
         omp_set_num_threads(threads);
-        do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N);
+        do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N, robust_param);
         omp_set_num_threads(num_gpus);
 };
 

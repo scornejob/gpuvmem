@@ -11,7 +11,7 @@ cufftComplex *device_V, *device_fg_image, *device_image;
 
 float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
-float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta;
+float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta, robust_param;
 float *host_I, sum_weights, *initial_values, *penalizators;
 Telescope *telescope;
 
@@ -73,10 +73,10 @@ void MFS::configure(int argc, char **argv)
         b_noise_aux = variables.noise;
         noise_cut = variables.noise_cut;
         random_probability = variables.randoms;
-        reg_term = variables.reg_term;
         eta = variables.eta;
         gridding = variables.gridding;
         nu_0 = variables.nu_0;
+        robust_param = variables.robust_param;
         threshold = variables.threshold * 5.0;
 
         char *pt;
@@ -105,20 +105,30 @@ void MFS::configure(int argc, char **argv)
         if(print_images)
                 if(stat(mempath, &st) == -1) mkdir(mempath,0700);
 
+        cudaDeviceProp dprop[num_gpus];
         if(verbose_flag) {
                 printf("Number of host CPUs:\t%d\n", omp_get_num_procs());
                 printf("Number of CUDA devices:\t%d\n", num_gpus);
 
 
                 for(int i = 0; i < num_gpus; i++) {
-                        cudaDeviceProp dprop;
-                        cudaGetDeviceProperties(&dprop, i);
+                        cudaGetDeviceProperties(&dprop[i], i);
 
-                        printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop.name, (IsGPUCapableP2P(&dprop) ? "IS " : "NOT"));
+                        printf("> GPU%d = \"%15s\" %s capable of Peer-to-Peer (P2P)\n", i, dprop[i].name, (IsGPUCapableP2P(&dprop[i]) ? "IS " : "NOT"));
 
                         //printf("   %d: %s\n", i, dprop.name);
                 }
                 printf("---------------------------\n");
+        }
+
+        if(variables.blockSizeX*variables.blockSizeY >= dprop[0].maxThreadsPerBlock || variables.blockSizeV >= dprop[0].maxThreadsPerBlock){
+            printf("ERROR. The maximum threads per block cannot be greater than %d\n", dprop[0].maxThreadsPerBlock);
+            exit(-1);
+        }
+
+        if(variables.blockSizeX >= dprop[0].maxThreadsDim[0] || variables.blockSizeY >= dprop[0].maxThreadsDim[1] || variables.blockSizeV >= dprop[0].maxThreadsDim[0]){
+          printf("ERROR. The size of the blocksize cannot exceed X: %d Y: %d Z: %d\n", dprop[0].maxThreadsDim[0], dprop[0].maxThreadsDim[1], dprop[0].maxThreadsDim[2]);
+          exit(-1);
         }
 
         if(selected > num_gpus || selected < 0) {
@@ -290,11 +300,13 @@ void MFS::configure(int argc, char **argv)
                                 fields[f].gridded_visibilities[i].u = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));
+                                fields[f].gridded_visibilities[i].S = (int*)malloc(M*N*sizeof(int));
                                 fields[f].gridded_visibilities[i].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 
                                 memset(fields[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
                                 memset(fields[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
                                 memset(fields[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
+                                memset(fields[f].gridded_visibilities[i].S, 0, M*N*sizeof(int));
                                 memset(fields[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
                         }
                 }
@@ -327,8 +339,9 @@ void MFS::configure(int argc, char **argv)
         deltav = 1.0 / (N * deltay);
 
         if(gridding) {
+                printf("Doing gridding\n");
                 omp_set_num_threads(gridding);
-                do_gridding(fields, &data, deltau, deltav, M, N);
+                do_gridding(fields, &data, deltau, deltav, M, N, robust_param);
                 omp_set_num_threads(num_gpus);
         }
 }
@@ -340,7 +353,6 @@ void MFS::setDevice()
         deltau = 1.0 / (M * deltax);
         deltav = 1.0 / (N * deltay);
 
-        sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
         if(verbose_flag) {
                 printf("MS File Successfully Read\n");
                 if(beam_noise == -1) {
@@ -348,6 +360,7 @@ void MFS::setDevice()
                 }
         }
 
+        sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV, gridding);
 
         if(num_gpus == 1) {
                 cudaSetDevice(selected);

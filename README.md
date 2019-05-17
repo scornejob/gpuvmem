@@ -29,22 +29,42 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 1. Download or clone gpuvmem.
 
 2. To compile GPUVMEM you will need:
-- cfitsio - Please install packages `libcfitsio-dev`.
-- casacore (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using the last version of casacore, please compile using the flag NEWCASA=1.
+- cfitsio - Usually the package is called `libcfitsio-dev`.
+- casacore <= 5.4.0 (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using version 5.4.0 of casacore, please compile using the flag NEWCASA=1.
 - CUDA >= 9
 - OpenMP
+
+# Installation using a Singularity container
+
+We have created a recipe to use Singularity without worrying about installing CUDA and installing libraries. The container has gpuvmem compiled and all you need to work. Additionally, you can edit the recipe and add applications that you are interested in. To use the Singularity container, follow the next steps:
+```
+# Install Singularity, in this case we will follow the Linux instructions, but to install it on MAC see: https://singularity.lbl.gov/install-mac
+
+sudo apt install squashfs-tools
+VERSION=2.5.2
+wget https://github.com/singularityware/singularity/releases/download/$VERSION/singularity-$VERSION.tar.gz
+tar xvf singularity-$VERSION.tar.gz
+cd singularity-$VERSION
+./configure --prefix=/usr/local
+make
+sudo make install
+
+#Now we can use Singularity to shell into the container
+mkdir container # Make a directory in your workspace
+singularity shell --nv shub://miguelcarcamov/container_docker:casacore.gpuvmem.9.2 #Use this command for CUDA 9.2
+# singularity shell --nv shub://miguelcarcamov/container_docker:casacore.gpuvmem.10.0 #Use this command for CUDA 10.0
+```
+The gpuvmem binary should be in `/gpuvmem/bin`.
 
 # Compiling
 ```
 cd gpuvmem
-./configure
 make
 ```
 
-If you are using the last version of casacore
+If you are using the version 5.4.0 of casacore
  ```
 cd gpuvmem
-./configure
 make NEWCASA=1
 ```
 
