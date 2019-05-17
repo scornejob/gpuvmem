@@ -50,7 +50,7 @@ extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, M
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
 extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff;
-extern float *initial_values, *penalizators;
+extern float *initial_values, *penalizators, robust_param;
 extern double ra, dec;
 extern float threshold;
 extern float nu_0;
@@ -243,6 +243,7 @@ __host__ void print_help() {
         printf("    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)\n");
         printf("    -z  --initial-cond     Initial conditions for image/s\n");
         printf("    -Z  --penalizators     penalizators for Fi\n");
+        printf("    -R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n");
         printf("    -c  --copyright        Shows copyright conditions\n");
         printf("    -w  --warranty         Shows no warranty details\n");
         printf("        --xcorr            Run gpuvmem with cross-correlation\n");
@@ -288,12 +289,13 @@ __host__ Vars getOptions(int argc, char **argv) {
         variables.noise_cut = -1;
         variables.eta = -1.0;
         variables.gridding = 0;
+        variables.robust_param = 2.0;
         variables.nu_0 = -1;
         variables.threshold = 0.0;
 
 
         long next_op;
-        const char* const short_op = "hcwi:o:O:I:m:n:N:r:f:M:s:e:p:X:Y:V:t:g:z:T:F:Z:";
+        const char* const short_op = "hcwi:o:O:I:m:n:N:r:R:f:M:s:e:p:X:Y:V:t:g:z:T:F:Z:";
 
         const struct option long_op[] = { //Flag for help, copyright and warranty
                 {"help", 0, NULL, 'h' },
@@ -311,7 +313,7 @@ __host__ Vars getOptions(int argc, char **argv) {
                 {"threshold", 0, NULL, 'T'}, {"nu_0", 0, NULL, 'F'},
                 {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                 {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
-                {"path", 1, NULL, 'p'}, {"prior", 0, NULL, 'P'}, {"eta", 0, NULL, 'e'},
+                {"path", 1, NULL, 'p'}, {"robust-parameter", 0, NULL, 'R'}, {"eta", 0, NULL, 'e'},
                 {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
                 {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"initial-cond", 1, NULL, 'z'}, {"penalizators", 0, NULL, 'Z'},
                 {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' }, {"gridding", 0, NULL, 'g' }, { NULL, 0, NULL, 0 }
@@ -393,6 +395,9 @@ __host__ Vars getOptions(int argc, char **argv) {
                         break;
                 case 'r':
                         variables.randoms = atof(optarg);
+                        break;
+                case 'R':
+                        variables.robust_param = atof(optarg);
                         break;
                 case 'f':
                         variables.ofile = (char*) malloc((strlen(optarg)+1)*sizeof(char));
@@ -819,7 +824,7 @@ void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
         }
 }
 
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N)
+__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, float robust)
 {
         int local_max = 0;
         int max = 0;
@@ -849,21 +854,33 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                                         Vo.y *= -1.0;
                                 }
 
-                                j = roundf(u/fabsf(deltau) + N/2);
-                                k = roundf(v/fabsf(deltav) + M/2);
+                                j = round(u/fabsf(deltau) + N/2);
+                                k = round(v/fabsf(deltav) + M/2);
 
                                 if(k < M && j < N)
                                 {
                                         #pragma omp critical
                                         {
-                                                fields[f].gridded_visibilities[i].Vo[N*k+j].x += w * Vo.x;
-                                                fields[f].gridded_visibilities[i].Vo[N*k+j].y += w * Vo.y;
+                                                fields[f].gridded_visibilities[i].Vo[N*k+j].x += w*Vo.x;
+                                                fields[f].gridded_visibilities[i].Vo[N*k+j].y += w*Vo.y;
                                                 fields[f].gridded_visibilities[i].weight[N*k+j] += w;
+                                                fields[f].gridded_visibilities[i].S[N*k+j] += 1;
                                         }
                                 }
                         }
 
                         int visCounter = 0;
+                        float gridWeight2Sum = 0.0f;
+                        float gridWeightSum = 0.0f;
+
+                        for(int k=0; k<M; k++) {
+                            for (int j = 0; j < N; j++) {
+                                gridWeight2Sum += fields[f].gridded_visibilities[i].weight[N*k+j] * fields[f].gridded_visibilities[i].weight[N*k+j];
+                                gridWeightSum += fields[f].gridded_visibilities[i].weight[N*k+j];
+                            }
+                        }
+
+                        float S2 = (5.0f * pow(10.0f, -robust)) * (5.0f * pow(10.0f, -robust));
 
                         #pragma omp parallel for schedule(static,1)
                         for(int k=0; k<M; k++) {
@@ -881,6 +898,7 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                                         if(weight > 0.0f) {
                                                 fields[f].gridded_visibilities[i].Vo[N*k+j].x /= weight;
                                                 fields[f].gridded_visibilities[i].Vo[N*k+j].y /= weight;
+                                                fields[f].gridded_visibilities[i].weight[N*k+j] /= 1 + (weight * (S2/gridWeight2Sum/gridWeightSum));
             					                #pragma omp atomic
                                                  visCounter++;
                                         }else{

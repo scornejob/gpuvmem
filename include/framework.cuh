@@ -53,6 +53,7 @@ typedef struct variables {
         float randoms;
         float eta;
         float nu_0;
+        float robust_param;
         float threshold;
 } Vars;
 
