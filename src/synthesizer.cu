@@ -73,7 +73,6 @@ void MFS::configure(int argc, char **argv)
         b_noise_aux = variables.noise;
         noise_cut = variables.noise_cut;
         random_probability = variables.randoms;
-        reg_term = variables.reg_term;
         eta = variables.eta;
         gridding = variables.gridding;
         nu_0 = variables.nu_0;
@@ -350,7 +349,6 @@ void MFS::setDevice()
         deltau = 1.0 / (M * deltax);
         deltav = 1.0 / (N * deltay);
 
-        sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV);
         if(verbose_flag) {
                 printf("MS File Successfully Read\n");
                 if(beam_noise == -1) {
@@ -358,6 +356,7 @@ void MFS::setDevice()
                 }
         }
 
+        sum_weights = calculateNoise(fields, data, &total_visibilities, variables.blockSizeV, gridding);
 
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
