@@ -2537,8 +2537,10 @@ __host__ void DLaplacian(float *I, float *dgi, float penalization_factor, float 
         }
         if(iter > 0 && penalization_factor)
         {
+          if(flag_opt%2 == index){
                 DL<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
+              }
         }
 };
 
@@ -2631,8 +2633,10 @@ __host__ void DEntropy(float *I, float *dgi, float penalization_factor, int mod,
         }
         if(iter > 0 && penalization_factor)
         {
+              if(flag_opt%2 == index){
                 DS<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, initial_values[index], eta, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
+              }
         }
 };
 
@@ -2664,8 +2668,10 @@ __host__ void DQuadraticP(float *I, float *dgi, float penalization_factor, int m
         }
         if(iter > 0 && penalization_factor)
         {
+          if(flag_opt%2 == index){
                 DQ<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
+              }
         }
 };
 
@@ -2697,8 +2703,10 @@ __host__ void DTVariation(float *I, float *dgi, float penalization_factor, int m
         }
         if(iter > 0 && penalization_factor)
         {
+          if(flag_opt%2 == index){
                 DTV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
+              }
         }
 };
 
@@ -2730,8 +2738,10 @@ __host__ void DSTVariation(float *I, float *dgi, float penalization_factor, int 
         }
         if(iter > 0 && penalization_factor)
         {
+          if(flag_opt%2 == index){
                 DSTV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                 gpuErrchk(cudaDeviceSynchronize());
+              }
         }
 };
 
