@@ -37,7 +37,7 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 # Installation using a Singularity container
 
 We have created a recipe to use Singularity without worrying about installing CUDA and installing libraries. The container has gpuvmem compiled and all you need to work. Additionally, you can edit the recipe and add applications that you are interested in. To use the Singularity container, follow the next steps:
-```
+```bash
 # Install Singularity, in this case we will follow the Linux instructions, but to install it on MAC see: https://singularity.lbl.gov/install-mac
 
 sudo apt install squashfs-tools
@@ -57,13 +57,13 @@ singularity shell --nv shub://miguelcarcamov/container_docker:casacore.gpuvmem.9
 The gpuvmem binary should be in `/gpuvmem/bin`.
 
 # Compiling
-```
+```bash
 cd gpuvmem
 make
 ```
 
 If you are using the version 5.4.0 of casacore
- ```
+ ```bash
 cd gpuvmem
 make NEWCASA=1
 ```
@@ -149,9 +149,13 @@ We have fixed the Makefile and now you can compile gpuvmem using the new version
 
 # TO RESTORE YOUR IMAGE PLEASE SEE CARCAMO ET AL. 2018 FOR MORE INFORMATION
 
-Restoring usage:
+- This will return a restored image: A convolution of the model image with the CLEAN BEAM + residuals (JY/BEAM)
+- Residuals (JY/BEAM)
 
-`casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output`
+Restoring usage:
+```bash
+casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_model.fits restored_output
+```
 
 # CONTRIBUTORS
 
