@@ -1350,7 +1350,7 @@ __host__ void do_gridding(Field *fields, MSData *data, float deltau, float delta
           v *= fields[f].nu[i] / LIGHTSPEED;
 
           j = roundf(u/fabsf(deltau) + N/2);
-      		k = roundf(v/fabsf(deltav) + M/2);
+      	  k = roundf(v/fabsf(deltav) + M/2);
 
           #pragma omp critical
           {
