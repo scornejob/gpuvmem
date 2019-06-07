@@ -750,78 +750,17 @@ __host__ T deviceReduce(T *in, long N)
         return sum;
 }
 
-template <typename T, typename C>
-__host__
-void fftShift_2D(T* data, C* w, C* u, C* v, int M, int N)
+__global__ void fftshift_2D(cufftComplex *data, int N1, int N2)
 {
-        // 2D Slice & 1D Line
-        int sLine = N;
-        int sSlice = M * N;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
 
-        // Transformations Equations
-        int sEq1 = (sSlice + sLine) / 2;
-        int sEq2 = (sSlice - sLine) / 2;
+    if (i < N1 && j < N2) {
+        float a = 1-2*((i+j)&1);
 
-        for(int i = 0; i < M; i++) {
-                for(int j = 0; j < N; j++) {
-                        // Thread Index (2D)
-                        int xIndex =  j;
-                        int yIndex = i;
-
-                        // Thread Index Converted into 1D Index
-                        int index = (yIndex * N) + xIndex;
-
-                        T regTemp;
-                        C uTemp;
-                        C vTemp;
-                        C wTemp;
-
-                        if (xIndex < N / 2)
-                        {
-                                if (yIndex < M / 2)
-                                {
-                                        regTemp = data[index];
-                                        uTemp = u[index];
-                                        vTemp = v[index];
-                                        wTemp = w[index];
-
-                                        // First Quad
-                                        data[index] = data[index + sEq1];
-                                        u[index] = u[index + sEq1];
-                                        v[index] = v[index + sEq1];
-                                        w[index] = w[index + sEq1];
-
-                                        // Third Quad
-                                        data[index + sEq1] = regTemp;
-                                        u[index + sEq1] = uTemp;
-                                        v[index + sEq1] = vTemp;
-                                        w[index + sEq1] = wTemp;
-                                }
-                        }
-                        else
-                        {
-                                if (yIndex < M / 2)
-                                {
-                                        regTemp = data[index];
-                                        uTemp = u[index];
-                                        vTemp = v[index];
-                                        wTemp = w[index];
-
-                                        // Second Quad
-                                        data[index] = data[index + sEq2];
-                                        v[index] = u[index + sEq2];
-                                        u[index] = v[index + sEq2];
-                                        w[index] = w[index + sEq2];
-
-                                        // Fourth Quad
-                                        data[index + sEq2] = regTemp;
-                                        u[index + sEq2] = uTemp;
-                                        v[index + sEq2] = vTemp;
-                                        w[index + sEq2] = wTemp;
-                                }
-                        }
-                }
-        }
+        data[N2*i+j].x *= a;
+        data[N2*i+j].y *= a;
+    }
 }
 
 __host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, float robust)
@@ -1039,7 +978,7 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
 
     for(int f=0; f<data.nfields; f++) {
         for(int i=0; i<data.total_frequencies; i++) {
-            // Put grid visibilities in a M*N grid
+            // Put gridded visibilities in a M*N grid
             griddedTogrid(fields[f].gridded_visibilities[i].Vm, fields[f].visibilities[i].Vm, fields[f].visibilities[i].u, fields[f].visibilities[i].v, deltau, deltav, fields[f].visibilities[i].freq, M, N, fields[f].numVisibilitiesPerFreq[i]);
 
             /*
@@ -1049,6 +988,9 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
             // Now the number of visibilities will be the original one.
             fields[f].numVisibilitiesPerFreq[i] = fields[f].backup_numVisibilitiesPerFreq[i];
 
+            fields[f].visibilities[i].u = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+            fields[f].visibilities[i].v = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+            fields[f].visibilities[i].weight = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
             fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
             fields[f].visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
 
@@ -1065,9 +1007,15 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
             // Copy gridded model visibilities to device
             gpuErrchk(cudaMemcpy(V_grid_device, fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N, cudaMemcpyHostToDevice));
 
-            // Copy original (u,v) positions to device
+            // Copy original (u,v) positions and weights to host and device
+
+            memcpy(fields[f].visibilities[i].u, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]);
+            memcpy(fields[f].visibilities[i].v, fields[f].backup_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]);
+            memcpy(fields[f].visibilities[i].weight, fields[f].backup_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]);
+
             gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
-            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].backup_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
             gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].backup_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
 
 
@@ -1078,6 +1026,13 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
             // Interpolation / Degridding
             vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, V_grid_device, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
             cudaDeviceSynchronize();
+
+            // Freeing backup arrays
+
+            free(fields[f].backup_visibilities[i].u);
+            free(fields[f].backup_visibilities[i].v);
+            free(fields[f].backup_visibilities[i].weight);
+            free(fields[f].backup_visibilities[i].Vo);
 
         }
     }

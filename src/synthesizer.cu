@@ -878,13 +878,9 @@ void MFS::unSetDevice()
                         cudaSetDevice((i%num_gpus) + firstgpu);
                     }
 
-                    printf("Free u\n");
                     cudaFree(fields[f].device_visibilities[i].u);
-                    printf("Free v\n");
                     cudaFree(fields[f].device_visibilities[i].v);
-                    printf("Weight\n");
                     cudaFree(fields[f].device_visibilities[i].weight);
-                    printf("Vr\n");
                     cudaFree(fields[f].device_visibilities[i].Vr);
                     cudaFree(fields[f].device_visibilities[i].Vm);
                     cudaFree(fields[f].device_visibilities[i].Vo);
