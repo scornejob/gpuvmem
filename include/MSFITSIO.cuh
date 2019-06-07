@@ -81,9 +81,11 @@ typedef struct field {
         double obsra, obsdec;
         float global_xobs, global_yobs;
         long *numVisibilitiesPerFreq;
+        long *backup_numVisibilitiesPerFreq;
         Vis *visibilities;
         Vis *device_visibilities;
         Vis *gridded_visibilities;
+        Vis *backup_visibilities;
 }Field;
 
 typedef struct canvas_variables {
@@ -95,7 +97,7 @@ typedef struct canvas_variables {
         float beam_noise;
 }canvasVariables;
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields);
+__host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding);
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
 

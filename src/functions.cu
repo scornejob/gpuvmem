@@ -844,6 +844,7 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                                 Vo = fields[f].visibilities[i].Vo[z];
 
 
+
                                 // Visibilities from metres to klambda
                                 u *= fields[f].visibilities[i].freq / LIGHTSPEED;
                                 v *= fields[f].visibilities[i].freq / LIGHTSPEED;
@@ -854,6 +855,12 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                                         v *= -1.0;
                                         Vo.y *= -1.0;
                                 }
+
+                                //Backing up original visibilities
+                                fields[f].backup_visibilities[i].u[z] = u;
+                                fields[f].backup_visibilities[i].v[z] = v;
+                                fields[f].backup_visibilities[i].Vo[z] = Vo;
+                                fields[f].backup_visibilities[i].weight[z] = w;
 
                                 j = round(u/fabsf(deltau) + N/2);
                                 k = round(v/fabsf(deltav) + M/2);
@@ -941,6 +948,7 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                         free(fields[f].gridded_visibilities[i].Vo);
                         free(fields[f].gridded_visibilities[i].weight);
 
+                        fields[f].backup_numVisibilitiesPerFreq[i] = fields[f].numVisibilitiesPerFreq[i];
                         if(fields[f].numVisibilitiesPerFreq[i] > 0) {
                                 fields[f].numVisibilitiesPerFreq[i] = visCounter;
                         }
@@ -1001,6 +1009,83 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
 
         return sum_weights;
 }
+
+__host__ void griddedTogrid(cufftComplex *Vm_gridded, cufftComplex *Vm_gridded_sp, float *u_gridded_sp, float *v_gridded_sp, float deltau, float deltav, float freq, long M, long N, int numvis)
+{
+
+    float deltau_meters = fabsf(deltau) * (LIGHTSPEED/freq);
+    float deltav_meters = fabsf(deltav) * (LIGHTSPEED/freq);
+    int j, k;
+    for(int i=0; i<numvis; i++){
+        j = (u_gridded_sp[i] / deltau_meters) + N/2;
+        k = (v_gridded_sp[i] / deltav_meters) + M/2;
+        Vm_gridded[N*k+j] = Vm_gridded_sp[i];
+    }
+}
+
+__host__ void degridding(Field *fields, freqData data, float deltau, float deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N)
+{
+    cufftComplex *V_grid_device;
+    long UVpow2;
+
+    residualsToHost(fields, data, num_gpus, firstgpu);
+
+    if(num_gpus == 1)
+        cudaSetDevice(selected);
+    else
+        cudaSetDevice(firstgpu);
+
+    gpuErrchk(cudaMalloc(&V_grid_device, sizeof(cufftComplex)*M*N));
+
+    for(int f=0; f<data.nfields; f++) {
+        for(int i=0; i<data.total_frequencies; i++) {
+            // Put grid visibilities in a M*N grid
+            griddedTogrid(fields[f].gridded_visibilities[i].Vm, fields[f].visibilities[i].Vm, fields[f].visibilities[i].u, fields[f].visibilities[i].v, deltau, deltav, fields[f].visibilities[i].freq, M, N, fields[f].numVisibilitiesPerFreq[i]);
+
+            /*
+              Model visibilities and original (u,v) positions to GPU.
+            */
+
+            // Now the number of visibilities will be the original one.
+            fields[f].numVisibilitiesPerFreq[i] = fields[f].backup_numVisibilitiesPerFreq[i];
+
+            fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+            fields[f].visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+
+            gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
+            gpuErrchk(cudaMemset(fields[f].device_visibilities[i].Vm, 0, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
+
+            gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+            gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+            gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+
+            // Copy original Vo visibilities to host
+            memcpy(fields[f].visibilities[i].Vo, fields[f].backup_visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]);
+
+            // Copy gridded model visibilities to device
+            gpuErrchk(cudaMemcpy(V_grid_device, fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N, cudaMemcpyHostToDevice));
+
+            // Copy original (u,v) positions to device
+            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].backup_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
+
+
+            UVpow2 = NearestPowerOf2(fields[f].numVisibilitiesPerFreq[i]);
+            fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
+            fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
+
+            // Interpolation / Degridding
+            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, V_grid_device, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+            cudaDeviceSynchronize();
+
+        }
+    }
+
+    cudaFree(V_grid_device);
+
+}
+
 /*__global__ void do_gridding(float *u, float *v, cufftComplex *Vo, cufftComplex *Vo_g, float *w, float *w_g, int* count, float deltau, float deltav, int visibilities, int M, int N)
    {
    int i = blockDim.x * blockIdx.x + threadIdx.x;

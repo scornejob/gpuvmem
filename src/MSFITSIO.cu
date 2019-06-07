@@ -33,7 +33,7 @@
 
 #include "MSFITSIO.cuh"
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields)
+__host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding)
 {
         freqData freqsAndVisibilities;
         string dir = MS_name;
@@ -81,6 +81,8 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields)
         freqsAndVisibilities.total_frequencies = total_frequencies;
         for(int f=0; f < freqsAndVisibilities.nfields; f++) {
                 fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
+                if(gridding)
+                    fields[f].backup_numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
                 for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++) {
                         fields[f].numVisibilitiesPerFreq[i] = 0;
                 }
