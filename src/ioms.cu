@@ -66,6 +66,11 @@ void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int
         free(full_name);
 }
 
+void IoMS::IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+{
+    fitsOutputCufftComplex(I, canvas, out_image, mempath, iteration, fg_scale, M, N, option);
+}
+
 void IoMS::IocloseCanvas(fitsfile *canvas)
 {
         closeCanvas(canvas);

@@ -1,0 +1,11 @@
+taskname           = "importfits"
+fitsimage          =  "mod_out.fits"
+imagename          =  "mod_out"
+whichrep           =  0
+whichhdu           =  -1
+zeroblanks         =  True
+overwrite          =  False
+defaultaxes        =  False
+defaultaxesvalues    =  []
+beam               =  []
+#importfits(fitsimage="mod_out.fits",imagename="mod_out",whichrep=0,whichhdu=-1,zeroblanks=True,overwrite=False,defaultaxes=False,defaultaxesvalues=[],beam=[])

@@ -650,7 +650,7 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
 
 __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu)
 {
-        printf("Saving residuals to host memory\n");
+
         if(num_gpus == 1) {
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
@@ -671,9 +671,8 @@ __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int fi
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {
                         for(int j=0; j<fields[f].numVisibilitiesPerFreq[i]; j++) {
-                                if(fields[f].visibilities[i].u[j]<0) {
+                                if(fields[f].visibilities[i].u[j]<0)
                                         fields[f].visibilities[i].Vm[j].y *= -1;
-                                }
                         }
                 }
         }
@@ -725,7 +724,8 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data,
                                         if(field == f && spw == i && flag == false) {
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0) {
+                                                        if(auxbool[0] == false && weights[sto] > 0.0)
+                                                        {
                                                                 dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vo[h].x - fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vo[h].y - fields[f].visibilities[g].Vm[h].y);
                                                                 weights[sto] = fields[f].visibilities[g].weight[h];
                                                                 h++;
@@ -788,7 +788,8 @@ __host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData da
                                         if(field == f && spw == i && flag == false) {
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0) {
+                                                        if(auxbool[0] == false && weights[sto] > 0.0)
+                                                        {
                                                                 dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x, fields[f].visibilities[g].Vm[h].y);
                                                                 h++;
                                                         }
@@ -854,7 +855,8 @@ __host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData 
                                         if(field == f && spw == i && flag == false) {
                                                 for (int sto=0; sto< data.nstokes; sto++) {
                                                         auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0) {
+                                                        if(auxbool[0] == false && weights[sto] > 0.0)
+                                                        {
                                                                 real_n = Normal(0.0, 1.0);
                                                                 imag_n = Normal(0.0, 1.0);
                                                                 dataCol[j][sto] = casa::Complex(fields[f].visibilities[g].Vm[h].x + real_n * (1/sqrt(weights[sto])), fields[f].visibilities[g].Vm[h].y + imag_n * (1/sqrt(weights[sto])));
@@ -1019,6 +1021,87 @@ __host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields,
         }
         main_tab.flush();
 
+}
+
+__host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+{
+    fitsfile *fpointer;
+    int status = 0;
+    long fpixel = 1;
+    long elements = M*N;
+    size_t needed;
+    char *name;
+    long naxes[2]={M,N};
+    long naxis = 2;
+    char *unit = "JY/PIXEL";
+
+    switch(option){
+        case 0:
+            needed = snprintf(NULL, 0, "!%s", out_image) + 1;
+            name = (char*)malloc(needed*sizeof(char));
+            snprintf(name, needed*sizeof(char), "!%s", out_image);
+            break;
+        case 1:
+            needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
+            name = (char*)malloc(needed*sizeof(char));
+            snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
+            break;
+        case -1:
+            break;
+        default:
+            printf("Invalid case to FITS\n");
+            exit(-1);
+    }
+
+    fits_create_file(&fpointer, name, &status);
+    if (status) {
+        fits_report_error(stderr, status); /* print error message */
+        exit(-1);
+    }
+    fits_copy_header(canvas, fpointer, &status);
+    if (status) {
+        fits_report_error(stderr, status); /* print error message */
+        exit(-1);
+    }
+
+    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+    fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
+
+
+    cufftComplex *host_IFITS;
+    host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+    float *image2D = (float*) malloc(M*N*sizeof(float));
+    gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
+
+
+    int x = M-1;
+    int y = N-1;
+    for(int i=0; i < M; i++){
+        for(int j=0; j < N; j++){
+            /*Absolute*/
+            //image2D[N*(y-i)+(x-j)] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
+            image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
+            /*Real part*/
+            //image2D[N*i+j] = host_IFITS[N*i+j].y;
+            /*Imaginary part*/
+            //image2D[N*i+j] = host_IFITS[N*i+j].y;
+        }
+    }
+
+    fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+    if (status) {
+        fits_report_error(stderr, status); /* print error message */
+        exit(-1);
+    }
+    fits_close_file(fpointer, &status);
+    if (status) {
+        fits_report_error(stderr, status); /* print error message */
+        exit(-1);
+    }
+
+    free(host_IFITS);
+    free(image2D);
+    free(name);
 }
 
 __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)

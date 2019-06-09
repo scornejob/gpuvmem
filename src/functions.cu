@@ -782,7 +782,11 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
                                 w = fields[f].visibilities[i].weight[z];
                                 Vo = fields[f].visibilities[i].Vo[z];
 
-
+                                //Backing up original visibilities and (u,v) positions
+                                fields[f].backup_visibilities[i].u[z] = u;
+                                fields[f].backup_visibilities[i].v[z] = v;
+                                fields[f].backup_visibilities[i].Vo[z] = Vo;
+                                fields[f].backup_visibilities[i].weight[z] = w;
 
                                 // Visibilities from metres to klambda
                                 u *= fields[f].visibilities[i].freq / LIGHTSPEED;
@@ -790,16 +794,10 @@ __host__ void do_gridding(Field *fields, freqData *data, float deltau, float del
 
                                 //Apply hermitian symmetry (it will be applied afterwards)
                                 if(u < 0.0) {
-                                        u *= -1.0;
-                                        v *= -1.0;
-                                        Vo.y *= -1.0;
+                                    u *= -1.0;
+                                    v *= -1.0;
+                                    Vo.y *= -1.0;
                                 }
-
-                                //Backing up original visibilities
-                                fields[f].backup_visibilities[i].u[z] = u;
-                                fields[f].backup_visibilities[i].v[z] = v;
-                                fields[f].backup_visibilities[i].Vo[z] = Vo;
-                                fields[f].backup_visibilities[i].weight[z] = w;
 
                                 j = round(u/fabsf(deltau) + N/2);
                                 k = round(v/fabsf(deltav) + M/2);
@@ -964,7 +962,7 @@ __host__ void griddedTogrid(cufftComplex *Vm_gridded, cufftComplex *Vm_gridded_s
 
 __host__ void degridding(Field *fields, freqData data, float deltau, float deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N)
 {
-    cufftComplex *V_grid_device;
+
     long UVpow2;
 
     residualsToHost(fields, data, num_gpus, firstgpu);
@@ -974,10 +972,9 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
     else
         cudaSetDevice(firstgpu);
 
-    gpuErrchk(cudaMalloc(&V_grid_device, sizeof(cufftComplex)*M*N));
-
     for(int f=0; f<data.nfields; f++) {
         for(int i=0; i<data.total_frequencies; i++) {
+
             // Put gridded visibilities in a M*N grid
             griddedTogrid(fields[f].gridded_visibilities[i].Vm, fields[f].visibilities[i].Vm, fields[f].visibilities[i].u, fields[f].visibilities[i].v, deltau, deltav, fields[f].visibilities[i].freq, M, N, fields[f].numVisibilitiesPerFreq[i]);
 
@@ -999,13 +996,14 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
 
             gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
             gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
+            gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]));
             gpuErrchk(cudaMalloc(&fields[f].device_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i]));
 
             // Copy original Vo visibilities to host
             memcpy(fields[f].visibilities[i].Vo, fields[f].backup_visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i]);
 
             // Copy gridded model visibilities to device
-            gpuErrchk(cudaMemcpy(V_grid_device, fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N, cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(device_V, fields[f].gridded_visibilities[i].Vm, sizeof(cufftComplex)*M*N, cudaMemcpyHostToDevice));
 
             // Copy original (u,v) positions and weights to host and device
 
@@ -1015,16 +1013,22 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
 
             gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].u, fields[f].backup_visibilities[i].u, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
             gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].v, fields[f].backup_visibilities[i].v, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
-
+            gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].Vo, fields[f].backup_visibilities[i].Vo, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
             gpuErrchk(cudaMemcpy(fields[f].device_visibilities[i].weight, fields[f].backup_visibilities[i].weight, sizeof(float)*fields[f].numVisibilitiesPerFreq[i], cudaMemcpyHostToDevice));
-
 
             UVpow2 = NearestPowerOf2(fields[f].numVisibilitiesPerFreq[i]);
             fields[f].visibilities[i].threadsPerBlockUV = blockSizeV;
             fields[f].visibilities[i].numBlocksUV = UVpow2/fields[f].visibilities[i].threadsPerBlockUV;
 
+            // We do a FFTSHIFT to place quadrants as cuFFT
+            /*fftshift_2D<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N);
+            fitsOutputCufftComplex(device_V, mod_in, "gridded_2.fits", "", 100, 1.0, M, N, 0);*/
+
+            hermitianSymmetry<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].Vo, fields[f].visibilities[i].freq, fields[f].numVisibilitiesPerFreq[i]);
+            cudaDeviceSynchronize();
+
             // Interpolation / Degridding
-            vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, V_grid_device, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+            vis_mod2<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
             cudaDeviceSynchronize();
 
             // Freeing backup arrays
@@ -1037,7 +1041,6 @@ __host__ void degridding(Field *fields, freqData data, float deltau, float delta
         }
     }
 
-    cudaFree(V_grid_device);
 
 }
 
@@ -1300,6 +1303,45 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
                 }
 
         }
+
+}
+
+
+__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N)
+{
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    float f_j, f_k;
+    int j, k;
+    float2 uv;
+    cufftComplex Z;
+
+    if (i < numVisibilities) {
+
+        uv.x = Ux[i]/fabs(deltau);
+        uv.y = Vx[i]/fabs(deltav);
+
+        f_j = roundf(uv.x + N/2);
+        j = (int)f_j;
+        f_j = f_j - j;
+
+        f_k = roundf(uv.y + N/2);
+        k = (int)f_k;
+        f_k = f_k - k;
+
+
+        if (j < N && k < N && j+1 < N && k+1 < N) {
+            /* Bilinear interpolation */
+            // Real part
+            Z.x = (1-f_j)*(1-f_k)*V[N*k+j].x + f_j*(1-f_k)*V[N*k+(j+1)].x + (1-f_j)*f_k*V[N*(k+1)+j].x + f_j*f_k*V[N*(k+1)+j+1].x;
+            // Imaginary part
+            Z.y = (1-f_j)*(1-f_k)*V[N*k+j].y + f_j*(1-f_k)*V[N*k+(j+1)].y + (1-f_j)*f_k*V[N*(k+1)+j].y + f_j*f_k*V[N*(k+1)+j+1].y;
+
+            Vm[i] = Z;
+        }else{
+            weight[i] = 0.0f;
+        }
+
+    }
 
 }
 

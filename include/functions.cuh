@@ -79,6 +79,8 @@ __global__ void weight_image(float *weight_image, float *total_atten, float nois
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
 __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod3(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(float *xt, float *pcom, float *xicom, float x, float MINPIX, float eta, long N);

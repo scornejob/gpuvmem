@@ -1,0 +1,7 @@
+taskname           = "imhead"
+imagename          =  "FREQ78_out.ms.img.image"
+mode               =  "get"
+hdkey              =  "beampa"
+hdvalue            =  ""
+verbose            =  False
+#imhead(imagename="FREQ78_out.ms.img.image",mode="get",hdkey="beampa",hdvalue="",verbose=False)

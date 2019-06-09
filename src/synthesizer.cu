@@ -297,7 +297,8 @@ void MFS::configure(int argc, char **argv)
                         fields[f].visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
                         fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
 
-                        if(gridding) {
+                        if(gridding)
+                        {
                                 fields[f].gridded_visibilities[i].u = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));

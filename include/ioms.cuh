@@ -17,6 +17,7 @@ void IocloseCanvas(fitsfile *canvas);
 void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
 void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
 void IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index);
+void IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 void doOrderIterations(float *I);
 void doOrderEnd(float *I);
 void doOrderError(float *I);
