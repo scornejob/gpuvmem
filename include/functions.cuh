@@ -34,6 +34,7 @@ __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float *I);
 __host__ void dchiCuadrado(float *I, float *dxi2);
 __host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, float robust);
+__host__ void degridding(Field *fields, freqData data, float deltau, float deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N);
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV, int gridding);
 __host__ void clipping(cufftComplex *I, int iterations);
 template <class T>
@@ -78,6 +79,8 @@ __global__ void weight_image(float *weight_image, float *total_atten, float nois
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
 __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod3(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(float *xt, float *pcom, float *xicom, float x, float MINPIX, float eta, long N);
@@ -114,7 +117,7 @@ __global__ void getR (float *d_r, float *d_q, float scalar, int M, int N, int im
 __global__ void updateQ (float *d_q, float alpha, float *d_y, int k, int M, int N, int image);
 __global__ void getDot_LBFGS_ff(float *aux_vector, float *vec_1, float *vec_2, int k, int h, int M, int N, int image);
 __global__ void searchDirection_LBFGS(float *xi, long N, long M, int image);
-
+__global__ void fftshift_2D(cufftComplex *data, int N1, int N2);
 
 
 #endif

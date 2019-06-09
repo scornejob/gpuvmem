@@ -6,9 +6,9 @@ extern char* mempath;
 extern fitsfile *mod_in;
 extern int iter;
 
-freqData IoMS::IocountVisibilities(char * MS_name, Field *&fields)
+freqData IoMS::IocountVisibilities(char * MS_name, Field *&fields, int gridding)
 {
-        return countVisibilities(MS_name, fields);
+        return countVisibilities(MS_name, fields, gridding);
 };
 canvasVariables IoMS::IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag)
 {
@@ -64,6 +64,11 @@ void IoMS::IoPrintMEMImageIteration(float *I, char *name_image, char *units, int
 
         OFITS(I, mod_in, mempath, full_name, units, iter, index, fg_scale, M, N);
         free(full_name);
+}
+
+void IoMS::IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
+{
+    fitsOutputCufftComplex(I, canvas, out_image, mempath, iteration, fg_scale, M, N, option);
 }
 
 void IoMS::IocloseCanvas(fitsfile *canvas)

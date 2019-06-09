@@ -236,7 +236,7 @@ virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
 class Io
 {
 public:
-virtual freqData IocountVisibilities(char * MS_name, Field *&fields) = 0;
+virtual freqData IocountVisibilities(char * MS_name, Field *&fields, int gridding) = 0;
 virtual canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag) = 0;
 virtual void IoreadMSMCNoise(char *MS_name, Field *fields, freqData data) = 0;
 virtual void IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
@@ -247,6 +247,7 @@ virtual void IocloseCanvas(fitsfile *canvas) = 0;
 virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
 virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
 virtual void IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index) = 0;
+virtual void IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)=0;
 void setPrintImagesPath(char * pip){
         this->printImagesPath = pip;
 };

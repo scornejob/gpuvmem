@@ -156,7 +156,7 @@ void MFS::configure(int argc, char **argv)
         beam_bmin = canvas_vars.beam_bmin;
         beam_noise = canvas_vars.beam_noise;
 
-        data = iohandler->IocountVisibilities(msinput, fields);
+        data = iohandler->IocountVisibilities(msinput, fields, gridding);
 
         vars_per_field = (VariablesPerField*)malloc(data.nfields*sizeof(VariablesPerField));
 
@@ -284,6 +284,7 @@ void MFS::configure(int argc, char **argv)
                 fields[f].visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
                 fields[f].gridded_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
                 fields[f].device_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
+                fields[f].backup_visibilities = (Vis*)malloc(data.total_frequencies*sizeof(Vis));
         }
 
         //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
@@ -296,18 +297,35 @@ void MFS::configure(int argc, char **argv)
                         fields[f].visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
                         fields[f].visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
 
-                        if(gridding) {
+                        if(gridding)
+                        {
                                 fields[f].gridded_visibilities[i].u = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].v = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].weight = (float*)malloc(M*N*sizeof(float));
                                 fields[f].gridded_visibilities[i].S = (int*)malloc(M*N*sizeof(int));
                                 fields[f].gridded_visibilities[i].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+                                fields[f].gridded_visibilities[i].Vm = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
 
                                 memset(fields[f].gridded_visibilities[i].u, 0, M*N*sizeof(float));
                                 memset(fields[f].gridded_visibilities[i].v, 0, M*N*sizeof(float));
                                 memset(fields[f].gridded_visibilities[i].weight, 0, M*N*sizeof(float));
                                 memset(fields[f].gridded_visibilities[i].S, 0, M*N*sizeof(int));
                                 memset(fields[f].gridded_visibilities[i].Vo, 0, M*N*sizeof(cufftComplex));
+                                memset(fields[f].gridded_visibilities[i].Vm, 0, M*N*sizeof(cufftComplex));
+
+                                //Save memory to backup original visibilities after gridding
+                                fields[f].backup_visibilities[i].u = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                fields[f].backup_visibilities[i].v = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                fields[f].backup_visibilities[i].weight = (float*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                fields[f].backup_visibilities[i].Vo = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+                                fields[f].backup_visibilities[i].Vm = (cufftComplex*)malloc(fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+
+                                memset(fields[f].backup_visibilities[i].u, 0, fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                memset(fields[f].backup_visibilities[i].v, 0, fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                memset(fields[f].backup_visibilities[i].weight, 0, fields[f].numVisibilitiesPerFreq[i]*sizeof(float));
+                                memset(fields[f].backup_visibilities[i].Vo, 0, fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+                                memset(fields[f].backup_visibilities[i].Vm, 0, fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex));
+
                         }
                 }
         }
@@ -818,13 +836,26 @@ void MFS::run()
                 }
 
         }
-        //Saving residuals to disk
-        residualsToHost(fields, data, num_gpus, firstgpu);
+
         if(!gridding)
         {
+                //Saving residuals to disk
+                residualsToHost(fields, data, num_gpus, firstgpu);
                 printf("Saving residuals to MS...\n");
                 iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
                 printf("Residuals saved.\n");
+        }else{
+            float deltax = RPDEG*DELTAX; //radians
+            float deltay = RPDEG*DELTAY; //radians
+            deltau = 1.0 / (M * deltax);
+            deltav = 1.0 / (N * deltay);
+
+            printf("Visibilities are gridded, we will need to de-grid to save them in a Measurement Set File\n");
+            degridding(fields, data, deltau, deltav, num_gpus, firstgpu, variables.blockSizeV, M, N);
+            residualsToHost(fields, data, num_gpus, firstgpu);
+            printf("Saving residuals to MS...\n");
+            iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
+            printf("Residuals saved.\n");
         }
 
 
@@ -833,31 +864,43 @@ void MFS::run()
 void MFS::unSetDevice()
 {
         //Free device and host memory
-        printf("Free device and host memory\n");
-        cufftDestroy(plan1GPU);
-        for(int f=0; f<data.nfields; f++) {
-                for(int i=0; i<data.total_frequencies; i++) {
-                        if(num_gpus > 1) {
-                                cudaSetDevice((i%num_gpus) + firstgpu);
-                                //cudaFree(vars_per_field[f].device_vars[i].dchi2);
-                        }
-                        cudaFree(fields[f].device_visibilities[i].u);
-                        cudaFree(fields[f].device_visibilities[i].v);
-                        cudaFree(fields[f].device_visibilities[i].weight);
+        printf("Freeing device memory\n");
+        if(num_gpus == 1) {
+            cudaSetDevice(selected);
+        }else{
+            cudaSetDevice(firstgpu);
+        }
 
-                        cudaFree(fields[f].device_visibilities[i].Vr);
-                        cudaFree(fields[f].device_visibilities[i].Vo);
+        //Weird error segmentation fault when doing cudafree
+        for(int f=0; f<data.nfields; f++) {
+            for(int i=0; i<data.total_frequencies; i++) {
+
+                    if(num_gpus > 1) {
+                        cudaSetDevice((i%num_gpus) + firstgpu);
+                    }
+
+                    cudaFree(fields[f].device_visibilities[i].u);
+                    cudaFree(fields[f].device_visibilities[i].v);
+                    cudaFree(fields[f].device_visibilities[i].weight);
+                    cudaFree(fields[f].device_visibilities[i].Vr);
+                    cudaFree(fields[f].device_visibilities[i].Vm);
+                    cudaFree(fields[f].device_visibilities[i].Vo);
 
                 }
         }
 
+        printf("Freeing cuFFT plans\n");
         if(num_gpus > 1) {
                 for(int g=0; g<num_gpus; g++) {
                         cudaSetDevice((g%num_gpus) + firstgpu);
                         cufftDestroy(vars_gpu[g].plan);
                 }
+        }else{
+            cudaSetDevice(selected);
+            cufftDestroy(plan1GPU);
         }
 
+        printf("Freeing host memory\n");
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {
                         if(fields[f].numVisibilitiesPerFreq[i] != 0) {

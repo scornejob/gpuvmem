@@ -6,7 +6,7 @@
 class IoMS : public Io
 {
 public:
-freqData IocountVisibilities(char * MS_name, Field *&fields);
+freqData IocountVisibilities(char * MS_name, Field *&fields, int gridding);
 canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 void IoreadMSMCNoise(char *MS_name, Field *fields, freqData data);
 void IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability);
@@ -17,6 +17,7 @@ void IocloseCanvas(fitsfile *canvas);
 void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
 void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
 void IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index);
+void IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 void doOrderIterations(float *I);
 void doOrderEnd(float *I);
 void doOrderError(float *I);
