@@ -158,6 +158,11 @@ __host__ void init_beam(int telescope)
                 pb_factor = 1.22; /* FWHM Factor */
                 pb_cutoff = 80.0*RPARCM; /* radians */
                 break;
+        case 7:
+                antenna_diameter = 1.0726E+07; /* EHT Antenna Diameter according to the paper */
+                pb_factor = 1.22; /* FWHM Factor */
+                pb_cutoff = 80.0E-06*RPARCSEC; /* radians */
+                break;
         default:
                 printf("Telescope type not defined\n");
                 goToError();

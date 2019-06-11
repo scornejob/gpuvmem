@@ -19,6 +19,7 @@ const float PI = CUDART_PI_F;
 const double PI_D = CUDART_PI;
 const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
+const float RPARCSEC = (PI/(180.0*3600.0));
 const float RPARCM = (PI/(180.0*60.0));
 const float LIGHTSPEED = 2.99792458E8;
 const float RZ = 1.2196698912665045;
