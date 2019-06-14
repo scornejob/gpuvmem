@@ -146,7 +146,7 @@ __host__ void init_beam(int telescope)
         case 4:
                 antenna_diameter = 25.0; /* VLA Antenna Diameter */
                 pb_factor = 1.22; /* FWHM Factor */
-                pb_cutoff = 20.0*RPARCM; /* radians */
+                pb_cutoff = 2.0E+5*RPARCM; /* radians */
                 break;
         case 5:
                 antenna_diameter = 3.5; /* SZA Antenna Diameter */
@@ -2475,7 +2475,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
 
                                         ip->apply_beam(device_image, fields[f].global_xobs, fields[f].global_yobs, fields[f].visibilities[i].freq);
                                         gpuErrchk(cudaDeviceSynchronize());
-
+                                        
                                         //FFT 2D
                                         if ((cufftExecC2C(plan1GPU, (cufftComplex*)device_image, (cufftComplex*)device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
                                                 printf("CUFFT exec error\n");
