@@ -1295,13 +1295,13 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
         float du = xphs/(float)M;
         float dv = yphs/(float)N;
 
-        if(j < M/2 + 1) {
+        if(j < M/2) {
                 u = du * j;
         }else{
                 u = du * (j-M);
         }
 
-        if(i < N/2 + 1) {
+        if(i < N/2) {
                 v = dv * i;
         }else{
                 v = dv * (i-N);
