@@ -36,11 +36,19 @@
  * Convert (ra,dec) to direction cosines (l,m) relative to
  * phase-tracking center (ra0, dec0). All in radians.
  * Reference: Synthesis Imaging in Radio Astronomy II, p.388.
- */
+ */                     // MS     ,      MS  ,    FITS   ,   FITS
 __host__ void direccos(double ra, double dec, double ra0, double dec0, double* l, double* m)
 {
         double delta_ra = ra - ra0;
-        double cosdec = cos(dec);
-        *l = cosdec * sin(delta_ra);
-        *m = sin(dec) * cos(dec0) - cosdec * sin(dec0) * cos(delta_ra);
+
+        double sindec, cosdec;
+        double sindec0,cosdec0;
+        double sindelta, cosdelta;
+
+        sincos(dec, &sindec, &cosdec);
+        sincos(dec0, &sindec0, &cosdec0);
+        sincos(delta_ra, &sindelta, &cosdelta);
+
+        *l = cosdec * sindelta;
+        *m = sindec * cosdec0 - cosdec * sindec0 * cosdelta;
 }

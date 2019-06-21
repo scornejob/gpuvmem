@@ -485,28 +485,60 @@ void MFS::setDevice()
         /////////////////////////////////////////////////////CALCULATE DIRECTION COSINES/////////////////////////////////////////////////
         double raimage = ra * RPDEG_D;
         double decimage = dec * RPDEG_D;
-        if(verbose_flag) {
-                printf("FITS: Ra: %lf, dec: %lf\n", raimage, decimage);
-        }
-        for(int f=0; f<data.nfields; f++) {
-                double lobs, mobs;
 
-                direccos(fields[f].obsra, fields[f].obsdec, raimage, decimage, &lobs,  &mobs);
+        if(verbose_flag) {
+                printf("FITS: Ra: %.16e (rad), dec: %.16e (rad)\n", raimage, decimage);
+                printf("FITS: Center pix: (%d,%d)\n", crpix1-1, crpix2-1);
+        }
+
+        double lobs, mobs, lphs, mphs;
+        double dcosines_l_pix_ref, dcosines_m_pix_ref, dcosines_l_pix_phs, dcosines_m_pix_phs;
+        for(int f=0; f<data.nfields; f++) {
+
+                direccos(fields[f].ref_ra, fields[f].ref_dec, raimage, decimage, &lobs,  &mobs);
+                direccos(fields[f].phs_ra, fields[f].phs_dec, raimage, decimage, &lphs,  &mphs);
+
+                dcosines_l_pix_ref = lobs/deltax; // Radians to pixels
+                dcosines_m_pix_ref = mobs/deltay; // Radians to pixels
+
+                dcosines_l_pix_phs = lphs/deltax; // Radians to pixels
+                dcosines_m_pix_phs = mphs/deltay; // Radians to pixels
+                if(verbose_flag)
+                {
+                    printf("Ref: l (pix): %e, m (pix): %e\n", dcosines_l_pix_ref, dcosines_m_pix_ref);
+                    printf("Phase: l (pix): %e, m (pix): %e\n", dcosines_l_pix_phs, dcosines_m_pix_phs);
+
+                }
 
                 if(crpix1 != crpix2) {
-                        fields[f].global_xobs = (crpix1 - 1.0) - (lobs/deltax) + 1.0;
-                        fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
+                    fields[f].ref_xobs = (crpix1 - 1.0f) - dcosines_l_pix_ref + 1.0f;// + 6.0f;
+                    fields[f].ref_yobs = (crpix2 - 1.0f) - dcosines_m_pix_ref - 1.0f;// - 10.0f;
+
+                    fields[f].phs_xobs = (crpix1 - 1.0f) - dcosines_l_pix_phs + 1.0f;// + 6.0f;
+                    fields[f].phs_yobs = (crpix2 - 1.0f) - dcosines_m_pix_phs - 1.0f;// - 10.0f;
                 }else{
-                        fields[f].global_xobs = (crpix1 - 1.0) - (lobs/deltax) - 1.0;
-                        fields[f].global_yobs = (crpix2 - 1.0) - (mobs/deltay) - 1.0;
-                }
-                if(verbose_flag) {
-                        printf("Field %d - Ra: %f, dec: %f , x0: %f, y0: %f\n", f, fields[f].obsra, fields[f].obsdec, fields[f].global_xobs, fields[f].global_yobs);
+                    fields[f].ref_xobs = (crpix1 - 1.0f) - dcosines_l_pix_ref - 1.0f;// + 6.0f;
+                    fields[f].ref_yobs = (crpix2 - 1.0f) - dcosines_m_pix_ref - 1.0f;// - 7.0f;
+
+                    fields[f].phs_xobs = (crpix1 - 1.0f) - dcosines_l_pix_phs - 1.0f;// + 5.0f;
+                    fields[f].phs_yobs = (crpix2 - 1.0f) - dcosines_m_pix_phs - 1.0f;// - 7.0f;
                 }
 
-                if(fields[f].global_xobs < 0 || fields[f].global_xobs > M || fields[f].global_xobs < 0 || fields[f].global_yobs > N) {
-                        printf("Pointing center (%f,%f) is outside the range of the image\n", fields[f].global_xobs, fields[f].global_xobs);
+                if(verbose_flag) {
+                    printf("Ref: Field %d - Ra: %.16e (rad), dec: %.16e (rad), x0: %f (pix), y0: %f (pix)\n", f, fields[f].ref_ra, fields[f].ref_dec,
+                           fields[f].ref_xobs, fields[f].ref_yobs);
+                    printf("Phase: Field %d - Ra: %.16e (rad), dec: %.16e (rad), x0: %f (pix), y0: %f (pix)\n", f, fields[f].phs_ra, fields[f].phs_dec,
+                           fields[f].phs_xobs, fields[f].phs_yobs);
+                }
+
+                if(fields[f].ref_xobs < 0 || fields[f].ref_xobs >= M || fields[f].ref_xobs < 0 || fields[f].ref_yobs >= N) {
+                        printf("Pointing reference center (%f,%f) is outside the range of the image\n", fields[f].ref_xobs, fields[f].ref_yobs);
                         goToError();
+                }
+
+                if(fields[f].phs_xobs < 0 || fields[f].phs_xobs >= M || fields[f].phs_xobs < 0 || fields[f].phs_yobs >= N) {
+                    printf("Pointing phase center (%f,%f) is outside the range of the image\n", fields[f].phs_xobs, fields[f].phs_yobs);
+                    goToError();
                 }
         }
         ////////////////////////////////////////////////////////MAKE STARTING IMAGE////////////////////////////////////////////////////////
@@ -661,7 +693,7 @@ void MFS::setDevice()
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
                                 if(fields[f].numVisibilitiesPerFreq[i] > 0) {
-                                        total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
+                                        total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].ref_xobs, fields[f].ref_yobs, DELTAX, DELTAY, N);
                                         gpuErrchk(cudaDeviceSynchronize());
                                 }
                         }
@@ -680,7 +712,7 @@ void MFS::setDevice()
                                 if(fields[f].numVisibilitiesPerFreq[i] > 0) {
                                         #pragma omp critical
                                         {
-                                                total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].global_xobs, fields[f].global_yobs, DELTAX, DELTAY, N);
+                                                total_attenuation<<<numBlocksNN, threadsPerBlockNN>>>(vars_per_field[f].atten_image, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq, fields[f].ref_xobs, fields[f].ref_yobs, DELTAX, DELTAY, N);
                                                 gpuErrchk(cudaDeviceSynchronize());
                                         }
                                 }
