@@ -2485,7 +2485,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                         gpuErrchk(cudaDeviceSynchronize());
 
                                         //PHASE_ROTATE
-                                        phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
+                                        phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, fields[f].ref_xobs, fields[f].ref_yobs);
                                         gpuErrchk(cudaDeviceSynchronize());
 
                                         //RESIDUAL CALCULATION
@@ -2646,7 +2646,7 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
                                 if(fields[f].numVisibilitiesPerFreq[i] != 0) {
                                         //size_t shared_memory;
                                         //shared_memory = 3*fields[f].numVisibilitiesPerFreq[i]*sizeof(float) + fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex);
-                                        DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq);
+                                        DChi2<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq);
                                         //DChi2<<<numBlocksNN, threadsPerBlockNN, shared_memory>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, N, fields[f].numVisibilitiesPerFreq[i], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].visibilities[i].freq);
                                         gpuErrchk(cudaDeviceSynchronize());
 
