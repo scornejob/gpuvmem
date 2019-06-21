@@ -38,21 +38,29 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding
         freqData freqsAndVisibilities;
         string dir = MS_name;
         char *query;
-        casa::Vector<double> pointing;
+        casa::Vector<double> pointing_ref;
+        casa::Vector<double> pointing_phs;
         casa::Table main_tab(dir);
         casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
         casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
         casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
         freqsAndVisibilities.nfields = field_tab.nrow();
-        casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,NAME"));
+        casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,PHASE_DIR"));
 
         fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
         for(int f=0; f<freqsAndVisibilities.nfields; f++) {
                 const casa::TableRecord &values = field_row.get(f);
-                pointing = values.asArrayDouble("REFERENCE_DIR");
-                fields[f].obsra = pointing[0];
-                fields[f].obsdec = pointing[1];
+                pointing_ref = values.asArrayDouble("REFERENCE_DIR");
+                pointing_phs = values.asArrayDouble("PHASE_DIR");
+
+                fields[f].ref_ra = pointing_ref[0];
+                fields[f].ref_dec = pointing_ref[1];
+
+                fields[f].phs_ra = pointing_phs[0];
+                fields[f].phs_dec = pointing_phs[1];
+                //printf("RA: %.12e, DEC: %.12e\n", pointing[0], pointing[1]);
         }
+
 
         freqsAndVisibilities.nsamples = main_tab.nrow();
         if (freqsAndVisibilities.nsamples == 0) {
@@ -167,6 +175,7 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
         fits_read_key(canvas, TFLOAT, "BMAJ", &c_vars.beam_bmaj, NULL, &status_canvas);
         fits_read_key(canvas, TFLOAT, "BMIN", &c_vars.beam_bmin, NULL, &status_canvas);
         fits_read_key(canvas, TFLOAT, "NOISE", &c_vars.beam_noise, NULL, &status_noise);
+
 
         if (status_canvas) {
                 fits_report_error(stderr, status_canvas); /* print error message */

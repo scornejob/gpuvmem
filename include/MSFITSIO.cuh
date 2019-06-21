@@ -78,8 +78,10 @@ typedef struct observedVisibilities {
 
 typedef struct field {
         int valid_frequencies;
-        double obsra, obsdec;
-        float global_xobs, global_yobs;
+        double ref_ra, ref_dec;
+        double phs_ra, phs_dec;
+        float ref_xobs, ref_yobs;
+        float phs_xobs, phs_yobs;
         long *numVisibilitiesPerFreq;
         long *backup_numVisibilitiesPerFreq;
         Vis *visibilities;
