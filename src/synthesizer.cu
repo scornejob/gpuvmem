@@ -511,17 +511,17 @@ void MFS::setDevice()
                 }
 
                 if(crpix1 != crpix2) {
-                    fields[f].ref_xobs = (crpix1 - 1.0f) - dcosines_l_pix_ref + 1.0f;// + 6.0f;
-                    fields[f].ref_yobs = (crpix2 - 1.0f) - dcosines_m_pix_ref - 1.0f;// - 10.0f;
+                    fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref;// + 1.0f;// + 6.0f;
+                    fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref;// - 1.0f;// - 10.0f;
 
-                    fields[f].phs_xobs = (crpix1 - 1.0f) - dcosines_l_pix_phs + 1.0f;// + 6.0f;
-                    fields[f].phs_yobs = (crpix2 - 1.0f) - dcosines_m_pix_phs - 1.0f;// - 10.0f;
+                    fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs;// + 1.0f;// + 6.0f;
+                    fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs;// - 1.0f;// - 10.0f;
                 }else{
-                    fields[f].ref_xobs = (crpix1 - 1.0f) - dcosines_l_pix_ref - 1.0f;// + 6.0f;
-                    fields[f].ref_yobs = (crpix2 - 1.0f) - dcosines_m_pix_ref - 1.0f;// - 7.0f;
+                    fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref; //- 1.0f;// + 6.0f;
+                    fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref; //- 1.0f;// - 7.0f;
 
-                    fields[f].phs_xobs = (crpix1 - 1.0f) - dcosines_l_pix_phs - 1.0f;// + 5.0f;
-                    fields[f].phs_yobs = (crpix2 - 1.0f) - dcosines_m_pix_phs - 1.0f;// - 7.0f;
+                    fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs; //- 1.0f;// + 5.0f;
+                    fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs; //- 1.0f;// - 7.0f;
                 }
 
                 if(verbose_flag) {
