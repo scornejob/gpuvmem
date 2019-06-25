@@ -351,8 +351,8 @@ void MFS::configure(int argc, char **argv)
         this->visibilities->setData(&data);
         this->visibilities->setFields(fields);
         this->visibilities->setTotalVisibilites(&total_visibilities);
-        float deltax = RPDEG*DELTAX; //radians
-        float deltay = RPDEG*DELTAY; //radians
+        float deltax = RPDEG_D*DELTAX; //radians
+        float deltay = RPDEG_D*DELTAY; //radians
         deltau = 1.0 / (M * deltax);
         deltav = 1.0 / (N * deltay);
 

@@ -1206,7 +1206,7 @@ __device__ float GaussianBeam(float distance, float lambda, float antenna_diamet
         return atten;
 }
 
-__device__ float attenuation(float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY)
+__device__ float attenuation(float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY)
 {
 
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1216,8 +1216,8 @@ __device__ float attenuation(float antenna_diameter, float pb_factor, float pb_c
 
         int x0 = xobs;
         int y0 = yobs;
-        float x = (j - x0) * DELTAX * RPDEG;
-        float y = (i - y0) * DELTAY * RPDEG;
+        float x = (j - x0) * DELTAX * RPDEG_D;
+        float y = (i - y0) * DELTAY * RPDEG_D;
 
         float arc = sqrtf(x*x+y*y);
         float lambda = LIGHTSPEED/freq;
@@ -1234,7 +1234,7 @@ __device__ float attenuation(float antenna_diameter, float pb_factor, float pb_c
 }
 
 
-__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N)
+__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY, long N)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -1272,7 +1272,7 @@ __global__ void noise_image(float *noise_image, float *weight_image, float noise
         noise_image[N*i+j] = noiseval;
 }
 
-__global__ void apply_beam2I(float antenna_diameter, float pb_factor, float pb_cutoff, cufftComplex *image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY)
+__global__ void apply_beam2I(float antenna_diameter, float pb_factor, float pb_cutoff, cufftComplex *image, long N, float xobs, float yobs, float fg_scale, float freq, double DELTAX, double DELTAY)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
@@ -2083,7 +2083,7 @@ __global__ void DL(float *dL, float *I, float *noise, float noise_cut, float lam
 }
 
 
-__global__ void DChi2_SharedMemory(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float ref_xobs, float ref_yobs, float phs_xobs, float phs_yobs, float DELTAX, float DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq)
+__global__ void DChi2_SharedMemory(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float ref_xobs, float ref_yobs, float phs_xobs, float phs_yobs, double DELTAX, double DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq)
 {
 
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2095,8 +2095,8 @@ __global__ void DChi2_SharedMemory(float *noise, float *dChi2, cufftComplex *Vr,
 
         int x0 = phs_xobs;
         int y0 = phs_yobs;
-        float x = (j - x0) * DELTAX * RPDEG;
-        float y = (i - y0) * DELTAY * RPDEG;
+        float x = (j - x0) * DELTAX * RPDEG_D;
+        float y = (i - y0) * DELTAY * RPDEG_D;
 
         float Ukv, Vkv, cosk, sink, atten;
 
@@ -2138,7 +2138,7 @@ __global__ void DChi2_SharedMemory(float *noise, float *dChi2, cufftComplex *Vr,
 }
 
 
-__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float ref_xobs, float ref_yobs, float phs_xobs, float phs_yobs, float DELTAX, float DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq)
+__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float ref_xobs, float ref_yobs, float phs_xobs, float phs_yobs, double DELTAX, double DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq)
 {
 
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2146,8 +2146,8 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, fl
 
         int x0 = phs_xobs;
         int y0 = phs_yobs;
-        float x = (j - x0) * DELTAX * RPDEG;
-        float y = (i - y0) * DELTAY * RPDEG;
+        float x = (j - x0) * DELTAX * RPDEG_D;
+        float y = (i - y0) * DELTAY * RPDEG_D;
 
         float Ukv, Vkv, cosk, sink, atten;
 
