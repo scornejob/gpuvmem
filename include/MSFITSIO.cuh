@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
+#include "math_constants.h"
 #include <string>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
@@ -34,6 +35,9 @@
 #define TDOUBLE      82
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
+
+const float PI = CUDART_PI_F;
+const double PI_D = CUDART_PI;
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -93,7 +97,7 @@ typedef struct field {
 typedef struct canvas_variables {
         float DELTAX, DELTAY;
         double ra, dec;
-        int crpix1, crpix2;
+        double crpix1, crpix2;
         long M, N;
         float beam_bmaj, beam_bmin;
         float beam_noise;

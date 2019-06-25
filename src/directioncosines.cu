@@ -40,15 +40,18 @@
 __host__ void direccos(double ra, double dec, double ra0, double dec0, double* l, double* m)
 {
         double delta_ra = ra - ra0;
-
+        double delta_dec = dec - dec0;
         double sindec, cosdec;
         double sindec0,cosdec0;
-        double sindelta, cosdelta;
+        double sindelta_ra, cosdelta_ra;
 
         sincos(dec, &sindec, &cosdec);
         sincos(dec0, &sindec0, &cosdec0);
-        sincos(delta_ra, &sindelta, &cosdelta);
+        sincos(delta_ra, &sindelta_ra, &cosdelta_ra);
+        double sindelta_dec = sin(delta_dec);
 
-        *l = cosdec * sindelta;
-        *m = sindec * cosdec0 - cosdec * sindec0 * cosdelta;
+
+        *l = cosdec * sindelta_ra;
+        *m = sindec * cosdec0 - cosdec * sindec0 * cosdelta_ra;
+
 }

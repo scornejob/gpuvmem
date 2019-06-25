@@ -1297,19 +1297,19 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, flo
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
         float u,v, phase, c, s, re, im;
-        float du = xphs/(float)M;
-        float dv = yphs/(float)N;
+        float upix = xphs/(float)M;
+        float vpix = yphs/(float)N;
 
         if(j < M/2) {
-                u = du * j;
+                u = upix * j;
         }else{
-                u = du * (j-M);
+                u = upix * (j-M);
         }
 
         if(i < N/2) {
-                v = dv * i;
+                v = vpix * i;
         }else{
-                v = dv * (i-N);
+                v = vpix * (i-N);
         }
 
         phase = 2.0*(u+v);
@@ -1340,18 +1340,18 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx,
 
         if (i < numVisibilities) {
 
-                u = Ux[i]/deltau;
+                u = Ux[i]/fabs(deltau);
                 v = Vx[i]/deltav;
 
                 if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
 
-                        if(u < 0.0) {
-                                u += N;
-                        }
+                        if(u < 0.0)
+                            u = roundf(u+N);
 
-                        if(v < 0.0) {
-                                v += N;
-                        }
+
+                        if(v < 0.0)
+                            v = roundf(v+N);
+
 
                         i1 = (int)u;
                         i2 = (i1+1)%N;
@@ -2477,22 +2477,24 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                         ip->apply_beam(device_image, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].visibilities[i].freq);
                                         gpuErrchk(cudaDeviceSynchronize());
                                         
-                                        //FFT 2D
+                                        // FFT 2D
                                         if ((cufftExecC2C(plan1GPU, (cufftComplex*)device_image, (cufftComplex*)device_V, CUFFT_FORWARD)) != CUFFT_SUCCESS) {
                                                 printf("CUFFT exec error\n");
                                                 goToError();
                                         }
                                         gpuErrchk(cudaDeviceSynchronize());
 
-                                        //PHASE_ROTATE
+                                        // PHASE_ROTATE
                                         phase_rotate<<<numBlocksNN, threadsPerBlockNN>>>(device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
                                         gpuErrchk(cudaDeviceSynchronize());
 
-                                        //RESIDUAL CALCULATION
-                                        //if(!gridding){
-                                        vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V, fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
+
+                                        // BILINEAR INTERPOLATION
+                                        vis_mod<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vm, device_V,
+                                                fields[f].device_visibilities[i].u, fields[f].device_visibilities[i].v, fields[f].device_visibilities[i].weight, deltau, deltav, fields[f].numVisibilitiesPerFreq[i], N);
                                         gpuErrchk(cudaDeviceSynchronize());
 
+                                        // RESIDUAL CALCULATION
                                         residual<<<fields[f].visibilities[i].numBlocksUV, fields[f].visibilities[i].threadsPerBlockUV>>>(fields[f].device_visibilities[i].Vr, fields[f].device_visibilities[i].Vm, fields[f].device_visibilities[i].Vo, fields[f].numVisibilitiesPerFreq[i]);
                                         gpuErrchk(cudaDeviceSynchronize());
                                         /*}else{

@@ -58,7 +58,6 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding
 
                 fields[f].phs_ra = pointing_phs[0];
                 fields[f].phs_dec = pointing_phs[1];
-                //printf("RA: %.12e, DEC: %.12e\n", pointing[0], pointing[1]);
         }
 
 
@@ -168,8 +167,8 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
         fits_read_key(canvas, TFLOAT, "CDELT2", &c_vars.DELTAY, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL1", &c_vars.ra, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL2", &c_vars.dec, NULL, &status_canvas);
-        fits_read_key(canvas, TINT, "CRPIX1", &c_vars.crpix1, NULL, &status_canvas);
-        fits_read_key(canvas, TINT, "CRPIX2", &c_vars.crpix2, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CRPIX1", &c_vars.crpix1, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CRPIX2", &c_vars.crpix2, NULL, &status_canvas);
         fits_read_key(canvas, TLONG, "NAXIS1", &c_vars.M, NULL, &status_canvas);
         fits_read_key(canvas, TLONG, "NAXIS2", &c_vars.N, NULL, &status_canvas);
         fits_read_key(canvas, TFLOAT, "BMAJ", &c_vars.beam_bmaj, NULL, &status_canvas);
@@ -186,8 +185,10 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
                 c_vars.beam_noise = b_noise_aux;
         }
 
-        c_vars.beam_bmaj = c_vars.beam_bmaj/ -c_vars.DELTAX;
-        c_vars.beam_bmin = c_vars.beam_bmin/ -c_vars.DELTAX;
+        c_vars.beam_bmaj = c_vars.beam_bmaj/ fabsf(c_vars.DELTAX);
+        c_vars.beam_bmin = c_vars.beam_bmin/ c_vars.DELTAY;
+        c_vars.DELTAX = fabsf(c_vars.DELTAX);
+        c_vars.DELTAY *= -1.0;
 
         if(verbose_flag) {
                 printf("FITS Files READ\n");
@@ -1156,9 +1157,11 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
                         if(fg_scale != 0.0)
-                                image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
+                            image2D[N*i+j] = host_IFITS[N*i+j] * fg_scale;
                         else
-                                image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
+                            image2D[N*i+j] = host_IFITS[N*i+j];
+
+
                 }
         }
 

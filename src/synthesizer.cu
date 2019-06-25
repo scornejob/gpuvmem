@@ -488,21 +488,22 @@ void MFS::setDevice()
 
         if(verbose_flag) {
                 printf("FITS: Ra: %.16e (rad), dec: %.16e (rad)\n", raimage, decimage);
-                printf("FITS: Center pix: (%d,%d)\n", crpix1-1, crpix2-1);
+                printf("FITS: Center pix: (%lf,%lf)\n", crpix1-1, crpix2-1);
         }
 
         double lobs, mobs, lphs, mphs;
         double dcosines_l_pix_ref, dcosines_m_pix_ref, dcosines_l_pix_phs, dcosines_m_pix_phs;
+
         for(int f=0; f<data.nfields; f++) {
 
                 direccos(fields[f].ref_ra, fields[f].ref_dec, raimage, decimage, &lobs,  &mobs);
                 direccos(fields[f].phs_ra, fields[f].phs_dec, raimage, decimage, &lphs,  &mphs);
 
-                dcosines_l_pix_ref = lobs/deltax; // Radians to pixels
-                dcosines_m_pix_ref = mobs/deltay; // Radians to pixels
+                dcosines_l_pix_ref = lobs/-deltax; // Radians to pixels
+                dcosines_m_pix_ref = mobs/fabsf(deltay); // Radians to pixels
 
-                dcosines_l_pix_phs = lphs/deltax; // Radians to pixels
-                dcosines_m_pix_phs = mphs/deltay; // Radians to pixels
+                dcosines_l_pix_phs = lphs/-deltax; // Radians to pixels
+                dcosines_m_pix_phs = mphs/fabs(deltay); // Radians to pixels
                 if(verbose_flag)
                 {
                     printf("Ref: l (pix): %e, m (pix): %e\n", dcosines_l_pix_ref, dcosines_m_pix_ref);
@@ -510,19 +511,19 @@ void MFS::setDevice()
 
                 }
 
-                if(crpix1 != crpix2) {
-                    fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref;// + 1.0f;// + 6.0f;
-                    fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref;// - 1.0f;// - 10.0f;
+                /*if(crpix1 != crpix2) {
+                    fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref + 1.0f;// + 6.0f;
+                    fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref - 1.0f;// - 10.0f;
 
-                    fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs;// + 1.0f;// + 6.0f;
-                    fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs;// - 1.0f;// - 10.0f;
-                }else{
-                    fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref; //- 1.0f;// + 6.0f;
-                    fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref; //- 1.0f;// - 7.0f;
+                    fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs + 1.0f;// + 6.0f;
+                    fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs - 1.0f;// - 10.0f;
+                }else{*/
+                fields[f].ref_xobs = (crpix1 - 1.0f) + dcosines_l_pix_ref;// + 6.0f;
+                fields[f].ref_yobs = (crpix2 - 1.0f) + dcosines_m_pix_ref;// - 7.0f;
 
-                    fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs; //- 1.0f;// + 5.0f;
-                    fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs; //- 1.0f;// - 7.0f;
-                }
+                fields[f].phs_xobs = (crpix1 - 1.0f) + dcosines_l_pix_phs;// + 5.0f;
+                fields[f].phs_yobs = (crpix2 - 1.0f) + dcosines_m_pix_phs;// - 7.0f;
+
 
                 if(verbose_flag) {
                     printf("Ref: Field %d - Ra: %.16e (rad), dec: %.16e (rad), x0: %f (pix), y0: %f (pix)\n", f, fields[f].ref_ra, fields[f].ref_dec,

@@ -15,8 +15,6 @@
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
 
-const float PI = CUDART_PI_F;
-const double PI_D = CUDART_PI;
 const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCSEC = (PI/(180.0*3600.0));
