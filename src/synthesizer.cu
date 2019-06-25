@@ -18,14 +18,14 @@ Telescope *telescope;
 dim3 threadsPerBlockNN;
 dim3 numBlocksNN;
 
-int threadsVectorReduceNN, blocksVectorReduceNN, crpix1, crpix2, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding, it_maximum, status_mod_in;
+int threadsVectorReduceNN, blocksVectorReduceNN, nopositivity = 0, verbose_flag = 0, clip_flag = 0, apply_noise = 0, print_images = 0, gridding, it_maximum, status_mod_in;
 int multigpu, firstgpu, selected, t_telescope, reg_term, total_visibilities, image_count, nPenalizators, print_errors;
 char *output, *mempath, *out_image, *msinput, *msoutput, *inputdat, *modinput;
 float nu_0, threshold;
 
 extern int num_gpus;
 
-double ra, dec;
+double ra, dec, crpix1, crpix2;
 
 freqData data;
 
