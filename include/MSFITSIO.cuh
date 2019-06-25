@@ -95,7 +95,7 @@ typedef struct field {
 }Field;
 
 typedef struct canvas_variables {
-        float DELTAX, DELTAY;
+        double DELTAX, DELTAY;
         double ra, dec;
         double crpix1, crpix2;
         long M, N;

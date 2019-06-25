@@ -9,7 +9,7 @@ cufftHandle plan1GPU;
 
 cufftComplex *device_V, *device_fg_image, *device_image;
 
-float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, DELTAX, DELTAY, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
+float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, deltau, deltav, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
 float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta, robust_param;
 float *host_I, sum_weights, *initial_values, *penalizators;
@@ -25,7 +25,7 @@ float nu_0, threshold;
 
 extern int num_gpus;
 
-double ra, dec, crpix1, crpix2;
+double ra, dec, crpix1, crpix2, DELTAX, DELTAY;
 
 freqData data;
 

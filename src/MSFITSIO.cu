@@ -163,8 +163,8 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
                 exit(0);
         }
 
-        fits_read_key(canvas, TFLOAT, "CDELT1", &c_vars.DELTAX, NULL, &status_canvas);
-        fits_read_key(canvas, TFLOAT, "CDELT2", &c_vars.DELTAY, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CDELT1", &c_vars.DELTAX, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CDELT2", &c_vars.DELTAY, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL1", &c_vars.ra, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL2", &c_vars.dec, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRPIX1", &c_vars.crpix1, NULL, &status_canvas);
@@ -185,9 +185,9 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
                 c_vars.beam_noise = b_noise_aux;
         }
 
-        c_vars.beam_bmaj = c_vars.beam_bmaj/ fabsf(c_vars.DELTAX);
+        c_vars.beam_bmaj = c_vars.beam_bmaj/ fabs(c_vars.DELTAX);
         c_vars.beam_bmin = c_vars.beam_bmin/ c_vars.DELTAY;
-        c_vars.DELTAX = fabsf(c_vars.DELTAX);
+        c_vars.DELTAX = fabs(c_vars.DELTAX);
         c_vars.DELTAY *= -1.0;
 
         if(verbose_flag) {

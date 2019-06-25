@@ -44,14 +44,14 @@ extern float *device_I;
 extern Telescope *telescope;
 
 extern float *device_dphi, *device_chi2, *device_dchi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
-extern float noise_jypix, fg_scale, DELTAX, DELTAY, deltau, deltav, noise_cut, MINPIX, \
+extern float noise_jypix, fg_scale, deltau, deltav, noise_cut, MINPIX, \
              minpix, lambda, ftol, random_probability, final_chi2, final_S, eta;
 
 extern dim3 threadsPerBlockNN, numBlocksNN;
 
 extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff;
 extern float *initial_values, *penalizators, robust_param;
-extern double ra, dec;
+extern double ra, dec, DELTAX, DELTAY;
 extern float threshold;
 extern float nu_0;
 extern int nPenalizators, print_errors;
