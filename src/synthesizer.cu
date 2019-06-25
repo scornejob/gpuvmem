@@ -366,8 +366,8 @@ void MFS::configure(int argc, char **argv)
 
 void MFS::setDevice()
 {
-        float deltax = RPDEG*DELTAX; //radians
-        float deltay = RPDEG*DELTAY; //radians
+        double deltax = RPDEG_D*DELTAX; //radians
+        double deltay = RPDEG_D*DELTAY; //radians
         deltau = 1.0 / (M * deltax);
         deltav = 1.0 / (N * deltay);
 
@@ -500,7 +500,7 @@ void MFS::setDevice()
                 direccos(fields[f].phs_ra, fields[f].phs_dec, raimage, decimage, &lphs,  &mphs);
 
                 dcosines_l_pix_ref = lobs/-deltax; // Radians to pixels
-                dcosines_m_pix_ref = mobs/fabsf(deltay); // Radians to pixels
+                dcosines_m_pix_ref = mobs/fabs(deltay); // Radians to pixels
 
                 dcosines_l_pix_phs = lphs/-deltax; // Radians to pixels
                 dcosines_m_pix_phs = mphs/fabs(deltay); // Radians to pixels
