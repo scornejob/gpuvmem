@@ -15,8 +15,6 @@
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
 
-const float PI = CUDART_PI_F;
-const double PI_D = CUDART_PI;
 const float RPDEG = (PI/180.0);
 const double RPDEG_D = (PI_D/180.0);
 const float RPARCSEC = (PI/(180.0*3600.0));
@@ -34,8 +32,8 @@ __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float *I);
 __host__ void dchiCuadrado(float *I, float *dxi2);
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N, float robust);
-__host__ void degridding(Field *fields, freqData data, float deltau, float deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N);
+__host__ void do_gridding(Field *fields, freqData *data, double deltau, double deltav, int M, int N, float robust);
+__host__ void degridding(Field *fields, freqData data, double deltau, double deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N);
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV, int gridding);
 __host__ void clipping(cufftComplex *I, int iterations);
 template <class T>
@@ -72,16 +70,15 @@ __global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N);
 __global__ void newP(float *p, float *xi, float xmin, float MINPIX, float eta, long N);
 __global__ void newPNoPositivity(cufftComplex *p, float *xi, float xmin, long N);
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
-__global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
-__device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
-__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N);
+__global__ void hermitianSymmetry(double3 *UVW, cufftComplex *Vo, float freq, int numVisibilities);
+__device__ float attenuation(float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY);
+__global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY, long N);
 __global__ void mean_attenuation(float *total_atten, int channels, long N);
 __global__ void weight_image(float *weight_image, float *total_atten, float noise_jypix, long N);
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);
-__global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
-__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
-__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
-__global__ void vis_mod3(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float *weight, float deltau, float deltav, long numVisibilities, long N);
+__global__ void phase_rotate(cufftComplex *data, long M, long N, double xphs, double yphs);
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float *weight, double deltau, double deltav, long numVisibilities, long N);
+__global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float *weight, double deltau, double deltav, long numVisibilities, long N);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void makePositive(cufftComplex *I, long N);
 __global__ void evaluateXt(float *xt, float *pcom, float *xicom, float x, float MINPIX, float eta, long N);
@@ -97,7 +94,7 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N);
 __global__ void DS(float *dH, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N);
 __global__ void DQ(float *dQ, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N);
 __global__ void DTV(float *dTV, cufftComplex *I, float *noise, float noise_cut, float lambda, float MINPIX, long N);
-__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float xobs, float yobs, float DELTAX, float DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq);
+__global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, float *U, float *V, float *w, long N, long numVisibilities, float fg_scale, float noise_cut, float ref_xobs, float ref_yobs, float phs_xobs, float phs_yobs, double DELTAX, double DELTAY, float antenna_diameter, float pb_factor, float pb_cutoff, float freq);
 __global__ void DPhi(float *dphi, float *dchi2, float *dH, float lambda, long N);
 __global__ void projection(float *px, float *x, float MINPIX, long N);
 __global__ void substraction(float *x, cufftComplex *xc, float *gc, float lambda, long N);

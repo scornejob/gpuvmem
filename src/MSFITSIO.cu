@@ -58,7 +58,6 @@ __host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding
 
                 fields[f].phs_ra = pointing_phs[0];
                 fields[f].phs_dec = pointing_phs[1];
-                //printf("RA: %.12e, DEC: %.12e\n", pointing[0], pointing[1]);
         }
 
 
@@ -164,12 +163,12 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
                 exit(0);
         }
 
-        fits_read_key(canvas, TFLOAT, "CDELT1", &c_vars.DELTAX, NULL, &status_canvas);
-        fits_read_key(canvas, TFLOAT, "CDELT2", &c_vars.DELTAY, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CDELT1", &c_vars.DELTAX, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CDELT2", &c_vars.DELTAY, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL1", &c_vars.ra, NULL, &status_canvas);
         fits_read_key(canvas, TDOUBLE, "CRVAL2", &c_vars.dec, NULL, &status_canvas);
-        fits_read_key(canvas, TINT, "CRPIX1", &c_vars.crpix1, NULL, &status_canvas);
-        fits_read_key(canvas, TINT, "CRPIX2", &c_vars.crpix2, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CRPIX1", &c_vars.crpix1, NULL, &status_canvas);
+        fits_read_key(canvas, TDOUBLE, "CRPIX2", &c_vars.crpix2, NULL, &status_canvas);
         fits_read_key(canvas, TLONG, "NAXIS1", &c_vars.M, NULL, &status_canvas);
         fits_read_key(canvas, TLONG, "NAXIS2", &c_vars.N, NULL, &status_canvas);
         fits_read_key(canvas, TFLOAT, "BMAJ", &c_vars.beam_bmaj, NULL, &status_canvas);
@@ -186,8 +185,10 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
                 c_vars.beam_noise = b_noise_aux;
         }
 
-        c_vars.beam_bmaj = c_vars.beam_bmaj/ -c_vars.DELTAX;
-        c_vars.beam_bmin = c_vars.beam_bmin/ -c_vars.DELTAX;
+        c_vars.beam_bmaj = c_vars.beam_bmaj/ fabs(c_vars.DELTAX);
+        c_vars.beam_bmin = c_vars.beam_bmin/ c_vars.DELTAY;
+        c_vars.DELTAX = fabs(c_vars.DELTAX);
+        c_vars.DELTAY *= -1.0;
 
         if(verbose_flag) {
                 printf("FITS Files READ\n");
@@ -269,8 +270,9 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data)
                                                 if(flagCol(sto,j) == false && weights[sto] > 0.0) {
                                                         c = fields[f].numVisibilitiesPerFreq[g+j];
                                                         fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                        fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                        fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                        fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                        fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                        fields[f].visibilities[g+j].uvw[c].z = uvw[2];
                                                         u = Normal(0.0, 1.0);
                                                         fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                                                         u = Normal(0.0, 1.0);
@@ -373,8 +375,9 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                                                         if(u<random_probability) {
                                                                 c = fields[f].numVisibilitiesPerFreq[g+j];
                                                                 fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                                fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                                fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                                fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].z = uvw[2];
                                                                 fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
                                                                 fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
                                                                 fields[f].visibilities[g+j].weight[c] = weights[sto];
@@ -382,8 +385,9 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, floa
                                                         }else{
                                                                 c = fields[f].numVisibilitiesPerFreq[g+j];
                                                                 fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                                fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                                fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                                fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].z = uvw[2];
                                                                 fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
                                                                 fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
                                                                 fields[f].visibilities[g+j].weight[c] = 0.0;
@@ -487,8 +491,9 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                                                         if(u<random_probability) {
                                                                 c = fields[f].numVisibilitiesPerFreq[g+j];
                                                                 fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                                fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                                fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                                fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].z = uvw[2];
                                                                 nu = Normal(0.0, 1.0);
                                                                 fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
                                                                 nu = Normal(0.0, 1.0);
@@ -498,8 +503,10 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData dat
                                                         }else{
                                                                 c = fields[f].numVisibilitiesPerFreq[g+j];
                                                                 fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                                fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                                fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                                fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                                fields[f].visibilities[g+j].uvw[c].z = uvw[2];
+
                                                                 fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
                                                                 fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
                                                                 fields[f].visibilities[g+j].weight[c] = 0.0;
@@ -598,8 +605,9 @@ __host__ void readMS(char *MS_name, Field *fields, freqData data)
                                                 if(flagCol(sto,j) == false && weights[sto] > 0.0) {
                                                         c = fields[f].numVisibilitiesPerFreq[g+j];
                                                         fields[f].visibilities[g+j].stokes[c] = polarizations[sto];
-                                                        fields[f].visibilities[g+j].u[c] = uvw[0];
-                                                        fields[f].visibilities[g+j].v[c] = uvw[1];
+                                                        fields[f].visibilities[g+j].uvw[c].x = uvw[0];
+                                                        fields[f].visibilities[g+j].uvw[c].y = uvw[1];
+                                                        fields[f].visibilities[g+j].uvw[c].z = uvw[2];
                                                         fields[f].visibilities[g+j].Vo[c].x = dataCol(sto,j).real();
                                                         fields[f].visibilities[g+j].Vo[c].y = dataCol(sto,j).imag();
                                                         fields[f].visibilities[g+j].weight[c] = weights[sto];
@@ -680,7 +688,7 @@ __host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int fi
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {
                         for(int j=0; j<fields[f].numVisibilitiesPerFreq[i]; j++) {
-                                if(fields[f].visibilities[i].u[j]<0)
+                                if(fields[f].visibilities[i].uvw[j].x < 0)
                                         fields[f].visibilities[i].Vm[j].y *= -1;
                         }
                 }
@@ -1149,20 +1157,7 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         int offset = M*N*index;
         gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
-        float *image2D = (float*) malloc(M*N*sizeof(float));
-
-        int x = M-1;
-        int y = N-1;
-        for(int i=0; i < M; i++) {
-                for(int j=0; j < N; j++) {
-                        if(fg_scale != 0.0)
-                                image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j] * fg_scale;
-                        else
-                                image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
-                }
-        }
-
-        fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+        fits_write_img(fpointer, TFLOAT, fpixel, elements, host_IFITS, &status);
         if (status) {
                 fits_report_error(stderr, status); /* print error message */
                 exit(-1);
@@ -1174,8 +1169,6 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         }
 
         free(host_IFITS);
-        free(image2D);
-
 }
 
 __host__ void float2toImage(float *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, float fg_scale, long M, long N, int option)

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
+#include "math_constants.h"
 #include <string>
 #include <tables/Tables/Table.h>
 #include <tables/Tables/TableRow.h>
@@ -35,6 +36,9 @@
 #define TCOMPLEX     83
 #define TDBLCOMPLEX 163
 
+const float PI = CUDART_PI_F;
+const double PI_D = CUDART_PI;
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -60,9 +64,8 @@ typedef struct freqData {
         int max_number_visibilities_in_channel;
 }freqData;
 
-typedef struct observedVisibilities {
-        float *u;
-        float *v;
+typedef struct visibilities {
+        double3 *uvw;
         float *weight;
         cufftComplex *Vo;
         cufftComplex *Vm;
@@ -91,9 +94,9 @@ typedef struct field {
 }Field;
 
 typedef struct canvas_variables {
-        float DELTAX, DELTAY;
+        double DELTAX, DELTAY;
         double ra, dec;
-        int crpix1, crpix2;
+        double crpix1, crpix2;
         long M, N;
         float beam_bmaj, beam_bmin;
         float beam_noise;
