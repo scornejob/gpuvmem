@@ -64,9 +64,8 @@ typedef struct freqData {
         int max_number_visibilities_in_channel;
 }freqData;
 
-typedef struct observedVisibilities {
-        float *u;
-        float *v;
+typedef struct visibilities {
+        double3 *uvw;
         float *weight;
         cufftComplex *Vo;
         cufftComplex *Vm;
