@@ -35,7 +35,7 @@
 namespace cg = cooperative_groups;
 
 extern long M, N;
-extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, crpix1, crpix2, image_count, \
+extern int numVisibilities, iterations, iterthreadsVectorNN, blocksVectorNN, nopositivity, image_count, \
            status_mod_in, flag_opt, verbose_flag, clip_flag, num_gpus, selected, iter, t_telescope, multigpu, firstgpu, reg_term, apply_noise, print_images, gridding;
 
 extern cufftHandle plan1GPU;
@@ -51,7 +51,7 @@ extern dim3 threadsPerBlockNN, numBlocksNN;
 
 extern float beam_noise, beam_bmaj, beam_bmin, b_noise_aux, antenna_diameter, pb_factor, pb_cutoff;
 extern float *initial_values, *penalizators, robust_param;
-extern double ra, dec, DELTAX, DELTAY, deltau, deltav;
+extern double ra, dec, DELTAX, DELTAY, deltau, deltav, crpix1, crpix2;
 extern float threshold;
 extern float nu_0;
 extern int nPenalizators, print_errors;
