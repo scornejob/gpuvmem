@@ -1023,11 +1023,9 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
         float* image2D;
         image2D = (float*) malloc(M*N*sizeof(float));
 
-        int x = M-1;
-        int y = N-1;
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j].x * fg_scale;
+                        image2D[N*i+j] = host_IFITS[N*i+j].x * fg_scale;
                 }
         }
 
@@ -1098,11 +1096,9 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
         float* image2D;
         image2D = (float*) malloc(M*N*sizeof(float));
 
-        int x = M-1;
-        int y = N-1;
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        image2D[N*(y-i)+(x-j)] = host_IFITS[N*i+j];
+                        image2D[N*i+j] = host_IFITS[N*i+j];
                 }
         }
 
@@ -1202,12 +1198,10 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
         fits_update_key(fpointerI_nu_0, TSTRING, "BUNIT", I_unit, "Unit of measurement", &statusI_nu_0);
         fits_update_key(fpointeralpha, TSTRING, "BUNIT", alphaunit, "Unit of measurement", &statusalpha);
 
-        int x = M-1;
-        int y = N-1;
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x;
-                        host_alpha[N*(y-i)+(x-j)] = host_2Iout[N*i+j].y;
+                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x;
+                        host_alpha[N*i+j] = host_2Iout[N*i+j].y;
                 }
         }
 
@@ -1322,12 +1316,10 @@ __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char
         fits_update_key(fpointeralpha, TINT, "BITPIX", &bitpix_value, "", &statusalpha);
 
 
-        int x = M-1;
-        int y = N-1;
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        host_I_nu_0[N*(y-i)+(x-j)] = host_2Iout[N*i+j].x;
-                        host_alpha[N*(y-i)+(x-j)] = host_2Iout[N*i+j].y;
+                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x;
+                        host_alpha[N*i+j] = host_2Iout[N*i+j].y;
                 }
         }
 
@@ -1463,13 +1455,11 @@ __host__ void float3toImage(float3 *I, fitsfile *canvas, char *out_image, char*m
         fits_update_key(fpointertau, TSTRING, "BUNIT", tauunit, "Unit of measurement", &statustau);
         fits_update_key(fpointerbeta, TSTRING, "BUNIT", betaunit, "Unit of measurement", &statusbeta);
 
-        int x = M-1;
-        int y = N-1;
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        host_T[N*(y-i)+(x-j)] = host_3Iout[N*i+j].x;
-                        host_tau[N*(y-i)+(x-j)] = host_3Iout[N*i+j].y;
-                        host_beta[N*(y-i)+(x-j)] = host_3Iout[N*i+j].z;
+                        host_T[N*i+j] = host_3Iout[N*i+j].x;
+                        host_tau[N*i+j] = host_3Iout[N*i+j].y;
+                        host_beta[N*i+j] = host_3Iout[N*i+j].z;
                 }
         }
 
