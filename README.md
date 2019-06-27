@@ -1,4 +1,6 @@
-# GPUVMEM
+<p align="center">
+  <img src="https://github.com/miguelcarcamov/gpuvmem/wiki/images/logos/logo2.png" height="400">
+</p>
 
 # Papers and documentation
 
