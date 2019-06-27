@@ -1321,33 +1321,34 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float *
 {
         int i = threadIdx.x + blockDim.x * blockIdx.x;
         int i1, i2, j1, j2;
-        float du, dv, u, v;
+        double du, dv;
+        double2 uv;
         cufftComplex v11, v12, v21, v22;
         float Zreal;
         float Zimag;
 
         if (i < numVisibilities) {
 
-                u = UVW[i].x/fabs(deltau);
-                v = UVW[i].y/deltav;
+                uv.x = UVW[i].x/fabs(deltau);
+                uv.y = UVW[i].y/deltav;
 
-                if (fabsf(u) <= (N/2)+0.5 && fabsf(v) <= (N/2)+0.5) {
+                if (fabs(uv.x) <= (N/2)+0.5 && fabs(uv.y) <= (N/2)+0.5) {
 
-                        if(u < 0.0)
-                            u = roundf(u+N);
-
-
-                        if(v < 0.0)
-                            v = roundf(v+N);
+                        if(uv.x < 0.0)
+                            uv.x = round(uv.x+N);
 
 
-                        i1 = (int)u;
+                        if(uv.y < 0.0)
+                            uv.y = round(uv.y+N);
+
+
+                        i1 = (int)uv.x;
                         i2 = (i1+1)%N;
-                        du = u - i1;
+                        du = uv.x - i1;
 
-                        j1 = (int)v;
+                        j1 = (int)uv.y;
                         j2 = (j1+1)%N;
-                        dv = v - j1;
+                        dv = uv.y - j1;
 
                         if (i1 >= 0 && i1 < N && i2 >= 0 && i2 < N && j1 >= 0 && j1 < N && j2 >= 0 && j2 < N) {
                             /* Bilinear interpolation */
@@ -1378,9 +1379,9 @@ __global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float *
 __global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float *weight, double deltau, double deltav, long numVisibilities, long N)
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
-    float f_j, f_k;
+    double f_j, f_k;
     int j, k;
-    float2 uv;
+    double2 uv;
     cufftComplex Z;
 
     if (i < numVisibilities) {
@@ -1388,11 +1389,11 @@ __global__ void vis_mod2(cufftComplex *Vm, cufftComplex *V, double3 *UVW, float 
         uv.x = UVW[i].x/fabs(deltau);
         uv.y = UVW[i].y/fabs(deltav);
 
-        f_j = roundf(uv.x + N/2);
+        f_j = round(uv.x + N/2);
         j = (int)f_j;
         f_j = f_j - j;
 
-        f_k = roundf(uv.y + N/2);
+        f_k = round(uv.y + N/2);
         k = (int)f_k;
         f_k = f_k - k;
 
