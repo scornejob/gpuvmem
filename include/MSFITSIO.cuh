@@ -92,7 +92,8 @@ typedef struct canvas_variables{
   double ra, dec;
   double crpix1, crpix2;
   long M, N;
-  float beam_bmaj, beam_bmin, beam_bpa;
+  double beam_bmaj, beam_bmin;
+  float beam_bpa;
   float beam_noise;
 }canvasVariables;
 

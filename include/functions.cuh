@@ -94,7 +94,7 @@ __host__ float deviceReduce(float *in, long N);
 __host__ void MCMC(float2 *I, float2 *theta, int iterations, int burndown_steps);
 __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_steps);
 
-__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa);
+__device__ float EllipticGaussianKernel(float amplitude, int x_c, int y_c, float bmaj, float bmin, float bpa, double DELTAX, double DELTAY);
 
 __global__ void deviceReduceKernel(float *g_idata, float *g_odata, unsigned int n);
 __global__ void clipWNoise(float *noise, cufftComplex *I, long N, float noise_cut, float MINPIX, float eta);

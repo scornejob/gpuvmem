@@ -1284,10 +1284,13 @@ __device__ float AiryDiskBeam(float distance, float lambda, float antenna_diamet
         return atten;
 }
 
-__device__ float EllipticGaussianKernel(float amplitude, int x0, int y0, int x_c, int y_c, float bmaj, float bmin, float bpa, double DELTAX, double DELTAY)
+__device__ float EllipticGaussianKernel(float amplitude, int x_c, int y_c, float bmaj, float bmin, float bpa, double DELTAX, double DELTAY)
 {
-        float x = (x0 - x_c) * DELTAX * RPDEG_D;
-        float y = (y0 - y_c) * DELTAY * RPDEG_D;
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        float x = (j - x_c) * DELTAX * RPDEG_D;
+        float y = (i - y_c) * DELTAY * RPDEG_D;
         float cos_bpa = cosf(bpa);
         float sin_bpa = sinf(bpa);
         float sin_bpa_2 = sinf(2.0*bpa);
@@ -2009,11 +2012,11 @@ __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilit
         printf("Keyword NOISE = %e\n", beam_noise);
     }
 
-    return sum_weights;
+    return beam_noise;
 }
 
 
-__global__ void changeGibbsEllipticalMaskAlpha(float2 *temp, float2 *theta, float *mask, float normal_I_nu_0, float normal_alpha, double crpix1, double crpix2, float bmaj, float bmin, float bpa, float factor_beam, float factor_noise, float sigma, int2 pix, float DELTAX, float DELTAY, int N)
+__global__ void changeGibbsEllipticalMaskAlpha(float2 *temp, float2 *theta, float *mask, float normal_I_nu_0, float normal_alpha, float bmaj, float bmin, float bpa, float factor_beam, float factor_noise, float sigma, int2 pix, float DELTAX, float DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2024,16 +2027,10 @@ __global__ void changeGibbsEllipticalMaskAlpha(float2 *temp, float2 *theta, floa
 
         int idx = N*pix.x + pix.y;
 
-        int x0 = j - (crpix1-1);
-        int y0 = i - (crpix2-1);
+        float bmaj_rad = factor_beam * bmaj * fabs(DELTAX) * RPDEG_D;
+        float bmin_rad = factor_beam * bmin * fabs(DELTAY) * RPDEG_D;
 
-        int x_c = c_j - (crpix1-1);
-        int y_c = c_i - (crpix2-1);
-
-        float bmaj_rad = bmaj * fabs(DELTAX) * RPDEG_D;
-        float bmin_rad = bmin * fabs(DELTAY) * RPDEG_D;
-
-        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor_beam*(bmaj_rad), factor_beam*(bmin_rad), bpa, DELTAX, DELTAY);
+        float pix_val = EllipticGaussianKernel(1.0, c_j, c_i, bmaj_rad, bmin_rad, bpa, DELTAX, DELTAY);
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
         nrandom.y = normal_alpha * theta[idx].y;
@@ -2046,7 +2043,7 @@ __global__ void changeGibbsEllipticalMaskAlpha(float2 *temp, float2 *theta, floa
         temp[N*i+j].x += nrandom.x * pix_val;
 }
 
-__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float normal_I_nu_0, double crpix1, double crpix2, float bmaj, float bmin, float bpa, float factor, int2 pix, double DELTAX, double DELTAY, int N)
+__global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float normal_I_nu_0, float bmaj, float bmin, float bpa, float factor, int2 pix, double DELTAX, double DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2057,16 +2054,10 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float
 
         int idx = N*pix.x + pix.y;
 
-        int x0 = j - (crpix1-1);
-        int y0 = i - (crpix2-1);
+        float bmaj_rad = factor * bmaj * fabs(DELTAX) * RPDEG_D;
+        float bmin_rad = factor * bmin * fabs(DELTAY) * RPDEG_D;
 
-        int x_c = c_j - (crpix1-1);
-        int y_c = c_i - (crpix2-1);
-
-        float bmaj_rad = bmaj * fabs(DELTAX) * RPDEG_D;
-        float bmin_rad = bmin * fabs(DELTAY) * RPDEG_D;
-
-        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
+        float pix_val = EllipticGaussianKernel(1.0, c_j, c_i, bmaj_rad, bmin_rad, bpa, DELTAX, DELTAY);
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
 
@@ -2074,7 +2065,7 @@ __global__ void changeGibbsEllipticalGaussian(float2 *temp, float2 *theta, float
 
 }
 
-__global__ void changeGibbsEllipticalGaussianSpecIdx(float2 *temp, float2 *theta, float normal_I_nu_0, float normal_alpha, double crpix1, double crpix2, float bmaj, float bmin, float bpa, float factor, int2 pix, double DELTAX, double DELTAY, int N)
+__global__ void changeGibbsEllipticalGaussianSpecIdx(float2 *temp, float2 *theta, float normal_I_nu_0, float normal_alpha, float bmaj, float bmin, float bpa, float factor, int2 pix, double DELTAX, double DELTAY, int N)
 {
         float2 nrandom;
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2085,16 +2076,10 @@ __global__ void changeGibbsEllipticalGaussianSpecIdx(float2 *temp, float2 *theta
 
         int idx = N*pix.x + pix.y;
 
-        int x0 = j - (crpix1-1);
-        int y0 = i - (crpix2-1);
+        float bmaj_rad = factor * bmaj * fabs(DELTAX) * RPDEG_D;
+        float bmin_rad = factor * bmin * fabs(DELTAY) * RPDEG_D;
 
-        int x_c = c_j - (crpix1-1);
-        int y_c = c_i - (crpix2-1);
-
-        float bmaj_rad = bmaj * fabs(DELTAX) * RPDEG_D;
-        float bmin_rad = bmin * fabs(DELTAY) * RPDEG_D;
-
-        float pix_val = EllipticGaussianKernel(1.0, x0, y0, x_c, y_c, factor*(bmaj_rad), factor*(bmin_rad), bpa, DELTAX, DELTAY);
+        float pix_val = EllipticGaussianKernel(1.0, c_j, c_i, bmaj_rad, bmin_rad, bpa, DELTAX, DELTAY);
 
         nrandom.x = normal_I_nu_0 * theta[idx].x;
         nrandom.y = normal_alpha * theta[idx].y;
@@ -2506,7 +2491,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         size_t file_shutdown_n = snprintf(NULL, 0, "%sshutdown.txt", checkp) + 1;
         char *chi2_file_name = (char*)malloc(sizeof(char)*file_chi2_n);
         char *iter_file_name = (char*)malloc(sizeof(char)*file_iter_n);
-        shutdown_file_name = (char*)malloc(sizeof(char)*file_iter_n);
+        shutdown_file_name = (char*)malloc(sizeof(char)*file_shutdown_n);
 
         snprintf(chi2_file_name, file_chi2_n*sizeof(char), "%schi2.txt", checkp, 0);
         snprintf(iter_file_name, file_iter_n*sizeof(char), "%siter.txt", checkp, 0);
@@ -2532,29 +2517,31 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
                         updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, total_out, total2_out, s_d, accepted_afterburndown, N);
                         gpuErrchk(cudaDeviceSynchronize());
                 }
+
                 for(int j = 0; j < valid_pixels; j++) {
 
                         //if(i>0){
                         //  calculateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, states2, total, total2, accepted+1, N);
                         //  gpuErrchk(cudaDeviceSynchronize());
                         //}
-                        gpuErrchk(cudaMemcpy2D(temp, sizeof(float2), I, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
+                        gpuErrchk(cudaMemcpy(temp, I, M*N*sizeof(float2), cudaMemcpyDeviceToDevice));
 
                         if(use_mask) {
                                 n_I_nu_0 = Normal(0.0, 1.0);
                                 n_alpha = Normal(0.0, 1.0);
-                                changeGibbsEllipticalMaskAlpha<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, device_mask, n_I_nu_0 , n_alpha, crpix1, crpix2, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), 10.0, noise_jypix, pixels[j], DELTAX, DELTAY, N);
+                                changeGibbsEllipticalMaskAlpha<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, device_mask, n_I_nu_0 , n_alpha, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), 10.0, noise_jypix, pixels[j], DELTAX, DELTAY, N);
                                 gpuErrchk(cudaDeviceSynchronize());
                         }else{
                                 //changeGibbs<<<1, 1>>>(temp, theta, states, pixels[j], N);
-                                if(spec_idx){
+                                if(spec_idx)
+                                {
                                   n_I_nu_0 = Normal(0.0, 1.0);
                                   n_alpha = Normal(0.0, 1.0);
-                                  changeGibbsEllipticalGaussianSpecIdx<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, n_I_nu_0, n_alpha, crpix1, crpix2, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
+                                  changeGibbsEllipticalGaussianSpecIdx<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, n_I_nu_0, n_alpha, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
                                   gpuErrchk(cudaDeviceSynchronize());
                                 }else{
                                   n_I_nu_0 = Normal(0.0, 1.0);
-                                  changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, n_I_nu_0, crpix1, crpix2, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
+                                  changeGibbsEllipticalGaussian<<<numBlocksNN, threadsPerBlockNN>>>(temp, theta, n_I_nu_0, beam_bmaj, beam_bmin, beam_bpa, (1.0/3.0), pixels[j], DELTAX, DELTAY, N);
                                   gpuErrchk(cudaDeviceSynchronize());
                                 }
 

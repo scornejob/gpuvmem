@@ -39,8 +39,8 @@ cufftHandle plan1GPU;
 cufftComplex *device_V, *device_Inu;
 
 float2 *device_dphi, *device_2I;
-float *device_mask, *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, beam_noise, beam_bmaj, beam_bpa, nu_0, *device_noise_image, *device_weight_image;
-float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability;
+float *device_mask, *device_dS, *device_dS_alpha, *device_chi2, *device_dchi2, *device_S, *device_S_alpha, beam_noise, beam_bpa, nu_0, *device_noise_image, *device_weight_image;
+float b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability, beam_bmaj, beam_bmin;
 float noise_jypix, fg_scale, final_chi2, final_H, antenna_diameter, pb_factor, pb_cutoff, alpha_start, eta, epsilon, *host_noise_image;
 
 dim3 threadsPerBlockNN;
@@ -205,7 +205,7 @@ __host__ int main(int argc, char **argv) {
         crpix2 = canvas_vars.crpix2;
         beam_bmaj = canvas_vars.beam_bmaj;
         beam_bmin = canvas_vars.beam_bmin;
-        beam_bpa = canvas_vars.beam_bpa * RPDEG_D;
+        beam_bpa = (canvas_vars.beam_bpa + 90.0) * RPDEG_D;
         beam_noise = canvas_vars.beam_noise;
 
         data = countVisibilities(msinput, fields);
@@ -455,7 +455,9 @@ __host__ int main(int argc, char **argv) {
         threadsPerBlockNN = threads;
         numBlocksNN = blocks;
 
-        noise_jypix = beam_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
+
+        noise_jypix = analytical_noise / (PI_D * beam_bmaj * beam_bmin / (4 * log(2) ));
+
         if(lambda == 0.0) {
                 MINPIX = 0.0;
         }else{
@@ -814,7 +816,7 @@ __host__ int main(int argc, char **argv) {
 
         float2 theta_init;
         //theta_init.x = MINPIX * fg_scale + fg_scale;
-        float analytical_noise_jypix = analytical_noise / (PI * beam_bmaj * beam_bmin / (4 * log(2) ));
+        float analytical_noise_jypix = noise_jypix;
         float gpuvmem_factor = sqrtf(PI * (1.0/3.0) * beam_bmaj * (1.0/3.0) * beam_bmin / (4 * log(2) ));
         float analytical_noise_gpuvmem = analytical_noise_jypix * gpuvmem_factor;
         theta_init.x = analytical_noise_gpuvmem;
@@ -845,7 +847,7 @@ __host__ int main(int argc, char **argv) {
 
 
         float2 *theta_device;
-        float2 *theta_host = (float2*) malloc((M*N)*sizeof(float2));
+        float2 *theta_host = (float2*)malloc((M*N)*sizeof(float2));
         for(int i=0; i<M; i++) {
                 for(int j=0; j<N; j++) {
                         theta_host[N*i+j].x = theta_init.x;
