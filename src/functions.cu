@@ -2452,7 +2452,7 @@ __host__ void MCMC_Gibbs(float2 *I, float2 *theta, int iterations, int burndown_
         size_t file_shutdown_n = snprintf(NULL, 0, "%sshutdown.txt", checkp) + 1;
         char *chi2_file_name = (char*)malloc(sizeof(char)*file_chi2_n);
         char *iter_file_name = (char*)malloc(sizeof(char)*file_iter_n);
-        shutdown_file_name = (char*)malloc(sizeof(char)*file_iter_n);
+        shutdown_file_name = (char*)malloc(sizeof(char)*file_shutdown_n);
 
         snprintf(chi2_file_name, file_chi2_n*sizeof(char), "%schi2.txt", checkp, 0);
         snprintf(iter_file_name, file_iter_n*sizeof(char), "%siter.txt", checkp, 0);
