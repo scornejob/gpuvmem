@@ -75,6 +75,7 @@ typedef struct variables {
   float eta;
   float epsilon;
   float alpha_value;
+  float robust_param;
 } Vars;
 
 __host__ void goToError();
@@ -86,7 +87,7 @@ __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float2 *I);
 __host__ void dchiCuadrado(float2 *I, float2 *dxi2);
-__host__ void do_gridding(Field *fields, freqData *data, float deltau, float deltav, int M, int N);
+__host__ void do_gridding(Field *fields, freqData *data, double deltau, double deltav, int M, int N, float robust);
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV);
 __host__ void clipping(cufftComplex *I, int iterations);
 __host__ float deviceReduce(float *in, long N);
@@ -104,15 +105,15 @@ __global__ void getGGandDGG(float *gg, float *dgg, float2 *xi, float2 *g, long N
 __global__ void clip(cufftComplex *I, long N, float MINPIX);
 __global__ void clip2IWNoise(float *noise, float2 *I, long N, float noise_cut, float minpix, float fg_scale, float eta);
 __global__ void clip2I(float2 *I, long N, float minpix, float fg_scale);
-__global__ void hermitianSymmetry(float *Ux, float *Vx, cufftComplex *Vo, float freq, int numVisibilities);
+__global__ void hermitianSymmetry(double3 *UVW, cufftComplex *Vo, float freq, int numVisibilities);
 __device__ float attenuation(float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY);
 __global__ void total_attenuation(float *total_atten, float beam_fwhm, float beam_freq, float beam_cutoff, float freq, float xobs, float yobs, float DELTAX, float DELTAY, long N);
 __global__ void mean_attenuation(float *total_atten, int channels, long N);
 __global__ void weight_image(float *weight_image, float *total_atten, float noise_jypix, long N);
 __global__ void noise_image(float *noise_image, float *weight_image, float noise_jypix, long N);
-__global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, float DELTAX, float DELTAY);
+__global__ void apply_beam(float beam_fwhm, float beam_freq, float beam_cutoff, cufftComplex *image, cufftComplex *fg_image, long N, float xobs, float yobs, float fg_scale, float freq, double DELTAX, double DELTAY);
 __global__ void phase_rotate(cufftComplex *data, long M, long N, float xphs, float yphs);
-__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, float *Ux, float *Vx, float deltau, float deltav, long numVisibilities, long N);
+__global__ void vis_mod(cufftComplex *Vm, cufftComplex *V, double3 *UVW, double deltau, double deltav, long numVisibilities, long N);
 __global__ void alphaVectors(float *alpha_num, float *alpha_den, float *w, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, long numVisibilities);
 __global__ void residual_XCORR(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, float alpha, long numVisibilities);
