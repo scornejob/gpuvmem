@@ -1157,6 +1157,12 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         int offset = M*N*index;
         gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
+        for(int i=0; i<M; i++){
+            for(int j=0; j<N; j++){
+                host_IFITS[N*i+j] *= fg_scale;
+            }
+        }
+
         fits_write_img(fpointer, TFLOAT, fpixel, elements, host_IFITS, &status);
         if (status) {
                 fits_report_error(stderr, status); /* print error message */
