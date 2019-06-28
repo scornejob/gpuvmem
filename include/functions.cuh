@@ -32,9 +32,9 @@ __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
 __host__ float chiCuadrado(float *I);
 __host__ void dchiCuadrado(float *I, float *dxi2);
-__host__ void do_gridding(Field *fields, freqData *data, double deltau, double deltav, int M, int N, float robust);
-__host__ void degridding(Field *fields, freqData data, double deltau, double deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N);
-__host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV, int gridding);
+__host__ void do_gridding(Field *fields, MSData *data, double deltau, double deltav, int M, int N, float robust);
+__host__ void degridding(Field *fields, MSData data, double deltau, double deltav, int num_gpus, int firstgpu, int blockSizeV, long M, long N);
+__host__ float calculateNoise(Field *fields, MSData data, int *total_visibilities, int blockSizeV, int gridding);
 __host__ void clipping(cufftComplex *I, int iterations);
 template <class T>
 __host__ T deviceReduce(T *in, long N);
