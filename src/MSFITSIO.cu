@@ -135,9 +135,9 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                 counter = 0;
                 for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
                         // Query for data with forced IF and FIELD
-                        needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
+                        needed = snprintf(NULL, 0, "select WEIGHT,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        snprintf(query, needed, "select WEIGHT,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
 
                         casa::Table query_tab = casa::tableCommand(query);
 
@@ -171,15 +171,6 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                     max = local_max;
                 }
             }
-        }
-
-        for(int f=0; f<freqsAndVisibilities.nfields; f++){
-            for(int i=0; i<freqsAndVisibilities.total_frequencies; i++) {
-                for(int s=0; s<freqsAndVisibilities.nstokes; s++){
-                    printf("Vis: %d\n", fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-                }
-            }
-
         }
 
         freqsAndVisibilities.max_number_visibilities_in_channel_and_stokes = max;
@@ -280,9 +271,9 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, MSData data)
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
+                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
 
                         casa::Table query_tab = casa::tableCommand(query);
 
@@ -383,9 +374,9 @@ __host__ void readSubsampledMS(char *MS_name, Field *fields, MSData data, float 
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
+                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
 
                         casa::Table query_tab = casa::tableCommand(query);
 
@@ -492,9 +483,9 @@ __host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, MSData data,
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
+                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
 
                         casa::Table query_tab = casa::tableCommand(query);
 
@@ -603,9 +594,9 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data)
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
+                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
                         query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select * from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
 
                         casa::Table query_tab = casa::tableCommand(query);
 
@@ -738,7 +729,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
         MScopy(infile, outfile, verbose_flag);
         char* out_col = "DATA";
         string dir=outfile;
-        string query;
+        char *query_update, *query;
         casa::Table main_tab(dir,casa::Table::Update);
         string column_name=out_col;
 
@@ -747,64 +738,90 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                 printf("Column %s already exists... skipping creation...\n", out_col);
         }else{
                 printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
+                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
                 main_tab.flush();
         }
 
-        if (column_name!="DATA")
-        {
-                query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
-                casa::tableCommand(query);
-        }
-
-        /*for(int f=0; f<data.nfields; f++)
-            for(int i=0; i < data.total_frequencies; i++)
-                for(int s=0; s<data.nstokes; s++)
-                    for(int z=0; z< fields[f].numVisibilitiesPerFreqPerStoke[i][s]; z++)
-                        printf("Vo backup copied: Real %e, Imag: %e\n", fields[f].visibilities[i][s].Vo[z].x, fields[f].visibilities[i][s].Vo[z].y);
-
-        exit(-1);*/
-
-        casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Vector<casa::Bool> auxbool;
-        casa::Vector<float> weights;
-        bool flag;
-        int spw, field, h = 0, g = 0;
+        /*size_t needed;
+        int freq;
+        cufftComplex residual;
         for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        for(int j=0; j < data.channels[i]; j++) {
-                                for (int k=0; k < data.nsamples; k++) {
-                                        const casa::TableRecord &values = row.get(k);
-                                        flag = values.asBool("FLAG_ROW");
-                                        spw = values.asInt("DATA_DESC_ID");
-                                        field = values.asInt("FIELD_ID");
-                                        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-                                        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-                                        weights=values.asArrayFloat("WEIGHT");
-                                        if(field == f && spw == i && flag == false) {
-                                                for (int sto=0; sto< data.nstokes; sto++) {
-                                                        auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0)
-                                                        {
-                                                                printf("Vo written: Real %e, Imag: %e\n", fields[f].visibilities[g][sto].Vo[h].x, fields[f].visibilities[g][sto].Vo[h].y);
-                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vo[h].x - fields[f].visibilities[g][sto].Vm[h].x, fields[f].visibilities[g][sto].Vo[h].y - fields[f].visibilities[g][sto].Vm[h].y);
-                                                                weights[sto] = fields[f].visibilities[g][sto].weight[h];
-                                                                h++;
-                                                        }
-
-                                                }
-                                                row.put(k);
-                                        }else continue;
-
-                                }
-                                g++;
+            freq = 0;
+            for(int i=0; i < data.n_internal_frequencies; i++) {
+                for(int j=0; j < data.channels[i]; j++) {
+                    for (int sto=0; sto< data.nstokes; sto++) {
+                        for(int z=0; z<fields[f].numVisibilitiesPerFreqPerStoke[i][sto]; z++)
+                        {
+                            residual.x = fields[f].visibilities[freq][sto].Vo[z].x - fields[f].visibilities[freq][sto].Vm[z].x;
+                            residual.y = fields[f].visibilities[freq][sto].Vo[z].y - fields[f].visibilities[freq][sto].Vm[z].y;
+                            needed = snprintf(NULL, 0, "update %s set DATA[%d,%d] = COMPLEX(%f,%f) where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE and FLAG[%d,%d]=FALSE and WEIGHT[%d]>0", outfile, sto, j, residual.x, residual.y, i, f, sto, j, sto) + 1;
+                            query_update = (char*) malloc(needed*sizeof(char));
+                            snprintf(query_update, needed, "update %s set DATA[%d,%d] = COMPLEX(%f,%f) where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE and FLAG[%d,%d]=FALSE and WEIGHT[%d]>0", outfile, sto, j, residual.x, residual.y, i,f, sto, j, sto);
+                            casa::TaQLResult result1 = casa::tableCommand(query_update);
+                            //casa::AlwaysAssertExit(result1.isTable());
                         }
-                        h=0;
+                    }
+                    freq++;
                 }
+            }
+        }*/
+
+        for(int f=0; f < data.nfields; f++)
+            for(int i = 0; i < data.total_frequencies; i++)
+                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
+
+
+        size_t needed;
+        cufftComplex residual;
+        int g = 0;
+        long c;
+        casa::Vector<float> weights;
+        casa::Matrix<casa::Complex> dataCol;
+        casa::Matrix<casa::Bool> flagCol;
+        for(int f=0; f<data.nfields; f++) {
+            g=0;
+            for(int i=0; i < data.n_internal_frequencies; i++) {
+                needed = snprintf(NULL, 0, "select WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f) + 1;
+                query = (char*) malloc(needed*sizeof(char));
+                snprintf(query, needed, "select WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f);
+
+                casa::Table query_tab = casa::tableCommand(query);
+
+                casa::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
+                casa::ArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+                casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+
+                for (int k=0; k < query_tab.nrow(); k++) {
+                    flagCol = flag_data_col(k);
+                    weights = weight_col(k);
+                    dataCol = data_col(k);
+                    for(int j=0; j < data.channels[i]; j++) {
+                        for (int sto=0; sto < data.nstokes; sto++) {
+                            if(flagCol(sto,j) == false && weights[sto] > 0.0) {
+                                c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                                residual.x = fields[f].visibilities[g+j][sto].Vo[c].x-fields[f].visibilities[g+j][sto].Vm[c].x;
+                                residual.y = fields[f].visibilities[g+j][sto].Vo[c].y-fields[f].visibilities[g+j][sto].Vm[c].y;
+                                dataCol[sto,j] = casa::Complex(residual.x, residual.y);
+                                weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
+                                fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
+                            }
+                        }
+                    }
+                    data_col.put(k,dataCol);
+                    weight_col.put(k, weights);
+                }
+
+                g+=data.channels[i];
+                needed = snprintf(NULL, 0, "update %s, $1 tq set DATA=tq.DATA, WEIGHT=tq.WEIGHT where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f) + 1;
+                query = (char*) malloc(needed*sizeof(char));
+                snprintf(query, needed, "update %s, $1 tq set DATA=tq.DATA, WEIGHT=tq.WEIGHT where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f);
+                casa::TaQLResult result1 = casa::tableCommand(query, query_tab);
+                free(query);
+            }
         }
+
         main_tab.flush();
+
 
 }
 
