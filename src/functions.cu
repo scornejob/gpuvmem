@@ -290,7 +290,7 @@ __host__ Vars getOptions(int argc, char **argv) {
         variables.blockSizeV = -1;
         variables.it_max = 500;
         variables.noise = -1;
-        variables.randoms = 1.0;
+        variables.randoms = -1.0;
         variables.noise_cut = -1;
         variables.eta = -1.0;
         variables.gridding = 0;

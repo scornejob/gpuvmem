@@ -37,7 +37,7 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
 {
         MSData freqsAndVisibilities;
         string dir = MS_name;
-        char *query;
+
         casa::Vector<double> pointing_ref;
         casa::Vector<double> pointing_phs;
         casa::Table main_tab(dir);
@@ -123,11 +123,10 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
         }
 
         casa::Vector<float> weights;
-        casa::Matrix<casa::Bool> flagCol;
+        casa::Matrix<bool> flagCol;
 
-        bool flag;
         int counter;
-        size_t needed;
+        string query;
 
         // Iteration through all fields
 
@@ -135,18 +134,16 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                 counter = 0;
                 for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
                         // Query for data with forced IF and FIELD
-                        needed = snprintf(NULL, 0, "select WEIGHT,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f) + 1;
-                        query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select WEIGHT,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", MS_name, i,f);
+                        query = "select WEIGHT,FLAG from "+ dir +" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
 
-                        casa::Table query_tab = casa::tableCommand(query);
+                        casa::Table query_tab = casa::tableCommand(query.c_str());
 
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
                         casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
                         for (int k=0; k < query_tab.nrow(); k++) {
-                                flagCol=flag_data_col(k);
                                 weights=weight_col(k);
+                                flagCol = flag_data_col(k);
                                 for(int j=0; j < freqsAndVisibilities.channels[i]; j++) {
                                         for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++) {
                                                 if(flagCol(sto,j) == false && weights[sto] > 0.0) {
@@ -157,7 +154,6 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                                 }
                         }
                         counter+=freqsAndVisibilities.channels[i];
-                        free(query);
                 }
         }
 
@@ -240,63 +236,76 @@ __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&value
 
 }
 
-__host__ void readMSMCNoise(char *MS_name, Field *fields, MSData data)
+__host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
 {
 
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        char *query;
         string dir = MS_name;
         casa::Table main_tab(dir);
+
         casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+
         casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
         casa::Vector<float> weights;
         casa::Vector<double> uvw;
         casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<casa::Bool> flagCol;
+        casa::Matrix<bool> flagCol;
 
         for(int f=0; f < data.nfields; f++)
             for(int i = 0; i < data.total_frequencies; i++)
                 memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
 
-        bool flag;
-        size_t needed;
-
         float u;
         SelectStream(0);
         PutSeed(-1);
-
+        string query;
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
-                        query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
 
-                        casa::Table query_tab = casa::tableCommand(query);
+                        query = "select UVW,WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
+                        if(W_projection && random_prob < 1.0)
+                        {
+                            query += " and RAND()<%f ORDERBY ASC UVW[2]";
+                        }else if(W_projection){
+                            query += " ORDERBY ASC UVW[2]";
+                        }else if(random_prob < 1.0) {
+                            query += " RAND()<%f";
+                        }
+
+                        casa::Table query_tab = casa::tableCommand(query.c_str());
 
                         casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
                         casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
                         casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+                        casa::ROArrayColumn<bool> flag_col(query_tab,"FLAG");
+
                         for (int k=0; k < query_tab.nrow(); k++) {
                                 uvw = uvw_col(k);
                                 dataCol = data_col(k);
-                                flagCol = flag_data_col(k);
                                 weights = weight_col(k);
+                                flagCol = flag_col(k);
                                 for(int j=0; j < data.channels[i]; j++) {
-                                        for (int sto=0; sto<data.nstokes; sto++) {
-                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
+                                        for (int sto=0; sto < data.nstokes; sto++) {
+                                                if(flagCol(sto,j) == false) {
                                                         c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
                                                         fields[f].visibilities[g+j][sto].uvw[c].x = uvw[0];
                                                         fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
                                                         fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
-                                                        u = Normal(0.0, 1.0);
-                                                        fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
-                                                        u = Normal(0.0, 1.0);
-                                                        fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+
+                                                        if(noise){
+                                                            u = Normal(0.0, 1.0);
+                                                            fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
+                                                            u = Normal(0.0, 1.0);
+                                                            fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
+                                                        }else{
+                                                            fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
+                                                            fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
+                                                        }
+
                                                         fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
                                                         fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                                                 }
@@ -304,329 +313,6 @@ __host__ void readMSMCNoise(char *MS_name, Field *fields, MSData data)
                                 }
                         }
                         g+=data.channels[i];
-                        free(query);
-                }
-        }
-
-        for(int f=0; f<data.nfields; f++){
-            for(int i=0; i<data.total_frequencies; i++) {
-                for (int sto=0; sto<data.nstokes; sto++) {
-                    fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
-                }
-            }
-        }
-
-
-        for(int f=0; f<data.nfields; f++) {
-                h = 0;
-                for(int i = 0; i < data.n_internal_frequencies; i++) {
-                        casa::Vector<double> chan_freq_vector;
-                        chan_freq_vector=chan_freq_col(i);
-                        for(int j = 0; j < data.channels[i]; j++) {
-                                fields[f].nu[h] = chan_freq_vector[j];
-                                h++;
-                        }
-                }
-        }
-
-        for(int f=0; f<data.nfields; f++) {
-                h = 0;
-                fields[f].valid_frequencies = 0;
-                for(int i = 0; i < data.n_internal_frequencies; i++) {
-                        for(int j = 0; j < data.channels[i]; j++) {
-                                if(fields[f].numVisibilitiesPerFreq[h] > 0) {
-                                        fields[f].valid_frequencies++;
-                                }
-                                h++;
-                        }
-                }
-        }
-}
-
-__host__ void readSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability)
-{
-        char *error = 0;
-        int g = 0, h = 0;
-        long c;
-        char *query;
-        string dir = MS_name;
-        casa::Table main_tab(dir);
-        casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-
-        casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
-
-        casa::Vector<float> weights;
-        casa::Vector<double> uvw;
-        casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<casa::Bool> flagCol;
-
-        for(int f=0; f < data.nfields; f++)
-            for(int i = 0; i < data.total_frequencies; i++)
-                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
-
-        bool flag;
-        size_t needed;
-
-
-        float u;
-        SelectStream(0);
-        PutSeed(-1);
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
-                        query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
-
-                        casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
-                        casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
-
-                        for (int k=0; k < query_tab.nrow(); k++) {
-                                uvw = uvw_col(k);
-                                dataCol = data_col(k);
-                                flagCol = flag_data_col(k);
-                                weights = weight_col(k);
-                                for(int j=0; j < data.channels[i]; j++) {
-                                        for (int sto=0; sto < data.nstokes; sto++) {
-                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
-                                                        u = Random();
-                                                        c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].x = uvw[0];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
-                                                        fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
-                                                        fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
-                                                        if(u<random_probability) {
-                                                             fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
-                                                        }else{
-                                                            fields[f].visibilities[g+j][sto].weight[c] = 0.0;
-                                                        }
-                                                        fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
-                                                }
-                                        }
-                                }
-                        }
-                        g+=data.channels[i];
-                        free(query);
-                }
-        }
-
-        for(int f=0; f<data.nfields; f++){
-            for(int i=0; i<data.total_frequencies; i++) {
-                for (int sto=0; sto<data.nstokes; sto++) {
-                    fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
-                }
-            }
-        }
-
-
-        for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                casa::Vector<double> chan_freq_vector;
-                chan_freq_vector=chan_freq_col(i);
-                for(int j = 0; j < data.channels[i]; j++) {
-                    fields[f].nu[h] = chan_freq_vector[j];
-                    h++;
-                }
-            }
-        }
-
-        for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            fields[f].valid_frequencies = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                for(int j = 0; j < data.channels[i]; j++) {
-                    if(fields[f].numVisibilitiesPerFreq[h] > 0) {
-                        fields[f].valid_frequencies++;
-                    }
-                    h++;
-                }
-            }
-        }
-
-}
-
-__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, MSData data, float random_probability)
-{
-        char *error = 0;
-        int g = 0, h = 0;
-        long c;
-        char *query;
-        string dir = MS_name;
-        casa::Table main_tab(dir);
-
-        casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-
-        casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
-
-        casa::Vector<float> weights;
-        casa::Vector<double> uvw;
-        casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<casa::Bool> flagCol;
-
-        for(int f=0; f < data.nfields; f++)
-            for(int i = 0; i < data.total_frequencies; i++)
-                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
-
-        bool flag;
-        size_t needed;
-
-        float u;
-        float nu;
-        SelectStream(0);
-        PutSeed(-1);
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
-                        query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
-
-                        casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
-                        casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
-
-                        for (int k=0; k < query_tab.nrow(); k++) {
-                                uvw = uvw_col(k);
-                                dataCol = data_col(k);
-                                flagCol = flag_data_col(k);
-                                weights = weight_col(k);
-                                for(int j=0; j < data.channels[i]; j++) {
-                                        for (int sto=0; sto < data.nstokes; sto++) {
-                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
-                                                        u = Random();
-                                                        c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].x = uvw[0];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
-                                                        if(u<random_probability) {
-                                                                nu = Normal(0.0, 1.0);
-                                                                fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
-                                                                nu = Normal(0.0, 1.0);
-                                                                fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                                                                fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
-                                                        }else{
-                                                                fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
-                                                                fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
-                                                                fields[f].visibilities[g+j][sto].weight[c] = 0.0;
-                                                        }
-                                                        fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
-                                                }
-                                        }
-                                }
-                        }
-                        g+=data.channels[i];
-                        free(query);
-                }
-        }
-
-        for(int f=0; f<data.nfields; f++){
-            for(int i=0; i<data.total_frequencies; i++) {
-                for (int sto=0; sto<data.nstokes; sto++) {
-                    fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
-                }
-            }
-        }
-
-
-        for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                casa::Vector<double> chan_freq_vector;
-                chan_freq_vector=chan_freq_col(i);
-                for(int j = 0; j < data.channels[i]; j++) {
-                    fields[f].nu[h] = chan_freq_vector[j];
-                    h++;
-                }
-            }
-        }
-
-        for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            fields[f].valid_frequencies = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                for(int j = 0; j < data.channels[i]; j++) {
-                    if(fields[f].numVisibilitiesPerFreq[h] > 0) {
-                        fields[f].valid_frequencies++;
-                    }
-                    h++;
-                }
-            }
-        }
-
-}
-
-
-__host__ void readMS(char *MS_name, Field *fields, MSData data)
-{
-
-        char *error = 0;
-        int g = 0, h = 0;
-        long c;
-        char *query;
-        string dir = MS_name;
-        casa::Table main_tab(dir);
-
-        casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-
-        casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
-
-        casa::Vector<float> weights;
-        casa::Vector<double> uvw;
-        casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<casa::Bool> flagCol;
-        bool flag;
-        size_t needed;
-
-        for(int f=0; f < data.nfields; f++)
-            for(int i = 0; i < data.total_frequencies; i++)
-                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
-
-
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        needed = snprintf(NULL, 0, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f) + 1;
-                        query = (char*) malloc(needed*sizeof(char));
-                        snprintf(query, needed, "select UVW,WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE ORDERBY ASC UVW[2]", MS_name, i,f);
-
-                        casa::Table query_tab = casa::tableCommand(query);
-
-                        casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
-                        casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
-
-                        for (int k=0; k < query_tab.nrow(); k++) {
-                                uvw = uvw_col(k);
-                                dataCol = data_col(k);
-                                flagCol = flag_data_col(k);
-                                weights = weight_col(k);
-                                for(int j=0; j < data.channels[i]; j++) {
-                                        for (int sto=0; sto < data.nstokes; sto++) {
-                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
-                                                        c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].x = uvw[0];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
-                                                        fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
-                                                        fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
-                                                        fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
-                                                        fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
-                                                }
-                                        }
-                                }
-                        }
-                        g+=data.channels[i];
-                        free(query);
                 }
         }
 
@@ -724,12 +410,11 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
 
 }
 
-__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
+__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
 {
         MScopy(infile, outfile, verbose_flag);
         char* out_col = "DATA";
         string dir=outfile;
-        char *query_update, *query;
         casa::Table main_tab(dir,casa::Table::Update);
         string column_name=out_col;
 
@@ -742,66 +427,60 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                 main_tab.flush();
         }
 
-        /*size_t needed;
-        int freq;
-        cufftComplex residual;
-        for(int f=0; f<data.nfields; f++) {
-            freq = 0;
-            for(int i=0; i < data.n_internal_frequencies; i++) {
-                for(int j=0; j < data.channels[i]; j++) {
-                    for (int sto=0; sto< data.nstokes; sto++) {
-                        for(int z=0; z<fields[f].numVisibilitiesPerFreqPerStoke[i][sto]; z++)
-                        {
-                            residual.x = fields[f].visibilities[freq][sto].Vo[z].x - fields[f].visibilities[freq][sto].Vm[z].x;
-                            residual.y = fields[f].visibilities[freq][sto].Vo[z].y - fields[f].visibilities[freq][sto].Vm[z].y;
-                            needed = snprintf(NULL, 0, "update %s set DATA[%d,%d] = COMPLEX(%f,%f) where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE and FLAG[%d,%d]=FALSE and WEIGHT[%d]>0", outfile, sto, j, residual.x, residual.y, i, f, sto, j, sto) + 1;
-                            query_update = (char*) malloc(needed*sizeof(char));
-                            snprintf(query_update, needed, "update %s set DATA[%d,%d] = COMPLEX(%f,%f) where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE and FLAG[%d,%d]=FALSE and WEIGHT[%d]>0", outfile, sto, j, residual.x, residual.y, i,f, sto, j, sto);
-                            casa::TaQLResult result1 = casa::tableCommand(query_update);
-                            //casa::AlwaysAssertExit(result1.isTable());
-                        }
-                    }
-                    freq++;
-                }
-            }
-        }*/
 
         for(int f=0; f < data.nfields; f++)
             for(int i = 0; i < data.total_frequencies; i++)
                 memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
 
 
-        size_t needed;
-        cufftComplex residual;
+
         int g = 0;
         long c;
+        cufftComplex vis;
         casa::Vector<float> weights;
         casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<casa::Bool> flagCol;
+        casa::Matrix<bool> flagCol;
+        string query;
+        float real_n, imag_n;
+        SelectStream(0);
+        PutSeed(-1);
+
         for(int f=0; f<data.nfields; f++) {
             g=0;
             for(int i=0; i < data.n_internal_frequencies; i++) {
-                needed = snprintf(NULL, 0, "select WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f) + 1;
-                query = (char*) malloc(needed*sizeof(char));
-                snprintf(query, needed, "select WEIGHT,DATA,FLAG from %s where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f);
+                query = "select WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
 
-                casa::Table query_tab = casa::tableCommand(query);
+                if(W_projection)
+                    query += " ORDERBY ASC UVW[2]";
+
+                casa::Table query_tab = casa::tableCommand(query.c_str());
 
                 casa::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
                 casa::ArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+                casa::ArrayColumn<bool> flag_col(query_tab,"FLAG");
 
                 for (int k=0; k < query_tab.nrow(); k++) {
-                    flagCol = flag_data_col(k);
                     weights = weight_col(k);
                     dataCol = data_col(k);
+                    flagCol = flag_col(k);
                     for(int j=0; j < data.channels[i]; j++) {
                         for (int sto=0; sto < data.nstokes; sto++) {
                             if(flagCol(sto,j) == false && weights[sto] > 0.0) {
                                 c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
-                                residual.x = fields[f].visibilities[g+j][sto].Vo[c].x-fields[f].visibilities[g+j][sto].Vm[c].x;
-                                residual.y = fields[f].visibilities[g+j][sto].Vo[c].y-fields[f].visibilities[g+j][sto].Vm[c].y;
-                                dataCol[sto,j] = casa::Complex(residual.x, residual.y);
+                                if(sim && noise){
+                                    real_n = Normal(0.0, 1.0);
+                                    imag_n = Normal(0.0, 1.0);
+                                    vis.x = fields[f].visibilities[g+j][sto].Vm[c].x +  real_n * (1/sqrt(weights[sto]));
+                                    vis.y = fields[f].visibilities[g+j][sto].Vm[c].y +  imag_n * (1/sqrt(weights[sto]));;
+                                }else if(sim){
+                                    vis.x = fields[f].visibilities[g+j][sto].Vm[c].x;
+                                    vis.y = fields[f].visibilities[g+j][sto].Vm[c].y;
+                                }else{
+                                    vis.x = fields[f].visibilities[g+j][sto].Vo[c].x - fields[f].visibilities[g+j][sto].Vm[c].x;
+                                    vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
+                                }
+
+                                dataCol[sto,j] = casa::Complex(vis.x, vis.y);
                                 weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
                                 fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                             }
@@ -811,297 +490,22 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                     weight_col.put(k, weights);
                 }
 
+                query_tab.flush();
+
+                string sub_query = "select from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
+                if(W_projection)
+                    sub_query += " ORDERBY ASC UVW[2]";
+
+                query = "update ["+sub_query+"], $1 tq set DATA[!FLAG]=tq.DATA[!tq.FLAG], WEIGHT=tq.WEIGHT";
+
+                casa::TaQLResult result1 = casa::tableCommand(query.c_str(), query_tab);
+
                 g+=data.channels[i];
-                needed = snprintf(NULL, 0, "update %s, $1 tq set DATA=tq.DATA, WEIGHT=tq.WEIGHT where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f) + 1;
-                query = (char*) malloc(needed*sizeof(char));
-                snprintf(query, needed, "update %s, $1 tq set DATA=tq.DATA, WEIGHT=tq.WEIGHT where DATA_DESC_ID=%d and FIELD_ID=%d and FLAG_ROW=FALSE", outfile, i,f);
-                casa::TaQLResult result1 = casa::tableCommand(query, query_tab);
-                free(query);
             }
         }
 
         main_tab.flush();
 
-
-}
-
-__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag)
-{
-        MScopy(infile, outfile, verbose_flag);
-        char* out_col = "DATA";
-        string dir=outfile;
-        string query;
-        casa::Table main_tab(dir,casa::Table::Update);
-        string column_name=out_col;
-
-        if (main_tab.tableDesc().isColumn(column_name))
-        {
-                printf("Column %s already exists... skipping creation...\n", out_col);
-        }else{
-                printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
-                main_tab.flush();
-        }
-
-        if (column_name!="DATA")
-        {
-                query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
-                casa::tableCommand(query);
-        }
-
-        casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Vector<casa::Bool> auxbool;
-        casa::Vector<float> weights;
-        bool flag;
-        int spw, field, h = 0, g = 0;
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        for(int j=0; j < data.channels[i]; j++) {
-                                for (int k=0; k < data.nsamples; k++) {
-                                        const casa::TableRecord &values = row.get(k);
-                                        flag = values.asBool("FLAG_ROW");
-                                        spw = values.asInt("DATA_DESC_ID");
-                                        field = values.asInt("FIELD_ID");
-                                        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-                                        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-                                        weights=values.asArrayFloat("WEIGHT");
-                                        if(field == f && spw == i && flag == false) {
-                                                for (int sto=0; sto< data.nstokes; sto++) {
-                                                        auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0)
-                                                        {
-                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x, fields[f].visibilities[g][sto].Vm[h].y);
-                                                                h++;
-                                                        }
-                                                }
-                                                row.put(k);
-                                        }else continue;
-                                }
-                                h=0;
-                                g++;
-                        }
-                }
-        }
-        main_tab.flush();
-
-}
-
-__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, MSData data, int verbose_flag)
-{
-        MScopy(infile, outfile, verbose_flag);
-        char* out_col = "DATA";
-        string dir=outfile;
-        string query;
-        casa::Table main_tab(dir,casa::Table::Update);
-        string column_name=out_col;
-
-        if (main_tab.tableDesc().isColumn(column_name))
-        {
-                printf("Column %s already exists... skipping creation...\n", out_col);
-        }else{
-                printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
-                main_tab.flush();
-        }
-
-        if (column_name!="DATA")
-        {
-                query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
-                casa::tableCommand(query);
-        }
-
-        casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Vector<casa::Bool> auxbool;
-        casa::Vector<float> weights;
-        bool flag;
-        int spw, field, h = 0, g = 0;
-        float real_n, imag_n;
-        SelectStream(0);
-        PutSeed(-1);
-
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        for(int j=0; j < data.channels[i]; j++) {
-                                for (int k=0; k < data.nsamples; k++) {
-                                        const casa::TableRecord &values = row.get(k);
-                                        flag = values.asBool("FLAG_ROW");
-                                        spw = values.asInt("DATA_DESC_ID");
-                                        field = values.asInt("FIELD_ID");
-                                        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-                                        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-                                        weights=values.asArrayFloat("WEIGHT");
-                                        if(field == f && spw == i && flag == false) {
-                                                for (int sto=0; sto< data.nstokes; sto++) {
-                                                        auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0)
-                                                        {
-                                                                real_n = Normal(0.0, 1.0);
-                                                                imag_n = Normal(0.0, 1.0);
-                                                                dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x + real_n * (1/sqrt(weights[sto])), fields[f].visibilities[g][sto].Vm[h].y + imag_n * (1/sqrt(weights[sto])));
-                                                                h++;
-                                                        }
-                                                }
-                                                row.put(k);
-                                        }else continue;
-                                }
-                                h=0;
-                                g++;
-                        }
-                }
-        }
-        main_tab.flush();
-
-}
-
-__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
-{
-        MScopy(infile, outfile, verbose_flag);
-        char* out_col = "DATA";
-        string dir=outfile;
-        string query;
-        casa::Table main_tab(dir,casa::Table::Update);
-        string column_name=out_col;
-
-        if (main_tab.tableDesc().isColumn(column_name))
-        {
-                printf("Column %s already exists... skipping creation...\n", out_col);
-        }else{
-                printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
-                main_tab.flush();
-        }
-
-        if (column_name!="DATA")
-        {
-                query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
-                casa::tableCommand(query);
-        }
-
-        casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Vector<casa::Bool> auxbool;
-        casa::Vector<float> weights;
-        bool flag;
-        int spw, field, h = 0, g = 0;
-        float u;
-        SelectStream(0);
-        PutSeed(-1);
-
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        for(int j=0; j < data.channels[i]; j++) {
-                                for (int k=0; k < data.nsamples; k++) {
-                                        const casa::TableRecord &values = row.get(k);
-                                        flag = values.asBool("FLAG_ROW");
-                                        spw = values.asInt("DATA_DESC_ID");
-                                        field = values.asInt("FIELD_ID");
-                                        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-                                        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-                                        weights=values.asArrayFloat("WEIGHT");
-                                        if(field == f && spw == i && flag == false) {
-                                                for (int sto=0; sto< data.nstokes; sto++) {
-                                                        auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0) {
-                                                                u = Random();
-                                                                if(u<random_probability) {
-                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x, fields[f].visibilities[g][sto].Vm[h].y);
-                                                                }else{
-                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x, fields[f].visibilities[g][sto].Vm[h].y);
-                                                                        weights[sto] = 0.0;
-                                                                }
-                                                                h++;
-                                                        }
-                                                }
-                                                row.put(k);
-                                        }else continue;
-                                }
-                                h=0;
-                                g++;
-                        }
-                }
-        }
-        main_tab.flush();
-
-}
-
-
-__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, MSData data, float random_probability, int verbose_flag)
-{
-        MScopy(infile, outfile, verbose_flag);
-        char* out_col = "DATA";
-        string dir=outfile;
-        string query;
-        casa::Table main_tab(dir,casa::Table::Update);
-        string column_name=out_col;
-
-        if (main_tab.tableDesc().isColumn(column_name))
-        {
-                printf("Column %s already exists... skipping creation...\n", out_col);
-        }else{
-                printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvsim"));
-                main_tab.flush();
-        }
-
-        if (column_name!="DATA")
-        {
-                query="UPDATE "+dir+" set "+column_name+"=DATA";
-                printf("Duplicating DATA column into %s\n", out_col);
-                casa::tableCommand(query);
-        }
-
-        casa::TableRow row(main_tab, casa::stringToVector(column_name+",FLAG,FIELD_ID,WEIGHT,FLAG_ROW,DATA_DESC_ID"));
-        casa::Vector<casa::Bool> auxbool;
-        casa::Vector<float> weights;
-        bool flag;
-        int spw, field, h = 0, g = 0;
-        float real_n, imag_n;
-        float u;
-        SelectStream(0);
-        PutSeed(-1);
-
-        for(int f=0; f<data.nfields; f++) {
-                g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
-                        for(int j=0; j < data.channels[i]; j++) {
-                                for (int k=0; k < data.nsamples; k++) {
-                                        const casa::TableRecord &values = row.get(k);
-                                        flag = values.asBool("FLAG_ROW");
-                                        spw = values.asInt("DATA_DESC_ID");
-                                        field = values.asInt("FIELD_ID");
-                                        casa::Array<casa::Bool> flagCol = values.asArrayBool("FLAG");
-                                        casa::Array<casa::Complex> dataCol = values.asArrayComplex(column_name);
-                                        weights=values.asArrayFloat("WEIGHT");
-                                        if(field == f && spw == i && flag == false) {
-                                                for (int sto=0; sto< data.nstokes; sto++) {
-                                                        auxbool = flagCol[j][sto];
-                                                        if(auxbool[0] == false && weights[sto] > 0.0) {
-                                                                u = Random();
-                                                                if(u<random_probability) {
-                                                                        real_n = Normal(0.0, 1.0);
-                                                                        imag_n = Normal(0.0, 1.0);
-                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x + real_n * (1/sqrt(weights[sto])), fields[f].visibilities[g][sto].Vm[h].y + imag_n * (1/sqrt(weights[sto])));
-                                                                }else{
-                                                                        dataCol[j][sto] = casa::Complex(fields[f].visibilities[g][sto].Vm[h].x, fields[f].visibilities[g][sto].Vm[h].y);
-                                                                        weights[sto] = 0.0;
-                                                                }
-                                                                h++;
-                                                        }
-                                                }
-                                                row.put(k);
-                                        }else continue;
-                                }
-                                h=0;
-                                g++;
-                        }
-                }
-        }
-        main_tab.flush();
 
 }
 
@@ -1156,12 +560,9 @@ __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *ou
     gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
 
 
-    int x = M-1;
-    int y = N-1;
     for(int i=0; i < M; i++){
         for(int j=0; j < N; j++){
             /*Absolute*/
-            //image2D[N*(y-i)+(x-j)] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
             image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
             /*Real part*/
             //image2D[N*i+j] = host_IFITS[N*i+j].y;

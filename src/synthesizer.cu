@@ -339,22 +339,15 @@ void MFS::configure(int argc, char **argv)
                 }
         }
 
-
-
         if(verbose_flag) {
                 printf("Reading visibilities and FITS input files...\n");
         }
 
 
-
-        if(apply_noise && random_probability < 1.0) {
-                iohandler->IoreadMCNoiseSubsampledMS(msinput, fields, data, random_probability);
-        }else if(random_probability < 1.0) {
-                iohandler->IoreadSubsampledMS(msinput, fields, data, random_probability);
-        }else if(apply_noise) {
-                iohandler->IoreadMSMCNoise(msinput, fields, data);
+        if(apply_noise) {
+            iohandler->IoreadMS(msinput, fields, data, true, false, random_probability);
         }else{
-                iohandler->IoreadMS(msinput, fields, data);
+                iohandler->IoreadMS(msinput, fields, data, false, false, random_probability);
         }
         this->visibilities = new Visibilities();
         this->visibilities->setData(&data);
@@ -916,9 +909,6 @@ void MFS::run()
         {
                 //Saving residuals to disk
                 residualsToHost(fields, data, num_gpus, firstgpu);
-                printf("Saving residuals to MS...\n");
-                iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
-                printf("Residuals saved.\n");
         }else{
             double deltax = RPDEG_D*DELTAX; //radians
             double deltay = RPDEG_D*DELTAY; //radians
@@ -926,12 +916,15 @@ void MFS::run()
             deltav = 1.0 / (N * deltay);
 
             printf("Visibilities are gridded, we will need to de-grid to save them in a Measurement Set File\n");
+            omp_set_num_threads(gridding);
             degridding(fields, data, deltau, deltav, num_gpus, firstgpu, variables.blockSizeV, M, N);
+            omp_set_num_threads(num_gpus);
             residualsToHost(fields, data, num_gpus, firstgpu);
-            printf("Saving residuals to MS...\n");
-            iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, verbose_flag);
-            printf("Residuals saved.\n");
         }
+
+        printf("Saving residuals to MS...\n");
+        iohandler->IowriteMS(msinput, msoutput, fields, data, random_probability, false, false, false, verbose_flag);
+        printf("Residuals saved.\n");
 
 
 };
