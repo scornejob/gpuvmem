@@ -480,7 +480,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                                     vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
                                 }
 
-                                dataCol[sto,j] = casa::Complex(vis.x, vis.y);
+                                dataCol(sto,j) = casa::Complex(vis.x, vis.y);
                                 weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
                                 fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                             }
