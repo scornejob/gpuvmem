@@ -881,7 +881,7 @@ void MFS::run()
         printf("Saving final image to disk\n");
         if(IoOrderEnd == NULL) {
                 iohandler->IoPrintImage(image->getImage(), mod_in, "", out_image, "JY/PIXEL", iter, 0, fg_scale, M, N);
-                iohandler->IoPrintImage(image->getImage(), mod_in, "", "alpha.fits", "", iter, 1, 0.0, M, N);
+                iohandler->IoPrintImage(image->getImage(), mod_in, "", "alpha.fits", "", iter, 1, 1.0, M, N);
         }else{
                 (IoOrderEnd)(image->getImage(), iohandler);
         }
@@ -897,8 +897,8 @@ void MFS::run()
                 printf("Calculating Error Images\n");
                 this->error->calculateErrorImage(this->image, this->visibilities);
                 if(IoOrderError == NULL) {
-                        iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_Inu_0.fits", "JY/PIXEL", iter, 0, 0.0, M, N);
-                        iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_alpha.fits", "", iter, 1, 0.0, M, N);
+                        iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_Inu_0.fits", "JY/PIXEL", iter, 0, 1.0, M, N);
+                        iohandler->IoPrintImage(image->getErrorImage(), mod_in, "", "error_alpha.fits", "", iter, 1, 1.0, M, N);
                 }else{
                         (IoOrderError)(image->getErrorImage(), iohandler);
                 }
