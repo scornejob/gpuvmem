@@ -768,7 +768,7 @@ void MFS::setDevice()
                                 gpuErrchk(cudaDeviceSynchronize());
                         }
                         if(print_images)
-                                iohandler->IoPrintImageIteration(vars_per_field[f].atten_image, mod_in, mempath, "atten", "", f, 0, 0.0, M, N);
+                                iohandler->IoPrintImageIteration(vars_per_field[f].atten_image, mod_in, mempath, "atten", "", f, 0, 1.0, M, N);
                 }
         }
 
@@ -785,7 +785,7 @@ void MFS::setDevice()
         noise_image<<<numBlocksNN, threadsPerBlockNN>>>(device_noise_image, device_weight_image, noise_jypix, N);
         gpuErrchk(cudaDeviceSynchronize());
         if(print_images)
-                iohandler->IoPrintImage(device_noise_image, mod_in, mempath, "noise.fits", "", 0, 0, 0.0, M, N);
+                iohandler->IoPrintImage(device_noise_image, mod_in, mempath, "noise.fits", "", 0, 0, 1.0, M, N);
 
 
         float *host_noise_image = (float*)malloc(M*N*sizeof(float));
