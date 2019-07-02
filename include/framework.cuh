@@ -174,16 +174,16 @@ imageMap *functionMapping;
 class Visibilities
 {
 public:
-void setData(freqData* d){
+void setData(MSData* d){
         this->data = d;
 };
 void setFields(Field *f){
         this->fields = f;
 };
-void setTotalVisibilites(int *t){
+void setTotalVisibilities(int *t){
         this->total_visibilities = t;
 };
-freqData *getData(){
+MSData *getData(){
         return data;
 };
 Field *getFields(){
@@ -193,7 +193,7 @@ int *getTotalVisibilities(){
         return total_visibilities;
 };
 private:
-freqData *data;
+MSData *data;
 VariablesPerField *vars_per_field;
 Field *fields;
 int *total_visibilities;
@@ -236,13 +236,10 @@ virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
 class Io
 {
 public:
-virtual freqData IocountVisibilities(char * MS_name, Field *&fields, int gridding) = 0;
+virtual MSData IocountVisibilities(char * MS_name, Field *&fields, int gridding) = 0;
 virtual canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag) = 0;
-virtual void IoreadMSMCNoise(char *MS_name, Field *fields, freqData data) = 0;
-virtual void IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
-virtual void IoreadMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability) = 0;
-virtual void IoreadMS(char *MS_name, Field *fields, freqData data) = 0;
-virtual void IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag) = 0;
+virtual void IoreadMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob) = 0;
+virtual void IowriteMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag) = 0;
 virtual void IocloseCanvas(fitsfile *canvas) = 0;
 virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
 virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;

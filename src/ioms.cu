@@ -6,7 +6,7 @@ extern char* mempath;
 extern fitsfile *mod_in;
 extern int iter;
 
-freqData IoMS::IocountVisibilities(char * MS_name, Field *&fields, int gridding)
+MSData IoMS::IocountVisibilities(char * MS_name, Field *&fields, int gridding)
 {
         return countVisibilities(MS_name, fields, gridding);
 };
@@ -14,25 +14,14 @@ canvasVariables IoMS::IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b
 {
         return readCanvas(canvas_name, canvas, b_noise_aux, status_canvas, verbose_flag);
 };
-void IoMS::IoreadMSMCNoise(char *MS_name, Field *fields, freqData data)
+
+void IoMS::IoreadMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
 {
-        readMSMCNoise(MS_name, fields, data);
+        readMS(MS_name, fields, data, noise, W_projection, random_prob);
 };
-void IoMS::IoreadSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability)
+void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
 {
-        readSubsampledMS(MS_name, fields, data, random_probability);
-};
-void IoMS::IoreadMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability)
-{
-        readMCNoiseSubsampledMS(MS_name, fields, data, random_probability);
-};
-void IoMS::IoreadMS(char *MS_name, Field *fields, freqData data)
-{
-        readMS(MS_name, fields, data);
-};
-void IoMS::IowriteMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag)
-{
-        writeMS(infile, outfile, fields, data, random_probability, verbose_flag);
+        writeMS(infile, outfile, fields, data, random_probability, sim, noise, W_projection, verbose_flag);
 };
 
 void IoMS::IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)

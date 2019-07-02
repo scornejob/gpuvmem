@@ -54,15 +54,17 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 namespace casa = casacore;
 #endif
 
-typedef struct freqData {
+typedef struct MSData {
         int n_internal_frequencies;
         int total_frequencies;
         int *channels;
         int nfields;
         int nsamples;
         int nstokes;
-        int max_number_visibilities_in_channel;
-}freqData;
+        int *corr_type;
+
+        int max_number_visibilities_in_channel_and_stokes;
+}MSData;
 
 typedef struct visibilities {
         double3 *uvw;
@@ -71,10 +73,7 @@ typedef struct visibilities {
         cufftComplex *Vm;
         cufftComplex *Vr;
         int *S;
-        float freq;
-        long numVisibilities;
 
-        int *stokes;
         int threadsPerBlockUV;
         int numBlocksUV;
 }Vis;
@@ -85,12 +84,15 @@ typedef struct field {
         double phs_ra, phs_dec;
         float ref_xobs, ref_yobs;
         float phs_xobs, phs_yobs;
+        float *nu;
+        long **numVisibilitiesPerFreqPerStoke;
         long *numVisibilitiesPerFreq;
+        long **backup_numVisibilitiesPerFreqPerStoke;
         long *backup_numVisibilitiesPerFreq;
-        Vis *visibilities;
-        Vis *device_visibilities;
-        Vis *gridded_visibilities;
-        Vis *backup_visibilities;
+        Vis **visibilities;
+        Vis **device_visibilities;
+        Vis **gridded_visibilities;
+        Vis **backup_visibilities;
 }Field;
 
 typedef struct canvas_variables {
@@ -102,24 +104,16 @@ typedef struct canvas_variables {
         float beam_noise;
 }canvasVariables;
 
-__host__ freqData countVisibilities(char * MS_name, Field *&fields, int gridding);
+__host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding);
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
-
-__host__ void readMSMCNoise(char *MS_name, Field *fields, freqData data);
-__host__ void readSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability);
-__host__ void readMCNoiseSubsampledMS(char *MS_name, Field *fields, freqData data, float random_probability);
-__host__ void readMS(char *MS_name, Field *fields, freqData data);
+__host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob);
 
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_flag);
 
-__host__ void residualsToHost(Field *fields, freqData data, int num_gpus, int firstgpu);
-__host__ void readMS(char *file, char *file2, Field *fields);
-__host__ void writeMS(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
-__host__ void writeMSSIM(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag);
-__host__ void writeMSSIMMC(char *infile, char *outfile, Field *fields, freqData data, int verbose_flag);
-__host__ void writeMSSIMSubsampled(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
-__host__ void writeMSSIMSubsampledMC(char *infile, char *outfile, Field *fields, freqData data, float random_probability, int verbose_flag);
+__host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu);
+
+__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag);
 
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
