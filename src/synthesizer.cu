@@ -7,7 +7,7 @@ int iter=0;
 
 cufftHandle plan1GPU;
 
-cufftComplex *device_V, *device_fg_image, *device_image;
+cufftComplex *device_V, *device_fg_image, *device_I_nu;
 
 float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
@@ -610,12 +610,12 @@ void MFS::setDevice()
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
                 gpuErrchk(cudaMalloc((void**)&device_V, sizeof(cufftComplex)*M*N));
-                gpuErrchk(cudaMalloc((void**)&device_image, sizeof(cufftComplex)*M*N));
+                gpuErrchk(cudaMalloc((void**)&device_I_nu, sizeof(cufftComplex)*M*N));
         }else{
                 for(int g=0; g<num_gpus; g++) {
                         cudaSetDevice((g%num_gpus) + firstgpu);
                         gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_V, sizeof(cufftComplex)*M*N));
-                        gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_image, sizeof(cufftComplex)*M*N));
+                        gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_I_nu, sizeof(cufftComplex)*M*N));
                 }
         }
 
@@ -639,12 +639,12 @@ void MFS::setDevice()
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
                 gpuErrchk(cudaMemset(device_V, 0, sizeof(cufftComplex)*M*N));
-                gpuErrchk(cudaMemset(device_image, 0, sizeof(cufftComplex)*M*N));
+                gpuErrchk(cudaMemset(device_I_nu, 0, sizeof(cufftComplex)*M*N));
         }else{
                 for(int g=0; g<num_gpus; g++) {
                         cudaSetDevice((g%num_gpus) + firstgpu);
                         gpuErrchk(cudaMemset(vars_gpu[g].device_V, 0, sizeof(cufftComplex)*M*N));
-                        gpuErrchk(cudaMemset(vars_gpu[g].device_image, 0, sizeof(cufftComplex)*M*N));
+                        gpuErrchk(cudaMemset(vars_gpu[g].device_I_nu, 0, sizeof(cufftComplex)*M*N));
                 }
         }
 
@@ -985,12 +985,12 @@ void MFS::unSetDevice()
         cudaFree(device_Image);
         if(num_gpus == 1) {
                 cudaFree(device_V);
-                cudaFree(device_image);
+                cudaFree(device_I_nu);
         }else{
                 for(int g=0; g<num_gpus; g++) {
                         cudaSetDevice((g%num_gpus) + firstgpu);
                         cudaFree(vars_gpu[g].device_V);
-                        cudaFree(vars_gpu[g].device_image);
+                        cudaFree(vars_gpu[g].device_I_nu);
                 }
         }
         if(num_gpus == 1) {

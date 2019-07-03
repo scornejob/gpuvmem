@@ -23,7 +23,7 @@ typedef struct varsPerGPU {
         float *device_chi2;
         float *device_dchi2;
         cufftHandle plan;
-        cufftComplex *device_image;
+        cufftComplex *device_I_nu;
         cufftComplex *device_V;
 }varsPerGPU;
 

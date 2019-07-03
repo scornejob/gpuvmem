@@ -65,7 +65,7 @@ __host__ int main(int argc, char **argv) {
                 exit(EXIT_SUCCESS);
         }
 
-//// AVAILABLE CLASSES
+        //// AVAILABLE CLASSES
         enum {MFS}; // Synthesizer
         enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, SquaredTotalVariation}; // Fi
         enum {Gridding}; // Filter
