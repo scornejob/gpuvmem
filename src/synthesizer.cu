@@ -5,7 +5,7 @@
 long M, N, numVisibilities;
 int iter=0;
 
-float *device_Image, *device_dphi, *device_chi2, *device_dchi2_total, *device_dS, *device_dchi2, *device_S, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
+float *device_Image, *device_dphi, *device_dchi2_total, *device_dS, *device_S, beam_noise, beam_bmaj, *device_noise_image, *device_weight_image;
 float beam_bmin, b_noise_aux, noise_cut, MINPIX, minpix, lambda, ftol, random_probability = 1.0;
 float noise_jypix, fg_scale, final_chi2, final_S, antenna_diameter, pb_factor, pb_cutoff, eta, robust_param;
 float *host_I, sum_weights, *initial_values, *penalizators;
@@ -422,14 +422,16 @@ void MFS::setDevice()
         }
 
 
+        for(int g=0; g<num_gpus; g++) {
+            cudaSetDevice((g%num_gpus) + firstgpu);
+            gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_dchi2, sizeof(float)*M*N));
+            gpuErrchk(cudaMemset(vars_gpu[g].device_dchi2, 0, sizeof(float)*M*N));
+
+            gpuErrchk(cudaMalloc(&vars_gpu[g].device_chi2, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
+            gpuErrchk(cudaMemset(vars_gpu[g].device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
+        }
+
         if(num_gpus == 1) {
-                cudaSetDevice(selected);
-                gpuErrchk(cudaMalloc((void**)&device_dchi2, sizeof(float)*M*N));
-                gpuErrchk(cudaMemset(device_dchi2, 0, sizeof(float)*M*N));
-
-                gpuErrchk(cudaMalloc(&device_chi2, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
-                gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
-
 
                 for(int f=0; f<data.nfields; f++) {
                         gpuErrchk(cudaMalloc((void**)&vars_per_field[f].atten_image, sizeof(float)*M*N));
@@ -463,15 +465,6 @@ void MFS::setDevice()
                         }
                 }
         }else{
-
-                for(int g=0; g<num_gpus; g++) {
-                        cudaSetDevice((g%num_gpus) + firstgpu);
-                        gpuErrchk(cudaMalloc((void**)&vars_gpu[g].device_dchi2, sizeof(float)*M*N));
-                        gpuErrchk(cudaMemset(vars_gpu[g].device_dchi2, 0, sizeof(float)*M*N));
-
-                        gpuErrchk(cudaMalloc(&vars_gpu[g].device_chi2, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
-                        gpuErrchk(cudaMemset(vars_gpu[g].device_chi2, 0, sizeof(float)*data.max_number_visibilities_in_channel_and_stokes));
-                }
 
                 for(int f=0; f<data.nfields; f++) {
                         cudaSetDevice(firstgpu);
@@ -969,8 +962,6 @@ void MFS::unSetDevice()
         cudaFree(device_noise_image);
 
         cudaFree(device_dphi);
-        cudaFree(device_dchi2);
-        cudaFree(device_chi2);
         cudaFree(device_dchi2_total);
         cudaFree(device_dS);
 

@@ -43,7 +43,7 @@ extern cufftComplex *device_V, *device_fg_image, *device_I_nu;
 extern float *device_I;
 extern Telescope *telescope;
 
-extern float *device_dphi, *device_chi2, *device_dchi2, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
+extern float *device_dphi, *device_S, *device_dchi2_total, *device_dS, *device_noise_image;
 extern float noise_jypix, fg_scale, noise_cut, MINPIX, \
              minpix, lambda, ftol, random_probability, final_chi2, final_S, eta;
 
@@ -2577,7 +2577,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                             for(int s=0; s<data.nstokes; s++) {
                                 if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
-                                    gpuErrchk(cudaMemset(device_chi2, 0, sizeof(float) *
+                                    gpuErrchk(cudaMemset(vars_gpu[0].device_chi2, 0, sizeof(float) *
                                                                          data.max_number_visibilities_in_channel_and_stokes));
 
                                     ip->calculateInu(vars_gpu[0].device_I_nu, I, fields[f].nu[i]);
@@ -2615,12 +2615,12 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                     ////chi 2 VECTOR
                                     chi2Vector <<< fields[f].visibilities[i][s].numBlocksUV,
                                             fields[f].visibilities[i][s].threadsPerBlockUV >>>
-                                            (device_chi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].weight, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                                            (vars_gpu[0].device_chi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].weight, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
                                     gpuErrchk(cudaDeviceSynchronize());
 
                                     //REDUCTIONS
                                     //chi2
-                                    resultchi2 += deviceReduce<float>(device_chi2,
+                                    resultchi2 += deviceReduce<float>(vars_gpu[0].device_chi2,
                                                                       fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
                                 }
                             }
@@ -2639,7 +2639,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                 cudaSetDevice((i%num_gpus) + firstgpu); // "% num_gpus" allows more CPU threads than GPU devices
                                 cudaGetDevice(&gpu_id);
                                 for(int s=0; s<data.nstokes;s++) {
-                                    if (fields[f].numVisibilitiesPerFreq[i] > 0) {
+                                    if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
                                         gpuErrchk(cudaMemset(vars_gpu[i % num_gpus].device_chi2, 0, sizeof(float) *
                                                                                                     data.max_number_visibilities_in_channel_and_stokes));
@@ -2713,20 +2713,22 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
                         for(int i=0; i<data.total_frequencies; i++) {
                             for(int s=0; s < data.nstokes; s++) {
                                 if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
+                                    gpuErrchk(cudaMemset(vars_gpu[0].device_dchi2, 0, sizeof(float) *
+                                                                                                M*N));
                                     //size_t shared_memory;
                                     //shared_memory = 3*fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(double) + fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(float) + fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex);
                                     DChi2 <<< numBlocksNN, threadsPerBlockNN >>>
-                                                            (device_noise_image, device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
-                                    //DChi2_SharedMemory<<<numBlocksNN, threadsPerBlockNN, shared_memory>>>(device_noise_image, device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
+                                                            (device_noise_image, vars_gpu[0].device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
+                                    //DChi2_SharedMemory<<<numBlocksNN, threadsPerBlockNN, shared_memory>>>(device_noise_image, vars_gpu[0].device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
                                     gpuErrchk(cudaDeviceSynchronize());
 
 
                                     if (flag_opt % 2 == 0)
                                         DChi2_total_I_nu_0 <<< numBlocksNN, threadsPerBlockNN >>>
-                                                                                 (device_noise_image, result_dchi2, device_dchi2, I, fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
+                                                                                 (device_noise_image, result_dchi2, vars_gpu[0].device_dchi2, I, fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
                                     else
                                             DChi2_total_alpha <<< numBlocksNN, threadsPerBlockNN >>>
-                                                                                (device_noise_image, result_dchi2, device_dchi2, I, fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
+                                                                                (device_noise_image, result_dchi2, vars_gpu[0].device_dchi2, I, fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
                                     gpuErrchk(cudaDeviceSynchronize());
 
                                 }
@@ -2745,7 +2747,9 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
                                 cudaSetDevice((i%num_gpus) + firstgpu); // "% num_gpus" allows more CPU threads than GPU devices
                                 cudaGetDevice(&gpu_id);
                                 for(int s=0; s<data.nstokes; s++) {
-                                    if (fields[f].numVisibilitiesPerFreq[i] > 0) {
+                                    if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
+                                        gpuErrchk(cudaMemset(vars_gpu[i % num_gpus].device_dchi2, 0, sizeof(float) *
+                                                                                          M*N));
                                         //size_t shared_memory;
                                         //shared_memory = 3*fields[f].numVisibilitiesPerFreq[i]*sizeof(float) + fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex);
                                         DChi2 <<< numBlocksNN, threadsPerBlockNN >>> (device_noise_image, vars_gpu[i % num_gpus].device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
