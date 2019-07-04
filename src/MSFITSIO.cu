@@ -236,6 +236,18 @@ __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&value
 
 }
 
+__host__ cufftComplex addNoiseToVis(cufftComplex vis, float weights){
+    cufftComplex noise_vis;
+
+    float real_n = Normal(0,1);
+    float imag_n = Normal(0,1);
+
+    noise_vis.x = vis.x + real_n * (1/sqrt(weights));
+    noise_vis.y = vis.y + imag_n * (1/sqrt(weights));
+
+    return noise_vis;
+}
+
 __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
 {
 
@@ -296,15 +308,12 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
                                                         fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
                                                         fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
 
-                                                        if(noise){
-                                                            u = Normal(0.0, 1.0);
-                                                            fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real() + u * (1/sqrt(weights[sto]));
-                                                            u = Normal(0.0, 1.0);
-                                                            fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag() + u * (1/sqrt(weights[sto]));
-                                                        }else{
-                                                            fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
-                                                            fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
-                                                        }
+                                                        fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
+                                                        fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
+
+                                                        if(noise)
+                                                            fields[f].visibilities[g+j][sto].Vo[c] = addNoiseToVis(fields[f].visibilities[g+j][sto].Vo[c], weights[sto]);
+
 
                                                         fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
                                                         fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
@@ -467,14 +476,11 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                         for (int sto=0; sto < data.nstokes; sto++) {
                             if(flagCol(sto,j) == false && weights[sto] > 0.0) {
                                 c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+
                                 if(sim && noise){
-                                    real_n = Normal(0.0, 1.0);
-                                    imag_n = Normal(0.0, 1.0);
-                                    vis.x = fields[f].visibilities[g+j][sto].Vm[c].x +  real_n * (1/sqrt(weights[sto]));
-                                    vis.y = fields[f].visibilities[g+j][sto].Vm[c].y +  imag_n * (1/sqrt(weights[sto]));;
+                                    vis = addNoiseToVis(fields[f].visibilities[g+j][sto].Vm[c], weights[sto]);
                                 }else if(sim){
-                                    vis.x = fields[f].visibilities[g+j][sto].Vm[c].x;
-                                    vis.y = fields[f].visibilities[g+j][sto].Vm[c].y;
+                                    vis = fields[f].visibilities[g+j][sto].Vm[c];
                                 }else{
                                     vis.x = fields[f].visibilities[g+j][sto].Vo[c].x - fields[f].visibilities[g+j][sto].Vm[c].x;
                                     vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
