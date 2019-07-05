@@ -97,37 +97,42 @@ t_telescope        2
 
 Example: `./bin/gpuvmem options [ arguments ...]`
 ```
--h  --help            Shows this
--X  --blockSizeX      Block X Size for Image (Needs to be pow of 2)
--Y  --blockSizeY      Block Y Size for Image (Needs to be pow of 2)
--V  --blockSizeV      Block Size for Visibilities (Needs to be pow of 2)
--i  --input           The name of the input file of visibilities(MS)
--o  --output          The name of the output file of residual visibilities(MS)
--O  --output-image    The name of the output image FITS file
--I  --inputdat        The name of the input file of parameters
--m  --modin           mod_in_0 FITS file
--x  --minpix          Minimum positive value of a pixel (Optional)
--n  --noise           Noise parameter (Optional)
--N  --noise-cut       Noise-cut Parameter (Optional)
--r  --randoms         Percentage of data used when random sampling (Default = 1.0, optional)
--p  --path            MEM folder path to save FITS images. With last / included. (Example ./../mem/)
--e  --eta             Variable that controls the minimum image value (Default eta = -1.0)
--f  --file            Output file where final objective function values are saved (Optional)
--M  --multigpu        Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
--s  --select          If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
--t  --iterations      Number of iterations for optimization (Default = 50)
--z  --initial-cond    Initial conditions for image/s
--Z  --penalizators    Penalizators for Fi/s in Objective Function
-    --xcorr           Run gpuvmem with cross-correlation
-    --nopositivity    Run gpuvmem using chi2 with no positivity restriction
-    --apply-noise     Apply random gaussian noise to visibilities
-    --clipping        Clips the image to positive values
-    --print-images    Prints images per iteration
-    --verbose         Shows information through all the execution
+-h  --help             Shows this
+-X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)
+-Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)
+-V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)
+-i  --input            The name of the input file of visibilities(MS)
+-o  --output           The name of the output file of residual visibilities(MS)
+-O  --output-image     The name of the output image FITS file
+-I  --inputdat         The name of the input file of parameters
+-m  --modin            FITS file including a complete header for astrometry
+-n  --noise            Noise Parameter in Jy (Optional)
+-N  --noise-cut        Noise-cut Parameter (Optional)
+-r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)
+-e  --eta              Variable that controls the minimum image value (Default eta = -1.0)
+-p  --path             MEM path to save FITS images. With last / included. (Example ./../mem/)
+-f  --file             Output file where final objective function values are saved (Optional)
+-M  --multigpu         Number of GPUs to use multiGPU image synthesis (Default OFF => 0)
+-s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
+-t  --iterations       Number of iterations for optimization (Default = 500)
+-g  --gridding         Use count in cell gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)
+-z  --initial-cond     Initial values for image/s
+-Z  --penalizators     penalizators for prior terms
+-R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n");
+-T  --threshold        Threshold to calculate the spectral index image from above a certain number of sigmas in I_nu_0
+-c  --copyright        Shows copyright conditions
+-w  --warranty     Shows no warranty details
+--nopositivity     Run gpuvmem using chi2 with no posititivy restriction
+--apply-noise      Apply random gaussian noise to visibilities\n");
+--clipping         Clips the image to positive values\n");
+--print-images     Prints images per iteration\n");
+--print-errors     Prints final error images\n");
+--verbose          Shows information through all the execution\n");
+
 ```
 # Framework usage
 
-The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding the Fi to the objective function
+The normal flow of the program starts by creating a synthesizer, creating an optimizer, creating an objective function, and adding your terms to the objective function
 
 All the objects must be created by their respective factory
 
