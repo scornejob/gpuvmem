@@ -235,7 +235,7 @@ __host__ void print_help() {
         printf( "   -o  --output           The name of the output file of residual visibilities(MS)\n");
         printf( "   -O  --output-image     The name of the output image FITS file\n");
         printf("    -I  --inputdat         The name of the input file of parameters\n");
-        printf("    -m  --modin            mod_in_0 FITS file\n");
+        printf("    -m  --model_input      FITS file including a complete header for astrometry\n");
         printf("    -n  --noise            Noise Parameter (Optional)\n");
         printf("    -N  --noise-cut        Noise-cut Parameter (Optional)\n");
         printf("    -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)\n");
@@ -246,7 +246,7 @@ __host__ void print_help() {
         printf("    -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)\n");
         printf("    -t  --iterations       Number of iterations for optimization (Default = 500)\n");
         printf("    -g  --gridding         Use gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)\n");
-        printf("    -z  --initial-cond     Initial conditions for image/s\n");
+        printf("    -z  --initial_values   Initial conditions for image/s\n");
         printf("    -Z  --penalizators     penalizators for Fi\n");
         printf("    -R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n");
         printf("    -T  --threshold        Threshold to calculate the spectral index image from a certain number of sigmas in I_nu_0\n");
@@ -316,11 +316,11 @@ __host__ Vars getOptions(int argc, char **argv) {
                 /* These options don’t set a flag. */
                 {"input", 1, NULL, 'i' }, {"output", 1, NULL, 'o'}, {"output-image", 1, NULL, 'O'},
                 {"threshold", 0, NULL, 'T'}, {"nu_0", 0, NULL, 'F'},
-                {"inputdat", 1, NULL, 'I'}, {"modin", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
+                {"inputdat", 1, NULL, 'I'}, {"model_input", 1, NULL, 'm' }, {"noise", 0, NULL, 'n' },
                 {"multigpu", 0, NULL, 'M'}, {"select", 1, NULL, 's'},
                 {"path", 1, NULL, 'p'}, {"robust-parameter", 0, NULL, 'R'}, {"eta", 0, NULL, 'e'},
                 {"blockSizeX", 1, NULL, 'X'}, {"blockSizeY", 1, NULL, 'Y'}, {"blockSizeV", 1, NULL, 'V'},
-                {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"initial-cond", 1, NULL, 'z'}, {"penalizators", 0, NULL, 'Z'},
+                {"iterations", 0, NULL, 't'}, {"noise-cut", 0, NULL, 'N' }, {"initial_values", 1, NULL, 'z'}, {"penalizators", 0, NULL, 'Z'},
                 {"randoms", 0, NULL, 'r' }, {"file", 0, NULL, 'f' }, {"gridding", 0, NULL, 'g' }, { NULL, 0, NULL, 0 }
         };
 

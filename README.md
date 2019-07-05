@@ -105,7 +105,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -o  --output           The name of the output file of residual visibilities(MS)
 -O  --output-image     The name of the output image FITS file
 -I  --inputdat         The name of the input file of parameters
--m  --modin            FITS file including a complete header for astrometry
+-m  --model_input      FITS file including a complete header for astrometry
 -n  --noise            Noise Parameter in Jy (Optional)
 -N  --noise-cut        Noise-cut Parameter (Optional)
 -r  --randoms          Percentage of data used when random sampling (Default = 1.0, optional)
@@ -116,7 +116,7 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -s  --select           If multigpu option is OFF, then select the GPU ID of the GPU you will work on. (Default = 0)
 -t  --iterations       Number of iterations for optimization (Default = 500)
 -g  --gridding         Use count in cell gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)
--z  --initial-cond     Initial values for image/s
+-z  --initial_values   Initial values for image/s
 -Z  --penalizators     penalizators for prior terms
 -R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n");
 -T  --threshold        Threshold to calculate the spectral index image from above a certain number of sigmas in I_nu_0
