@@ -17,6 +17,7 @@
 #include <omp.h>
 #include <sys/stat.h>
 #include "MSFITSIO.cuh"
+#include "copyrightwarranty.cuh"
 #include <cooperative_groups.h>
 
 typedef struct varsPerGPU {

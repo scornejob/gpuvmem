@@ -1,13 +1,13 @@
 
 CUFFTFLAG += -lcufft
-CFLAGS += -D_FORCE_INLINES -c -w -O3 -Xptxas -O3
+CFLAGS += -D_FORCE_INLINES -dc -w -O3 -Xptxas -O3
 INC_DIRS += -Iinclude -I/usr/local/include/casacore/
 CFFLAG += -std=c++11 -lcfitsio -lm -lcasa_casa -lcasa_tables -lcasa_ms -lcasa_measures
 LDFLAGS += -lcuda -lcudart
 FOPENFLAG += -Xcompiler -fopenmp -lgomp
 CCFLAG += -lstdc++
-# Gencode arguments
-SMS ?= 30 35 37 50 52
+# Gencode arguments for CUDA 9 and CUDA 10
+SMS ?= 50 52 60 61 70 75
 
 ifeq ($(NEWCASA),1)
 CFLAGS += -DNEWCASA
@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o build/complexOps.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -101,26 +101,32 @@ build/error.o: src/error.cu
 
 build/MSFITSIO.o: src/MSFITSIO.cu
 	@ echo "Building MSFITSIO"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/MSFITSIO.cu -o build/MSFITSIO.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/functions.o: src/functions.cu
 	@ echo "Building Functions"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/functions.cu -o build/functions.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/directioncosines.o: src/directioncosines.cu
 	@ echo "Building directioncosines"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/directioncosines.cu -o build/directioncosines.o  $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/rngs.o: src/rngs.cu
 	@ echo "Building Random number generator"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/rngs.cu -o build/rngs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/rvgs.o: src/rvgs.cu
 	@ echo "Building Random number generator 2"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/rvgs.cu -o build/rvgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/f1dim.o: src/f1dim.cu
 	@ echo "Building f1dim"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/f1dim.cu -o build/f1dim.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/mnbrak.o: src/mnbrak.cu
@@ -129,20 +135,28 @@ build/mnbrak.o: src/mnbrak.cu
 
 build/brent.o: src/brent.cu
 	@ echo "Building brent"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/brent.cu -o build/brent.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/linmin.o: src/linmin.cu
 	@ echo "Building linmin"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/linmin.cu -o build/linmin.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/frprmn.o: src/frprmn.cu
 	@ echo "Building frprmn"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/frprmn.cu -o build/frprmn.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
 build/lbfgs.o: src/lbfgs.cu
 	@ echo "Building lbfgs"
+	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/lbfgs.cu -o build/lbfgs.o $(LDFLAGS) $(CFFLAG) $(ARCHFLAG)
 
+build/complexOps.o: src/complexOps.cu
+	@ echo "Building complexOps"
+	@ mkdir -p build
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/complexOps.cu -o build/complexOps.o $(LDFLAGS) $(CFFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 cleanall:
 	@ echo "Cleaning all folders.."
 	@ rm -rf build/*
@@ -163,4 +177,4 @@ freq78:
 antennae:
 	@ ./bin/gpuvmem -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.0 -g 1 -R 2.0 -t 500000000 --print-images --verbose
 m87:
-	@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/M87/residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/mod_in_0.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 1e-5,6e-4 -t 500000000
+	@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/M87/residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/M87_original_highfreq.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 5e-6,5e-5 -t 500000000

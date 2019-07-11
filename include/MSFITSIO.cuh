@@ -23,7 +23,7 @@
 #include <fitsio.h>
 #include "rngs.cuh"
 #include "rvgs.cuh"
-#include <cufft.h>
+#include "complexOps.cuh"
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64

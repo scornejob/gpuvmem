@@ -2,7 +2,6 @@
 #define FUNCTIONS_CUH
 
 #include "framework.cuh"
-#include "copyrightwarranty.cuh"
 
 #define FLOAT_IMG   -32
 #define DOUBLE_IMG  -64
