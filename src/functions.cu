@@ -188,7 +188,6 @@ bool isPow2(unsigned int x)
         return ((x&(x-1))==0);
 }
 
-
 __host__ void readInputDat(char *file)
 {
         FILE *fp;
@@ -1331,6 +1330,7 @@ __device__ float GaussianBeam(float distance, float lambda, float antenna_diamet
         return atten;
 }
 
+
 __device__ float attenuation(float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY)
 {
 
@@ -1358,7 +1358,33 @@ __device__ float attenuation(float antenna_diameter, float pb_factor, float pb_c
         return atten_result;
 }
 
+__device__ cufftComplex WKernel(double w, float xobs, float yobs, double DELTAX, double DELTAY)
+{
+    int j = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = threadIdx.y + blockDim.y * blockIdx.y;
 
+    cufftComplex Wk;
+    float cosk, sink;
+
+    int x0 = xobs;
+    int y0 = yobs;
+    float x = (j - x0) * DELTAX * RPDEG_D;
+    float y = (i - y0) * DELTAY * RPDEG_D;
+    float z = sqrtf(1-x*x-y*y)-1;
+    float arg = 2.0f*w*z;
+
+    #if (__CUDA_ARCH__ >= 300 )
+        sincospif(arg, &sink, &cosk);
+    #else
+        cosk = cospif(arg);
+        sink = sinpif(arg);
+    #endif
+
+    Wk.x = cosk;
+    Wk.y = -sink;
+
+
+}
 __global__ void total_attenuation(float *total_atten, float antenna_diameter, float pb_factor, float pb_cutoff, float freq, float xobs, float yobs, double DELTAX, double DELTAY, long N)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1421,7 +1447,8 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, double xphs, do
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float u,v, phase, c, s, re, im;
+        float u,v, phase, c, s;
+        cufftComplex cphase;
         double upix = xphs/(double)M;
         double vpix = yphs/(double)N;
 
@@ -1444,10 +1471,10 @@ __global__ void phase_rotate(cufftComplex *data, long M, long N, double xphs, do
         c = cospif(phase);
         s = sinpif(phase);
     #endif
-        re = data[N*i+j].x;
-        im = data[N*i+j].y;
-        data[N*i+j].x = re * c - im * s;
-        data[N*i+j].y = re * s + im * c;
+
+        cphase.x = c;
+        cphase.y = s;
+        data[N*i+j] = multComplexComplex(data[N*i+j], cphase);
 }
 
 
