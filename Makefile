@@ -177,4 +177,4 @@ freq78:
 antennae:
 	@ ./bin/gpuvmem -i ./tests/antennae/all_fields.ms -o ./tests/antennae/antennae_out.ms -O ./tests/antennae/mod_out.fits -m ./tests/antennae/mod_in_0.fits -I ./tests/antennae/input.dat -p ./tests/antennae/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.0 -g 1 -R 2.0 -t 500000000 --print-images --verbose
 m87:
-	@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/M87/residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/M87_original_highfreq.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 5e-6,5e-5 -t 500000000
+	@ ./bin/gpuvmem -s 0 -i ./tests/M87/SR1_M87_2017_101_hi_hops_netcal_StokesI.selfcal.LLRR.ms -o ./tests/M87/residuals.ms -O ./tests/M87/mod_out.fits -m ./tests/M87/mod_in_0.fits -I ./tests/M87/input.dat -p ./tests/M87/mem/ -X 16 -Y 16 -V 256 --verbose --print-images -z 0.001 -Z 5e-6,5e-5 -t 500000000
