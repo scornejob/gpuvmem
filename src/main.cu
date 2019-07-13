@@ -66,12 +66,11 @@ varsPerGPU *vars_gpu;
 
 char *checkp;
 
-double2 *host_total;
-double2 *host_total2;
+double2 *host_M_k;
+double2 *host_Q_k;
 
 float2 *temp;
-double2 *total_out, *total2_out;
-double2 *total, *total2;
+double2 *M_k_out, *Q_k_out;
 
 FILE *outfile;
 FILE *outfile_its;
@@ -546,53 +545,54 @@ __host__ int main(int argc, char **argv) {
         }
 
         // IN CASE OF CHECKPOINT ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-        double *host_total_alpha;
-        double *host_total_I_nu_0;
-        double *host_total2_alpha;
-        double *host_total2_I_nu_0;
+        double *host_M_k_alpha;
+        double *host_M_k_I_nu_0;
 
-        char *I_nu_0_total;
-        char *alpha_total;
-        char *I_nu_0_total2;
-        char *alpha_total2;
+        double *host_Q_k_alpha;
+        double *host_Q_k_I_nu_0;
 
+        char *I_nu_0_M_k;
+        char *alpha_M_k;
 
+        char *I_nu_0_Q_k;
+        char *alpha_Q_k;
 
         if(checkpoint) {
-                host_total = (double2*)malloc(M*N*sizeof(double2));
-                host_total2 = (double2*)malloc(M*N*sizeof(double2));
+                host_M_k = (double2*)malloc(M*N*sizeof(double2));
+                host_Q_k = (double2*)malloc(M*N*sizeof(double2));
                 ///////////////////////////////////READ TOTAL SUM //////////////////////////////////////////////////////////////////////////////////
                 needed_alpha = snprintf(NULL, 0, "%salpha_%d.fits", checkp, 0) + 1;
                 needed_I_nu_0 = snprintf(NULL, 0, "%sI_nu_0_%d.fits", checkp, 0) + 1;
 
-                alpha_total = (char*)malloc(needed_alpha*sizeof(char));
-                snprintf(alpha_total, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
+                alpha_M_k = (char*)malloc(needed_alpha*sizeof(char));
+                snprintf(alpha_M_k, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 0);
 
-                I_nu_0_total = (char*)malloc(needed_I_nu_0*sizeof(char));
-                snprintf(I_nu_0_total, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 0);
+                I_nu_0_M_k = (char*)malloc(needed_I_nu_0*sizeof(char));
+                snprintf(I_nu_0_M_k, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 0);
 
-                open_read_fits<double>(&host_total_alpha, alpha_total, M*N, TDOUBLE);
-                open_read_fits<double>(&host_total_I_nu_0, I_nu_0_total, M*N, TDOUBLE);
+                open_read_fits<double>(&host_M_k_alpha, alpha_M_k, M*N, TDOUBLE);
+                open_read_fits<double>(&host_M_k_I_nu_0, I_nu_0_M_k, M*N, TDOUBLE);
 
                 /////////////////////////////////READ TOTAL SUM ^2 /////////////////////////////////////////////////////////////////////////////////
-                alpha_total2 = (char*)malloc(needed_alpha*sizeof(char));
-                snprintf(alpha_total2, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
-                open_read_fits<double>(&host_total2_alpha, alpha_total2, M*N, TDOUBLE);
+                alpha_Q_k = (char*)malloc(needed_alpha*sizeof(char));
+                snprintf(alpha_Q_k, needed_alpha*sizeof(char), "%salpha_%d.fits", checkp, 1);
+                open_read_fits<double>(&host_Q_k_alpha, alpha_Q_k, M*N, TDOUBLE);
 
 
-                I_nu_0_total2 = (char*)malloc(needed_I_nu_0*sizeof(char));
-                snprintf(I_nu_0_total2, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
-                open_read_fits<double>(&host_total2_I_nu_0, I_nu_0_total2, M*N, TDOUBLE);
+                I_nu_0_Q_k = (char*)malloc(needed_I_nu_0*sizeof(char));
+                snprintf(I_nu_0_Q_k, needed_I_nu_0*sizeof(char), "%sI_nu_0_%d.fits", checkp, 1);
+                open_read_fits<double>(&host_Q_k_I_nu_0, I_nu_0_Q_k, M*N, TDOUBLE);
 
 
                 /////////////////////////////////////////////////////PASSING TO DOUBLE2 ARRAY ///////////////////////////////////////////
 
                 for(int i=0; i<M; i++) {
                         for(int j=0; j<N; j++) {
-                                host_total[N*i+j].x = host_total_I_nu_0[N*i+j]; // I_nu
-                                host_total[N*i+j].y = host_total_alpha[N*i+j];
-                                host_total2[N*i+j].x = host_total2_I_nu_0[N*i+j]; // I_nu
-                                host_total2[N*i+j].y = host_total2_alpha[N*i+j];
+                                host_M_k[N*i+j].x = host_M_k_I_nu_0[N*i+j]; // I_nu
+                                host_M_k[N*i+j].y = host_M_k_alpha[N*i+j];
+
+                                host_Q_k[N*i+j].x = host_Q_k_I_nu_0[N*i+j]; // I_nu
+                                host_Q_k[N*i+j].y = host_Q_k_alpha[N*i+j];
                         }
                 }
 
@@ -870,7 +870,7 @@ __host__ int main(int argc, char **argv) {
         gpuErrchk(cudaMemset(theta_device, 0, sizeof(float2)*M*N));
         gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
-        MCMC_Gibbs(device_2I, theta_device, it_maximum, variables.burndown_steps);
+        MCMC_Gibbs(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
         /*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
            chiCuadrado(device_2I);
            frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
