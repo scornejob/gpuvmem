@@ -870,7 +870,7 @@ __host__ int main(int argc, char **argv) {
         gpuErrchk(cudaMemset(theta_device, 0, sizeof(float2)*M*N));
         gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
-        MCMC_Gibbs(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
+        MetropolisHasting(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
         /*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
            chiCuadrado(device_2I);
            frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
