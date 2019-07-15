@@ -2436,12 +2436,12 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
 
                   chi2_t_0 = chiCuadrado(I);
                   chi2_t_1 = chiCuadrado(temp);
-                  printf("chi2_t0: %f\n", chi2_t_0);
-                  printf("chi2_t1: %f\n", chi2_t_1);
+                  //printf("chi2_t0: %f\n", chi2_t_0);
+                  //printf("chi2_t1: %f\n", chi2_t_1);
                   fprintf(outfile, "%f\n", chi2_t_0);
                   delta_chi2 = chi2_t_1 - chi2_t_0;
                   if(delta_chi2 <= 0) {
-                          printf("Acccepted Delta chi2: %f\n", delta_chi2);
+                          //printf("Acccepted Delta chi2: %f\n", delta_chi2);
                           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
                           /*if(print_images && i%3 == 0)
                              float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
@@ -2453,7 +2453,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
 
                   }
                   else{
-                          printf("Not Accepted Delta chi2: %f\n", delta_chi2);
+                          //printf("Not Accepted Delta chi2: %f\n", delta_chi2);
                           un_rand = Random();
                           if(-log(un_rand) > delta_chi2) {
                                   gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
@@ -2465,6 +2465,17 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
                           }
                   }
             }
+
+            printf("--------------Iteration %d-----------\n", real_iterations);
+            printf("From %d valid pixels, accepted :%d\n", valid_pixels, accepted_afterburndown);
+            fseek(outfile_its,position_in_file,SEEK_SET);
+            fprintf(outfile_its, "Iterations: %d\n", real_iterations);
+            fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
+            fflush(outfile_its);
+            double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
+            double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
+            float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
+            randomize(pixels, valid_pixels);
         }
 
         printf("ACCEPTED AFTER BURNDOWN: %d\n", accepted_afterburndown);
