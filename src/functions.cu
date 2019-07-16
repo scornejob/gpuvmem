@@ -2343,14 +2343,6 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
 
         gpuErrchk(cudaMalloc((void**)&M_k_out, sizeof(double2)*M*N));
         gpuErrchk(cudaMemset(M_k_out, 0, sizeof(double2)*M*N));
-        if(checkpoint){
-          gpuErrchk(cudaMemcpy2D(M_k_out, sizeof(double2), host_M_k, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
-        }
-        else
-        {
-          floatToDoubleKernel<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, I, N);
-          gpuErrchk(cudaDeviceSynchronize());
-        }
 
 
 
@@ -2407,6 +2399,17 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
                         //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
                         updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, Q_k_out, s_d, accepted_afterburndown, N);
                         gpuErrchk(cudaDeviceSynchronize());
+                }
+
+                if(real_iterations == burndown_steps) {
+                  if(checkpoint){
+                    gpuErrchk(cudaMemcpy2D(M_k_out, sizeof(double2), host_M_k, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
+                  }
+                  else
+                  {
+                    floatToDoubleKernel<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, I, N);
+                    gpuErrchk(cudaDeviceSynchronize());
+                  }
                 }
 
                 for(int j = 0; j < valid_pixels; j++) {
@@ -2522,16 +2525,6 @@ __host__ void Metropolis(float2 *I, float2 *theta, int iterations, int burndown_
 
         gpuErrchk(cudaMalloc((void**)&M_k_out, sizeof(double2)*M*N));
         gpuErrchk(cudaMemset(M_k_out, 0, sizeof(double2)*M*N));
-        if(checkpoint){
-          gpuErrchk(cudaMemcpy2D(M_k_out, sizeof(double2), host_M_k, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
-        }
-        else
-        {
-          floatToDoubleKernel<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, I, N);
-          gpuErrchk(cudaDeviceSynchronize());
-        }
-
-
 
         /**************** GPU MEMORY FOR TOTAL OUT ^ 2 I_nu_0 and alpha ***************/
 
@@ -2584,6 +2577,17 @@ __host__ void Metropolis(float2 *I, float2 *theta, int iterations, int burndown_
                         //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
                         updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, Q_k_out, s_d, accepted_afterburndown, N);
                         gpuErrchk(cudaDeviceSynchronize());
+                }
+
+                if(real_iterations == burndown_steps) {
+                  if(checkpoint){
+                    gpuErrchk(cudaMemcpy2D(M_k_out, sizeof(double2), host_M_k, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
+                  }
+                  else
+                  {
+                    floatToDoubleKernel<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, I, N);
+                    gpuErrchk(cudaDeviceSynchronize());
+                  }
                 }
 
                 for(int j = 0; j < valid_pixels; j++) {
