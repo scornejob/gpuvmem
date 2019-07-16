@@ -2308,7 +2308,7 @@ __global__ void DChi2(float *noise, float *dChi2, cufftComplex *Vr, double3 *UVW
         float Ukv, Vkv, Wkv, cosk, sink, atten;
 
         atten = attenuation(antenna_diameter, pb_factor, pb_cutoff, freq, ref_xobs, ref_yobs, DELTAX, DELTAY);
-        
+
         float dchi2 = 0.0;
         if(noise[N*i+j] <= noise_cut) {
                 for(int v=0; v<numVisibilities; v++) {
@@ -2601,58 +2601,56 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                 cudaSetDevice(selected);
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
-                            for(int s=0; s<data.nstokes; s++) {
-                                if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
-                                    gpuErrchk(cudaMemset(vars_gpu[0].device_chi2, 0, sizeof(float) *
-                                                                         data.max_number_visibilities_in_channel_and_stokes));
+                          ip->calculateInu(vars_gpu[0].device_I_nu, I, fields[f].nu[i]);
 
-                                    ip->calculateInu(vars_gpu[0].device_I_nu, I, fields[f].nu[i]);
+                          ip->apply_beam(vars_gpu[0].device_I_nu, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].nu[i]);
+                          gpuErrchk(cudaDeviceSynchronize());
 
-                                    ip->apply_beam(vars_gpu[0].device_I_nu, fields[f].ref_xobs, fields[f].ref_yobs,
-                                                   fields[f].nu[i]);
-                                    gpuErrchk(cudaDeviceSynchronize());
+                          //FFT 2D
+                          FFT2D(vars_gpu[0].device_V, vars_gpu[0].device_I_nu, vars_gpu[0].plan, M, N, false);
 
-                                    //FFT 2D
-                                    FFT2D(vars_gpu[0].device_V, vars_gpu[0].device_I_nu, vars_gpu[0].plan, M, N, false);
+                          // PHASE_ROTATE
+                          phase_rotate <<< numBlocksNN, threadsPerBlockNN >>>
+                            (vars_gpu[0].device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
+                          gpuErrchk(cudaDeviceSynchronize());
 
-                                    // PHASE_ROTATE
-                                    phase_rotate <<< numBlocksNN, threadsPerBlockNN >>>
-                                                                   (vars_gpu[0].device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
-                                    gpuErrchk(cudaDeviceSynchronize());
+                          for(int s=0; s<data.nstokes; s++) {
+                            if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
+                              gpuErrchk(cudaMemset(vars_gpu[0].device_chi2, 0, sizeof(float) * data.max_number_visibilities_in_channel_and_stokes));
 
-                                    // BILINEAR INTERPOLATION
-                                    vis_mod <<< fields[f].visibilities[i][s].numBlocksUV,
-                                            fields[f].visibilities[i][s].threadsPerBlockUV >>>
-                                            (fields[f].device_visibilities[i][s].Vm, vars_gpu[0].device_V, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, deltau, deltav, fields[f].numVisibilitiesPerFreqPerStoke[i][s], N);
-                                    gpuErrchk(cudaDeviceSynchronize());
+                              // BILINEAR INTERPOLATION
+                              vis_mod <<< fields[f].visibilities[i][s].numBlocksUV,
+                                fields[f].visibilities[i][s].threadsPerBlockUV >>>
+                                (fields[f].device_visibilities[i][s].Vm, vars_gpu[0].device_V, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, deltau, deltav, fields[f].numVisibilitiesPerFreqPerStoke[i][s], N);
+                              gpuErrchk(cudaDeviceSynchronize());
 
-                                    //DFT 2D
-                                    /*DFT2D <<<fields[f].visibilities[i][s].numBlocksUV,
-                                            fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].Vm, vars_gpu[0].device_I_nu, fields[f].device_visibilities[i][s].uvw, device_noise_image, noise_cut, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, M, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-                                    gpuErrchk(cudaDeviceSynchronize());*/
+                              //DFT 2D
+                              /*DFT2D <<<fields[f].visibilities[i][s].numBlocksUV,
+                                fields[f].visibilities[i][s].threadsPerBlockUV>>>(fields[f].device_visibilities[i][s].Vm, vars_gpu[0].device_I_nu, fields[f].device_visibilities[i][s].uvw, device_noise_image, noise_cut, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, M, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                                gpuErrchk(cudaDeviceSynchronize());*/
 
-                                    // RESIDUAL CALCULATION
-                                    residual <<< fields[f].visibilities[i][s].numBlocksUV,
-                                            fields[f].visibilities[i][s].threadsPerBlockUV >>>
-                                            (fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vo, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-                                    gpuErrchk(cudaDeviceSynchronize());
+                              // RESIDUAL CALCULATION
+                              residual <<< fields[f].visibilities[i][s].numBlocksUV,
+                                fields[f].visibilities[i][s].threadsPerBlockUV >>>
+                                (fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vo, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                              gpuErrchk(cudaDeviceSynchronize());
 
-                                    ////chi 2 VECTOR
-                                    chi2Vector <<< fields[f].visibilities[i][s].numBlocksUV,
-                                            fields[f].visibilities[i][s].threadsPerBlockUV >>>
-                                            (vars_gpu[0].device_chi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].weight, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-                                    gpuErrchk(cudaDeviceSynchronize());
+                              ////chi 2 VECTOR
+                              chi2Vector <<< fields[f].visibilities[i][s].numBlocksUV,
+                                fields[f].visibilities[i][s].threadsPerBlockUV >>>
+                                (vars_gpu[0].device_chi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].weight, fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                                gpuErrchk(cudaDeviceSynchronize());
 
-                                    //REDUCTIONS
-                                    //chi2
-                                    resultchi2 += deviceReduce<float>(vars_gpu[0].device_chi2,
-                                                                      fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
-                                }
-                            }
-                        }
-                }
+                              //REDUCTIONS
+                              //chi2
+                              resultchi2 += deviceReduce<float>(vars_gpu[0].device_chi2,
+                                fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                              }
+                          }
+                      }
+              }
         }else{
                 for(int f=0; f<data.nfields; f++) {
                         #pragma omp parallel for schedule(static,1)
@@ -2665,27 +2663,24 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                 int gpu_id = -1;
                                 cudaSetDevice((i%num_gpus) + firstgpu); // "% num_gpus" allows more CPU threads than GPU devices
                                 cudaGetDevice(&gpu_id);
+                                ip->calculateInu(vars_gpu[i % num_gpus].device_I_nu, I, fields[f].nu[i]);
+
+                                //apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, vars_gpu[i%num_gpus].device_I_nu, device_fg_image, N, fields[f].ref_xobs, fields[f].ref_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
+                                ip->apply_beam(vars_gpu[i % num_gpus].device_I_nu, fields[f].ref_xobs,
+                                              fields[f].ref_yobs, fields[f].nu[i]);
+                                gpuErrchk(cudaDeviceSynchronize());
+
+
+                                //FFT 2D
+                                FFT2D(vars_gpu[i % num_gpus].device_V, vars_gpu[i % num_gpus].device_I_nu, vars_gpu[i % num_gpus].plan, M, N, false);
+
+                                //PHASE_ROTATE
+                                phase_rotate <<< numBlocksNN, threadsPerBlockNN >>> (vars_gpu[i % num_gpus].device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
+                                gpuErrchk(cudaDeviceSynchronize());
                                 for(int s=0; s<data.nstokes;s++) {
-                                    if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
+                                  if (fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
-                                        gpuErrchk(cudaMemset(vars_gpu[i % num_gpus].device_chi2, 0, sizeof(float) *
-                                                                                                    data.max_number_visibilities_in_channel_and_stokes));
-
-                                        ip->calculateInu(vars_gpu[i % num_gpus].device_I_nu, I, fields[f].nu[i]);
-
-                                        //apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, vars_gpu[i%num_gpus].device_I_nu, device_fg_image, N, fields[f].ref_xobs, fields[f].ref_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
-                                        ip->apply_beam(vars_gpu[i % num_gpus].device_I_nu, fields[f].ref_xobs,
-                                                       fields[f].ref_yobs, fields[f].nu[i]);
-                                        gpuErrchk(cudaDeviceSynchronize());
-
-
-                                        //FFT 2D
-                                        FFT2D(vars_gpu[i % num_gpus].device_V, vars_gpu[i % num_gpus].device_I_nu, vars_gpu[i % num_gpus].plan, M, N, false);
-
-                                        //PHASE_ROTATE
-                                        phase_rotate <<< numBlocksNN, threadsPerBlockNN >>> (vars_gpu[i % num_gpus].device_V, M, N, fields[f].phs_xobs, fields[f].phs_yobs);
-                                        gpuErrchk(cudaDeviceSynchronize());
-
+                                        gpuErrchk(cudaMemset(vars_gpu[i % num_gpus].device_chi2, 0, sizeof(float) *data.max_number_visibilities_in_channel_and_stokes));
                                         // BILINEAR INTERPOLATION
                                         vis_mod <<< fields[f].visibilities[i][s].numBlocksUV,
                                                 fields[f].visibilities[i][s].threadsPerBlockUV >>>
@@ -2711,7 +2706,7 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                         #pragma omp atomic
                                             resultchi2 += result;
                                     }
-                                }
+                              }
                         }
                 }
         }
