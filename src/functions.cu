@@ -2414,7 +2414,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
                 for(int j = 0; j < valid_pixels; j++) {
 
                   gpuErrchk(cudaMemcpy(temp, I, M*N*sizeof(float2), cudaMemcpyDeviceToDevice));
-                  
+
                   if(use_mask) {
                           n_I_nu_0 = Normal(0.0, 1.0);
                           n_alpha = Normal(0.0, 1.0);
