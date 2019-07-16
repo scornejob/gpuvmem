@@ -2403,8 +2403,6 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
 
         for(real_iterations = 0; real_iterations< iterations; real_iterations++) {
 
-                printf("--------------Iteration %d-----------\n", real_iterations);
-
                 if(adaptive && real_iterations >= burndown_steps + 100) {
                         //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
                         updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, Q_k_out, s_d, accepted_afterburndown, N);
