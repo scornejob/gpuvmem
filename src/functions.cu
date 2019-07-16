@@ -92,9 +92,9 @@ void sig_handler(int signo)
                 fprintf(shutdown_file, "Iterations: %d\n", real_iterations);
                 fprintf(shutdown_file, "Accepted after burndown: %d\n", accepted_afterburndown);
                 fflush(shutdown_file);
-                double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
-                double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
-                float2toImage(device_2I, mod_in, out_image, checkp, 2, M, N, 1);
+                double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1.0, accepted_afterburndown, 1);
+                double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1/(accepted_afterburndown-1), accepted_afterburndown, 1);
+                float2toImage(device_2I, mod_in, out_image, checkp, 2, M, N, 1.0, 1);
                 fclose(outfile);
                 fclose(outfile_its);
                 fclose(shutdown_file);
@@ -2475,17 +2475,18 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
             fprintf(outfile_its, "Iterations: %d\n", real_iterations);
             fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
             fflush(outfile_its);
-            double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
-            double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
-            float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
+            double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1.0, accepted_afterburndown, 1);
+            double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1/(accepted_afterburndown-1), accepted_afterburndown, 1);
+            float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1.0, 1);
             randomize(pixels, valid_pixels);
         }
 
         printf("ACCEPTED AFTER BURNDOWN: %d\n", accepted_afterburndown);
         fprintf(outfile_its, "%d\n", accepted_afterburndown);
 
-        double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
-        double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
+        double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1.0, accepted_afterburndown, 1);
+        double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1/(accepted_afterburndown-1), accepted_afterburndown, 1);
+        float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1.0, 1);
 
         signal(SIGINT, sig_handler);
         signal(SIGTERM, sig_handler);
@@ -2666,9 +2667,9 @@ __host__ void Metropolis(float2 *I, float2 *theta, int iterations, int burndown_
                 fprintf(outfile_its, "Iterations: %d\n", real_iterations);
                 fprintf(outfile_its, "Accepted after burndown: %d\n", accepted_afterburndown);
                 fflush(outfile_its);
-                double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
-                double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
-                float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1);
+                double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1.0, accepted_afterburndown, 1);
+                double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1/(accepted_afterburndown-1), accepted_afterburndown, 1);
+                float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1.0, 1);
                 randomize(pixels, valid_pixels);
         }
 
@@ -2677,8 +2678,9 @@ __host__ void Metropolis(float2 *I, float2 *theta, int iterations, int burndown_
         printf("ACCEPTED AFTER BURNDOWN: %d\n", accepted_afterburndown);
         fprintf(outfile_its, "%d\n", accepted_afterburndown);
 
-        double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1);
-        double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1);
+        double2toImage(M_k_out, mod_in, out_image, checkp, 0, M, N, 1.0, accepted_afterburndown, 1);
+        double2toImage(Q_k_out, mod_in, out_image, checkp, 1, M, N, 1/(accepted_afterburndown-1), accepted_afterburndown, 1);
+        float2toImage(I, mod_in, out_image, checkp, 2, M, N, 1.0, 1);
 
         signal(SIGINT, sig_handler);
         signal(SIGTERM, sig_handler);

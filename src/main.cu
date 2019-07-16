@@ -871,14 +871,7 @@ __host__ int main(int argc, char **argv) {
         gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
         Metropolis(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
-        /*frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
-           chiCuadrado(device_2I);
-           frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-           chiCuadrado(device_2I);
-           frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 1);
-           chiCuadrado(device_2I);
-           frprmn(device_2I	, ftol, &fret, chiCuadrado, dchiCuadrado, 0);
-           chiCuadrado(device_2I)*/;
+
         t = clock() - t;
         end = omp_get_wtime();
         printf("MCMC ended successfully\n\n");

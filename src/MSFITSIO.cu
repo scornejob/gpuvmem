@@ -1144,7 +1144,7 @@ __host__ void fitsOutputFloat(float *I, fitsfile *canvas, char *mempath, int ite
         free(name);
 }
 
-__host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)
+__host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, float fg_scale, int option)
 {
         fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
         int statusI_nu_0 = 0, statusalpha = 0;
@@ -1226,8 +1226,8 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
 
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x;
-                        host_alpha[N*i+j] = host_2Iout[N*i+j].y;
+                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x * fg_scale;
+                        host_alpha[N*i+j] = host_2Iout[N*i+j].y * fg_scale;
                 }
         }
 
@@ -1257,7 +1257,7 @@ __host__ void float2toImage(float2 *I, fitsfile *canvas, char *out_image, char*m
         free(Inu_0_name);
 }
 
-__host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, int option)
+__host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char*mempath, int iteration, long M, long N, double fg_scale, int samples, int option)
 {
         fitsfile *fpointerI_nu_0, *fpointeralpha, *fpointer;
         int statusI_nu_0 = 0, statusalpha = 0;
@@ -1341,11 +1341,14 @@ __host__ void double2toImage(double2 *I, fitsfile *canvas, char *out_image, char
         fits_update_key(fpointerI_nu_0, TINT, "BITPIX", &bitpix_value, "", &statusI_nu_0);
         fits_update_key(fpointeralpha, TINT, "BITPIX", &bitpix_value, "", &statusalpha);
 
+        fits_update_key(fpointerI_nu_0, TINT, "NITER", &samples, "Number of iteration in MCMC", &statusI_nu_0);
+        fits_update_key(fpointeralpha, TINT, "NITER", &samples, "Number of iteration in MCMC", &statusalpha);
+
 
         for(int i=0; i < M; i++) {
                 for(int j=0; j < N; j++) {
-                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x;
-                        host_alpha[N*i+j] = host_2Iout[N*i+j].y;
+                        host_I_nu_0[N*i+j] = host_2Iout[N*i+j].x * fg_scale;
+                        host_alpha[N*i+j] = host_2Iout[N*i+j].y * fg_scale;
                 }
         }
 
