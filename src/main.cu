@@ -67,7 +67,7 @@ __host__ int main(int argc, char **argv) {
 
         //// AVAILABLE CLASSES
         enum {MFS}; // Synthesizer
-        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, SquaredTotalVariation}; // Fi
+        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, TotalSquaredVariation}; // Fi
         enum {Gridding}; // Filter
         enum {CG, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
