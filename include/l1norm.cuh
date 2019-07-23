@@ -1,5 +1,5 @@
-#ifndef L1norm_CUH
-#define L1norm_CUH
+#ifndef L1NORM_CUH
+#define L1NORM_CUH
 
 #include "framework.cuh"
 #include "functions.cuh"
