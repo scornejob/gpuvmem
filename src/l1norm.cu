@@ -1,36 +1,36 @@
-#include "squaredtotalvariation.cuh"
+#include "l1norm.cuh"
 
 extern long M, N;
 extern int image_count;
 extern float * penalizators;
 extern int nPenalizators;
 
-SquaredTotalVariationP::SquaredTotalVariationP(){
+L1norm::L1norm(){
 };
 
-float SquaredTotalVariationP::calcFi(float *p)
+float L1norm::calcFi(float *p)
 {
         float result = 0.0;
-        result = (penalization_factor)*(squaredTotalVariation(p, device_S, penalization_factor, mod, order, imageIndex) );
+        result = (penalization_factor)*( L1Norm(p, device_S, penalization_factor, mod, order, imageIndex) );
         return result;
 }
-void SquaredTotalVariationP::calcGi(float *p, float *xi)
+void L1norm::calcGi(float *p, float *xi)
 {
-        DSTVariation(p, device_DS, penalization_factor, mod, order, imageIndex);
+        DL1Norm(p, device_DS, penalization_factor, mod, order, imageIndex);
 };
 
 
-void SquaredTotalVariationP::restartDGi()
+void L1norm::restartDGi()
 {
         gpuErrchk(cudaMemset(device_DS, 0, sizeof(float)*M*N));
 };
 
-void SquaredTotalVariationP::addToDphi(float *device_dphi)
+void L1norm::addToDphi(float *device_dphi)
 {
         linkAddToDPhi(device_dphi, device_DS, imageToAdd);
 };
 
-void SquaredTotalVariationP::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
+void L1norm::configure(int penalizatorIndex, int imageIndex, int imageToAdd)
 {
         this->imageIndex = imageIndex;
         this->order = order;
@@ -39,7 +39,7 @@ void SquaredTotalVariationP::configure(int penalizatorIndex, int imageIndex, int
 
         if(imageIndex > image_count -1 || imageToAdd > image_count -1)
         {
-                printf("There is no image for the provided index (SquaredTotalVariationP)\n");
+                printf("There is no image for the provided index (Laplacian)\n");
                 exit(-1);
         }
 
@@ -47,7 +47,7 @@ void SquaredTotalVariationP::configure(int penalizatorIndex, int imageIndex, int
         {
                 if(penalizatorIndex > (nPenalizators - 1) || penalizatorIndex < 0)
                 {
-                        printf("invalid index for penalizator (SquaredTotalVariationP)\n");
+                        printf("invalid index for penalizator (laplacian)\n");
                         exit(-1);
                 }else{
                         this->penalization_factor = penalizators[penalizatorIndex];
@@ -62,7 +62,7 @@ void SquaredTotalVariationP::configure(int penalizatorIndex, int imageIndex, int
 
 };
 
-void SquaredTotalVariationP::setSandDs(float *S, float *Ds)
+void L1norm::setSandDs(float *S, float *Ds)
 {
         cudaFree(this->device_S);
         cudaFree(this->device_DS);
@@ -71,10 +71,10 @@ void SquaredTotalVariationP::setSandDs(float *S, float *Ds)
 };
 
 namespace {
-Fi* CreateSquaredTotalVariationP()
+Fi* CreateL1norm()
 {
-        return new SquaredTotalVariationP;
+        return new L1norm;
 }
-const int SquaredTotalVariationPId = 5;
-const bool RegisteredSquaredTotalVariationP = Singleton<FiFactory>::Instance().RegisterFi(SquaredTotalVariationPId, CreateSquaredTotalVariationP);
+const int L1normId = 6;
+const bool RegisteredL1norm = Singleton<FiFactory>::Instance().RegisterFi(L1normId, CreateL1norm);
 };

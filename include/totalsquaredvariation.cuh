@@ -1,14 +1,14 @@
-#ifndef STVVECTOR_CUH
-#define STVVECTOR_CUH
+#ifndef TOTALSQUAREDVARIATION_CUH
+#define TOTALSQUAREDVARIATION_CUH
 
 #include "framework.cuh"
 #include "functions.cuh"
 
 
-class SquaredTotalVariationP : public Fi
+class TotalSquaredVariationP : public Fi
 {
 public:
-SquaredTotalVariationP();
+TotalSquaredVariationP();
 float calcFi(float *p);
 void calcGi(float *p, float *xi);
 void restartDGi();

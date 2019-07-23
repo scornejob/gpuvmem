@@ -1769,6 +1769,30 @@ __global__ void chi2Vector(float *chi2, cufftComplex *Vr, float *w, long numVisi
         }
 
 }
+
+__device__ float calculateL1norm(float *I, float noise, float noise_cut, int index, int M, int N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+  float c = I[N*M*index+N*i+j];
+
+  float l1 = 0.0f;
+
+  if(noise <= noise_cut) {
+    l1 = normf(1, &c);
+  }
+
+  return l1;
+}
+
+__global__ void L1Vector(float *L1, float *noise, float *I, long N, long M, float noise_cut, int index)
+{
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        L1[N*i+j] = calculateL1norm(I, noise[N*i+j], noise_cut, index, M, N);
+}
+
 __device__ float calculateS(float *I, float G, float eta, float noise, float noise_cut, int index, int M, int N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1787,7 +1811,6 @@ __global__ void SVector(float *S, float *noise, float *I, long N, long M, float 
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
-        float center = I[N*M*index+N*i+j];
 
         S[N*i+j] = calculateS(I, MINPIX, eta, noise[N*i+j], noise_cut, index, M, N);
 }
@@ -1837,6 +1860,7 @@ __device__ float calculateTV(float *I, float noise, float noise_cut, int index, 
 
   float c, r, d;
   float tv = 0.0f;
+  float dxy[2];
 
   c = I[N*M*index+N*i+j];
   if(noise <= noise_cut) {
@@ -1844,9 +1868,10 @@ __device__ float calculateTV(float *I, float noise, float noise_cut, int index, 
       r = I[N*M*index+N*i+(j+1)];
       d = I[N*M*index+N*(i+1)+j];
 
-      float dx = c - r;
-      float dy = c - d;
-      tv = sqrtf((dx * dx) + (dy * dy));
+
+      dxy[0] = r - c;
+      dxy[1] = d - c;
+      tv = normf(2, dxy);
     }else{
       tv = c;
     }
@@ -1864,7 +1889,7 @@ __global__ void TVVector(float *TV, float *noise, float *I, long N, long M, floa
 
 }
 
-__device__ float calculateSTV(float *I, float noise, float noise_cut, int index, int M, int N)
+__device__ float calculateTSV(float *I, float noise, float noise_cut, int index, int M, int N)
 {
 
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1890,12 +1915,12 @@ __device__ float calculateSTV(float *I, float noise, float noise_cut, int index,
   return tv;
 }
 
-__global__ void STVVector(float *STV, float *noise, float *I, long N, long M, float noise_cut, int index)
+__global__ void TSVVector(float *STV, float *noise, float *I, long N, long M, float noise_cut, int index)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        STV[N*i+j] = calculateTV(I, noise[N*i+j], noise_cut, index, M, N);
+        STV[N*i+j] = calculateTSV(I, noise[N*i+j], noise_cut, index, M, N);
 
 }
 
@@ -2027,6 +2052,35 @@ __global__ void restartDPhi(float *dphi, float *dChi2, float *dH, long N)
 
 }
 
+
+__device__ float calculateDNormL1(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
+{
+  int j = threadIdx.x + blockDim.x * blockIdx.x;
+  int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+  float dL1 = 0.0f;
+
+  float c = I[N*M*index+N*i+j];
+  float normI = normf(1, &c);
+  if(noise <= noise_cut){
+    if(normI > 0)
+      dL1 = c / normI;
+    else
+      dL1 = 0;
+  }
+
+  dL1 *= lambda;
+  return dL1;
+}
+
+__global__ void DL1NormK(float *dL1, float *I, float *noise, float noise_cut, float lambda, long N, long M, int index)
+{
+        int j = threadIdx.x + blockDim.x * blockIdx.x;
+        int i = threadIdx.y + blockDim.y * blockIdx.y;
+
+        dL1[N*i+j]  = calculateDNormL1(I, lambda, noise[N*i+j], noise_cut, index, M, N);
+}
+
 __device__ float calculateDS(float *I, float G, float eta, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2042,6 +2096,7 @@ __device__ float calculateDS(float *I, float G, float eta, float lambda, float n
   dS *= lambda;
   return dS;
 }
+
 __global__ void DS(float *dS, float *I, float *noise, float noise_cut, float lambda, float MINPIX, float eta, long N, long M, int index)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2097,7 +2152,8 @@ __device__ float calculateDTV(float *I, float lambda, float noise, float noise_c
   float c, d, u, r, l, dl_corner, ru_corner;
 
   float num0, num1, num2;
-  float den0, den1, den2;
+  float den0[2], den1[2], den2[2];
+  float norm0, norm1, norm2;
   float dtv = 0.0f;
 
   c = I[N*M*index+N*i+j];
@@ -2114,18 +2170,23 @@ __device__ float calculateDTV(float *I, float lambda, float noise, float noise_c
                   num1 = c - l;
                   num2 = c - u;
 
-                  den0 = (c - r) * (c - r) +
-                         (c - d) * (c - d);
+                  den0[0] = c - r;
+                  den0[1] = c - d;
 
-                  den1 = (l - c) * (l - c) +
-                         (l - dl_corner) * (l - dl_corner);
+                  den1[0] = l - c;
+                  den1[1] = l - dl_corner;
 
-                  den2 = (u - ru_corner) * (u - ru_corner) +
-                         (u - c) * (u - c);
-                  if(den0 == 0.0f || den1 == 0.0f || den2 == 0.0f) {
+                  den2[0] = u - ru_corner;
+                  den2[1] = u - c;
+
+                  norm0 = normf(2, den0);
+                  norm1 = normf(2, den1);
+                  norm2 = normf(2, den2);
+
+                  if(norm0 == 0.0f || norm1 == 0.0f || norm2 == 0.0f) {
                           dtv = c;
                   }else{
-                          dtv = num0/sqrtf(den0) + num1/sqrtf(den1) + num2/sqrtf(den2);
+                          dtv = num0/norm0 + num1/norm1 + num2/norm2;
                   }
       }else{
         dtv = c;
@@ -2147,7 +2208,7 @@ __global__ void DTV(float *dTV, float *I, float *noise, float noise_cut, float l
         dTV[N*i+j] = calculateDTV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
 
-__device__ float calculateDSTV(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
+__device__ float calculateDTSV(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
 {
 
   int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -2176,14 +2237,14 @@ __device__ float calculateDSTV(float *I, float lambda, float noise, float noise_
 
 }
 
-__global__ void DSTV(float *dSTV, float *I, float *noise, float noise_cut, float lambda, long N, long M, int index)
+__global__ void DTSV(float *dSTV, float *I, float *noise, float noise_cut, float lambda, long N, long M, int index)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
         float center, down, up, right, left, dl_corner, ru_corner;
 
 
-        dSTV[N*i+j] = calculateDSTV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
+        dSTV[N*i+j] = calculateDTSV(I, lambda, noise[N*i+j], noise_cut, index, M, N);
 }
 
 __device__ float calculateDL(float *I, float lambda, float noise, float noise_cut, int index, int M, int N)
@@ -2800,33 +2861,6 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
 
 };
 
-__host__ float laplacian(float *I, float * ds, float penalization_factor, int mod, int order, int imageIndex)
-{
-        cudaSetDevice(firstgpu);
-
-        float resultS = 0;
-        if(iter > 0 && penalization_factor)
-        {
-                LVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, imageIndex);
-                gpuErrchk(cudaDeviceSynchronize());
-                resultS  = deviceReduce<float>(ds, M*N);
-        }
-        return resultS;
-};
-
-__host__ void DLaplacian(float *I, float *dgi, float penalization_factor, float mod, float order, float index)
-{
-        cudaSetDevice(firstgpu);
-
-        if(iter > 0 && penalization_factor)
-        {
-          if(flag_opt%2 == index){
-                DL<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
-                gpuErrchk(cudaDeviceSynchronize());
-              }
-        }
-};
-
 __host__ void linkAddToDPhi(float *dphi, float *dgi, int index)
 {
         cudaSetDevice(firstgpu);
@@ -2884,11 +2918,40 @@ __host__ void linkChain2I(float *chain, float freq, float *I)
         gpuErrchk(cudaDeviceSynchronize());
 };
 
+__host__ float L1Norm(float *I, float * ds, float penalization_factor, int mod, int order, int index)
+{
+        cudaSetDevice(firstgpu);
+
+        float resultL1norm = 0.0f;
+        if(iter > 0 && penalization_factor)
+        {
+                L1Vector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
+                gpuErrchk(cudaDeviceSynchronize());
+                resultL1norm  = deviceReduce<float>(ds, M*N);
+        }
+
+        return resultL1norm;
+};
+
+__host__ void DL1Norm(float *I, float *dgi, float penalization_factor, int mod, int order, int index)
+{
+        cudaSetDevice(firstgpu);
+
+        if(iter > 0 && penalization_factor)
+        {
+              if(flag_opt%2 == index){
+                DL1NormK<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
+                gpuErrchk(cudaDeviceSynchronize());
+              }
+        }
+};
+
+
 __host__ float SEntropy(float *I, float * ds, float penalization_factor, int mod, int order, int index)
 {
         cudaSetDevice(firstgpu);
 
-        float resultS = 0;
+        float resultS = 0.0f;
         if(iter > 0 && penalization_factor)
         {
                 SVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, initial_values[index], eta, index);
@@ -2912,11 +2975,38 @@ __host__ void DEntropy(float *I, float *dgi, float penalization_factor, int mod,
         }
 };
 
+__host__ float laplacian(float *I, float * ds, float penalization_factor, int mod, int order, int imageIndex)
+{
+        cudaSetDevice(firstgpu);
+
+        float resultS = 0.0f;
+        if(iter > 0 && penalization_factor)
+        {
+                LVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, imageIndex);
+                gpuErrchk(cudaDeviceSynchronize());
+                resultS  = deviceReduce<float>(ds, M*N);
+        }
+        return resultS;
+};
+
+__host__ void DLaplacian(float *I, float *dgi, float penalization_factor, float mod, float order, float index)
+{
+        cudaSetDevice(firstgpu);
+
+        if(iter > 0 && penalization_factor)
+        {
+          if(flag_opt%2 == index){
+                DL<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
+                gpuErrchk(cudaDeviceSynchronize());
+              }
+        }
+};
+
 __host__ float quadraticP(float *I, float * ds, float penalization_factor, int mod, int order, int index)
 {
         cudaSetDevice(firstgpu);
 
-        float resultS = 0;
+        float resultS = 0.0f;
         if(iter > 0 && penalization_factor)
         {
                 QPVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
@@ -2944,7 +3034,7 @@ __host__ float totalvariation(float *I, float * ds, float penalization_factor, i
 {
         cudaSetDevice(firstgpu);
 
-        float resultS = 0;
+        float resultS = 0.0f;
         if(iter > 0 && penalization_factor)
         {
                 TVVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
@@ -2968,14 +3058,14 @@ __host__ void DTVariation(float *I, float *dgi, float penalization_factor, int m
         }
 };
 
-__host__ float squaredTotalVariation(float *I, float * ds, float penalization_factor, int mod, int order, int index)
+__host__ float TotalSquaredVariation(float *I, float * ds, float penalization_factor, int mod, int order, int index)
 {
         cudaSetDevice(firstgpu);
 
-        float resultS = 0;
+        float resultS = 0.0f;
         if(iter > 0 && penalization_factor)
         {
-                STVVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
+                TSVVector<<<numBlocksNN, threadsPerBlockNN>>>(ds, device_noise_image, I, N, M, noise_cut, index);
                 gpuErrchk(cudaDeviceSynchronize());
                 resultS  = deviceReduce<float>(ds, M*N);
         }
@@ -2983,14 +3073,14 @@ __host__ float squaredTotalVariation(float *I, float * ds, float penalization_fa
         return resultS;
 };
 
-__host__ void DSTVariation(float *I, float *dgi, float penalization_factor, int mod, int order, int index)
+__host__ void DTSVariation(float *I, float *dgi, float penalization_factor, int mod, int order, int index)
 {
         cudaSetDevice(firstgpu);
 
         if(iter > 0 && penalization_factor)
             {
               if(flag_opt%2 == index){
-                    DSTV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
+                    DTSV<<<numBlocksNN, threadsPerBlockNN>>>(dgi, I, device_noise_image, noise_cut, penalization_factor, N, M, index);
                     gpuErrchk(cudaDeviceSynchronize());
                   }
             }
