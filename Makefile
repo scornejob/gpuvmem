@@ -28,7 +28,7 @@ ARCHFLAG += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/error.o build/lbfgs.o build/complexOps.o
+main:	build/main.o build/MSFITSIO.o build/functions.o build/directioncosines.o build/copyrightwarranty.o build/rngs.o build/rvgs.o build/f1dim.o build/mnbrak.o build/brent.o build/linmin.o  build/frprmn.o build/synthesizer.o build/imageProcessor.o build/chi2.o build/laplacian.o build/gridding.o build/entropy.o build/ioms.o build/totalvariation.o build/quadraticpenalization.o build/totalsquaredvariation.o build/l1norm.o build/error.o build/lbfgs.o build/complexOps.o
 	@ echo "Linking CUDAMEM"
 	@ mkdir -p bin
 	@ nvcc build/*.o -o bin/gpuvmem $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG) $(CCFLAG)
@@ -54,10 +54,15 @@ build/entropy.o: src/entropy.cu
 	@ mkdir -p build
 	@ nvcc $(CFLAGS) $(INC_DIRS) src/entropy.cu -o build/entropy.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
-build/squaredtotalvariation.o: src/squaredtotalvariation.cu
-	@ echo "Building squared total variation"
+build/totalsquaredvariation.o: src/totalsquaredvariation.cu
+	@ echo "Building total squared variation"
 	@ mkdir -p build
-	@ nvcc $(CFLAGS) $(INC_DIRS) src/squaredtotalvariation.cu -o build/squaredtotalvariation.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/totalsquaredvariation.cu -o build/totalsquaredvariation.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
+
+build/l1norm.o: src/l1norm.cu
+	@ echo "Building L1 Norm"
+	@ mkdir -p build
+	@ nvcc $(CFLAGS) $(INC_DIRS) src/l1norm.cu -o build/l1norm.o $(LDFLAGS) $(CFFLAG) $(FOPENFLAG) $(CUFFTFLAG) $(ARCHFLAG)
 
 build/quadraticpenalization.o: src/quadraticpenalization.cu
 	@ echo "Building quadratic penalization"
@@ -169,7 +174,7 @@ clean:
 	@ rm -rf bin/*
 
 co65:
-	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.001 -Z 0.01,0.0 -t 500000000 --verbose
+	@ ./bin/gpuvmem -i ./tests/co65/co65.ms -o ./tests/co65/co65_out.ms -O ./tests/co65/mod_out.fits -m ./tests/co65/mod_in_0.fits -I ./tests/co65/input.dat -p ./tests/co65/mem/ -X 16 -Y 16 -V 256 -z 0.0 -Z 0.02,0.0 -g 1 -t 500000000 --verbose
 selfcalband9:
 	@ ./bin/gpuvmem -i ./tests/selfcalband9/hd142_b9cont_self_tav.ms -o ./tests/selfcalband9/hd142_b9cont_out.ms -O ./tests/selfcalband9/mod_out.fits -m ./tests/selfcalband9/mod_in_0.fits -I ./tests/selfcalband9/input.dat -p ./tests/selfcalband9/mem/ -X 16 -Y 16 -V 256 --verbose -z 0.001 -Z 0.05,0.0 -t 500000000 -g 1 --print-images
 freq78:

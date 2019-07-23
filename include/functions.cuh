@@ -61,8 +61,10 @@ __host__ void DTVariation(float *I, float *dgi, float penalization_factor, int m
 __host__ float totalvariation(float *I, float * ds, float penalization_factor, int mod, int order, int index);
 __host__ void DQuadraticP(float *I, float *dgi, float penalization_factor, int mod, int order, int index);
 __host__ float quadraticP(float *I, float * ds, float penalization_factor, int mod, int order, int index);
-__host__ float squaredTotalVariation(float *I, float * ds, float penalization_factor, int mod, int order, int index);
-__host__ void DSTVariation(float *I, float *dgi, float penalization_factor, int mod, int order, int index);
+__host__ float TotalSquaredVariation(float *I, float * ds, float penalization_factor, int mod, int order, int index);
+__host__ void DTSVariation(float *I, float *dgi, float penalization_factor, int mod, int order, int index);
+__host__ float L1Norm(float *I, float * ds, float penalization_factor, int mod, int order, int index);
+__host__ void DL1Norm(float *I, float *dgi, float penalization_factor, int mod, int order, int index);
 __host__ void calculateErrors(Image *image);
 
 
