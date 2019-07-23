@@ -2063,10 +2063,10 @@ __device__ float calculateDNormL1(float *I, float lambda, float noise, float noi
   float c = I[N*M*index+N*i+j];
   float normI = normf(1, &c);
   if(noise <= noise_cut){
-    if(normI > 0)
+    if(normI > 0.0f)
       dL1 = c / normI;
     else
-      dL1 = 0;
+      dL1 = 0.0f;
   }
 
   dL1 *= lambda;
