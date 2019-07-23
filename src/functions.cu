@@ -1844,8 +1844,8 @@ __device__ float calculateTV(float *I, float noise, float noise_cut, int index, 
       r = I[N*M*index+N*i+(j+1)];
       d = I[N*M*index+N*(i+1)+j];
 
-      float dx = c - r;
-      float dy = c - d;
+      float dx = r - c;
+      float dy = d - c;
       tv = sqrtf((dx * dx) + (dy * dy));
     }else{
       tv = c;
