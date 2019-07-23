@@ -67,7 +67,7 @@ __host__ int main(int argc, char **argv) {
 
         //// AVAILABLE CLASSES
         enum {MFS}; // Synthesizer
-        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, TotalSquaredVariation, L1}; // Fi
+        enum {Chi2, Entropy, Laplacian, QuadraticPenalization, TotalVariation, TotalSquaredVariation, L1Norm}; // Fi
         enum {Gridding}; // Filter
         enum {CG, LBFGS}; // Optimizator
         enum {DefaultObjectiveFunction}; // ObjectiveFunction
@@ -89,8 +89,8 @@ __host__ int main(int argc, char **argv) {
 
         sy->setDevice(); // This routine sends the data to GPU memory
         Fi *chi2 = Singleton<FiFactory>::Instance().CreateFi(Chi2);
-        Fi *e = Singleton<FiFactory>::Instance().CreateFi(L1);
-        Fi *l = Singleton<FiFactory>::Instance().CreateFi(TotalSquaredVariation);
+        Fi *e = Singleton<FiFactory>::Instance().CreateFi(Entropy);
+        Fi *l = Singleton<FiFactory>::Instance().CreateFi(Laplacian);
         chi2->configure(-1, 0, 0); // (penalizatorIndex, ImageIndex, imageToaddDphi)
         e->configure(0, 0, 0);
         l->configure(1, 0, 0);
