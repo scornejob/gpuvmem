@@ -2060,16 +2060,6 @@ __device__ float calculateDNormL1(float *I, float lambda, float noise, float noi
 
         float dL1 = 0.0f;
 
-<<<<<<< HEAD
-  float c = I[N*M*index+N*i+j];
-  float normI = normf(1, &c);
-  if(noise <= noise_cut){
-    if(normI > 0.0f)
-      dL1 = c / normI;
-    else
-      dL1 = 0.0f;
-  }
-=======
         float c = I[N*M*index+N*i+j];
         float normI = normf(1, &c);
         if(noise <= noise_cut) {
@@ -2078,7 +2068,6 @@ __device__ float calculateDNormL1(float *I, float lambda, float noise, float noi
                 else
                         dL1 = 0.0f;
         }
->>>>>>> 0a46b91f4b09ea63d897d62b541146ac5d00e88f
 
         dL1 *= lambda;
         return dL1;
