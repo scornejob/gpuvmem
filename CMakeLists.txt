@@ -59,7 +59,7 @@ else()
   set(TEMP "${TEMP} ") # A space to cleanly separate from existing content
 endif()
 
-set(COMPFLAGS "-D_FORCE_INLINES -dc -w -O3")
+set(COMPFLAGS "-D_FORCE_INLINES -w -O3")
 
 if(NEWCASA)
   message(STATUS "NEWCASA evaluates to True, adding compile flag -DNEWCASA")
