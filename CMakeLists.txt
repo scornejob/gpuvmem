@@ -1,0 +1,73 @@
+cmake_minimum_required(VERSION 3.8...3.12 FATAL_ERROR)
+project(gpuvmem LANGUAGES CXX CUDA)
+
+add_executable(gpuvmem ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu)
+
+target_sources(gpuvmem PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/brent.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/chi2.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/complexOps.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/copyrightwarranty.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/directioncosines.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/error.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/f1dim.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frprmn.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/functions.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gridding.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/imageProcessor.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ioms.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/l1norm.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/laplacian.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lbfgs.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/linmin.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mnbrak.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/MSFITSIO.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/quadraticpenalization.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rngs.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rvgs.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/synthesizer.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/totalsquaredvariation.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/totalvariation.cu
+)
+
+if(PREFIX)
+  set_target_properties(gpuvmem
+      PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${PREFIX}
+  )
+else()
+  set_target_properties(gpuvmem
+      PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+  )
+endif()
+
+
+set_property(TARGET gpuvmem PROPERTY CUDA_STANDARD 11)
+
+set(CASACORE_DIR /usr/local/include/casacore)
+target_include_directories(gpuvmem PUBLIC
+${CASACORE_DIR}
+${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+get_target_property(TEMP gpuvmem COMPILE_FLAGS)
+if(TEMP STREQUAL "TEMP-NOTFOUND")
+  set(TEMP "") # Set to empty string
+else()
+  set(TEMP "${TEMP} ") # A space to cleanly separate from existing content
+endif()
+
+
+set(COMPFLAGS "-D_FORCE_INLINES -dc -w -O3 -Xptxas -O3 -Xcompiler -fopenmp")
+if(NEWCASA)
+  message("-- NEWCASA evaluates to True, adding compile flag -DNEWCASA")
+  set(COMPFLAGS "${COMPFLAGS} -DNEWCASA" )
+endif()
+
+set(TEMP "${TEMP}${COMPFLAGS}" )
+set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} )
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cuda_check.cmake)
+target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measures cudart cuda stdc++ gomp cufft)
