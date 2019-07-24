@@ -83,8 +83,8 @@
 typedef union
 { struct BLKHEADstruct
   { char ID[2];           /* ID = 'JB', just as a checkpoint */
-          char tflag; /* is it shared memory or regular one ? */
-          int handle; /* this is not necessary, used only for non-resizeable objects via ptr */
+    char tflag;       /* is it shared memory or regular one ? */
+    int handle;       /* this is not necessary, used only for non-resizeable objects via ptr */
   } s;
   double d;       /* for proper alignment on every machine */
 } BLKHEAD;

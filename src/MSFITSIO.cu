@@ -56,8 +56,8 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
         casa::Vector<int> polarizations;
         polarizations=correlation_col(0);
 
-        for(int i=0; i<freqsAndVisibilities.nstokes; i++){
-            freqsAndVisibilities.corr_type[i] = polarizations[i];
+        for(int i=0; i<freqsAndVisibilities.nstokes; i++) {
+                freqsAndVisibilities.corr_type[i] = polarizations[i];
         }
 
         fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
@@ -105,20 +105,20 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                 fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
                 memset(fields[f].numVisibilitiesPerFreq, 0, freqsAndVisibilities.total_frequencies*sizeof(long));
                 if(gridding) {
-                    fields[f].backup_numVisibilitiesPerFreqPerStoke = (long **) malloc(freqsAndVisibilities.total_frequencies * sizeof(long *));
-                    fields[f].backup_numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
-                    memset(fields[f].backup_numVisibilitiesPerFreq, 0, freqsAndVisibilities.total_frequencies*sizeof(long));
+                        fields[f].backup_numVisibilitiesPerFreqPerStoke = (long **) malloc(freqsAndVisibilities.total_frequencies * sizeof(long *));
+                        fields[f].backup_numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
+                        memset(fields[f].backup_numVisibilitiesPerFreq, 0, freqsAndVisibilities.total_frequencies*sizeof(long));
                 }
 
                 for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++) {
-                    fields[f].numVisibilitiesPerFreqPerStoke[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
-                    memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, freqsAndVisibilities.nstokes*sizeof(long));
-                    if(gridding) {
-                        fields[f].backup_numVisibilitiesPerFreqPerStoke[i] = (long *) malloc(
-                                freqsAndVisibilities.nstokes * sizeof(long));
-                        memset(fields[f].backup_numVisibilitiesPerFreqPerStoke[i], 0,
-                               freqsAndVisibilities.nstokes * sizeof(long));
-                    }
+                        fields[f].numVisibilitiesPerFreqPerStoke[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
+                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, freqsAndVisibilities.nstokes*sizeof(long));
+                        if(gridding) {
+                                fields[f].backup_numVisibilitiesPerFreqPerStoke[i] = (long *) malloc(
+                                        freqsAndVisibilities.nstokes * sizeof(long));
+                                memset(fields[f].backup_numVisibilitiesPerFreqPerStoke[i], 0,
+                                       freqsAndVisibilities.nstokes * sizeof(long));
+                        }
                 }
         }
 
@@ -160,13 +160,13 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
 
         int local_max = 0;
         int max = 0;
-        for(int f=0; f < freqsAndVisibilities.nfields; f++){
-            for(int i=0; i<freqsAndVisibilities.total_frequencies; i++){
-                local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i],fields[f].numVisibilitiesPerFreqPerStoke[i]+freqsAndVisibilities.nstokes);
-                if(local_max > max){
-                    max = local_max;
+        for(int f=0; f < freqsAndVisibilities.nfields; f++) {
+                for(int i=0; i<freqsAndVisibilities.total_frequencies; i++) {
+                        local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i],fields[f].numVisibilitiesPerFreqPerStoke[i]+freqsAndVisibilities.nstokes);
+                        if(local_max > max) {
+                                max = local_max;
+                        }
                 }
-            }
         }
 
         freqsAndVisibilities.max_number_visibilities_in_channel_and_stokes = max;
@@ -237,15 +237,15 @@ __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&value
 }
 
 __host__ cufftComplex addNoiseToVis(cufftComplex vis, float weights){
-    cufftComplex noise_vis;
+        cufftComplex noise_vis;
 
-    float real_n = Normal(0,1);
-    float imag_n = Normal(0,1);
+        float real_n = Normal(0,1);
+        float imag_n = Normal(0,1);
 
-    noise_vis.x = vis.x + real_n * (1/sqrt(weights));
-    noise_vis.y = vis.y + imag_n * (1/sqrt(weights));
+        noise_vis.x = vis.x + real_n * (1/sqrt(weights));
+        noise_vis.y = vis.y + imag_n * (1/sqrt(weights));
 
-    return noise_vis;
+        return noise_vis;
 }
 
 __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
@@ -267,8 +267,8 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
         casa::Matrix<bool> flagCol;
 
         for(int f=0; f < data.nfields; f++)
-            for(int i = 0; i < data.total_frequencies; i++)
-                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
+                for(int i = 0; i < data.total_frequencies; i++)
+                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
 
         float u;
         SelectStream(0);
@@ -281,11 +281,11 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
                         query = "select UVW,WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
                         if(W_projection && random_prob < 1.0)
                         {
-                            query += " and RAND()<%f ORDERBY ASC UVW[2]";
-                        }else if(W_projection){
-                            query += " ORDERBY ASC UVW[2]";
+                                query += " and RAND()<%f ORDERBY ASC UVW[2]";
+                        }else if(W_projection) {
+                                query += " ORDERBY ASC UVW[2]";
                         }else if(random_prob < 1.0) {
-                            query += " RAND()<%f";
+                                query += " RAND()<%f";
                         }
 
                         casa::Table query_tab = casa::tableCommand(query.c_str());
@@ -312,7 +312,7 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
                                                         fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
 
                                                         if(noise)
-                                                            fields[f].visibilities[g+j][sto].Vo[c] = addNoiseToVis(fields[f].visibilities[g+j][sto].Vo[c], weights[sto]);
+                                                                fields[f].visibilities[g+j][sto].Vo[c] = addNoiseToVis(fields[f].visibilities[g+j][sto].Vo[c], weights[sto]);
 
 
                                                         fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
@@ -326,38 +326,38 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
         }
 
 
-        for(int f=0; f<data.nfields; f++){
-            for(int i=0; i<data.total_frequencies; i++) {
-                for (int sto=0; sto<data.nstokes; sto++) {
-                    fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
+        for(int f=0; f<data.nfields; f++) {
+                for(int i=0; i<data.total_frequencies; i++) {
+                        for (int sto=0; sto<data.nstokes; sto++) {
+                                fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
+                        }
                 }
-            }
         }
 
 
         for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                casa::Vector<double> chan_freq_vector;
-                chan_freq_vector=chan_freq_col(i);
-                for(int j = 0; j < data.channels[i]; j++) {
-                    fields[f].nu[h] = chan_freq_vector[j];
-                    h++;
+                h = 0;
+                for(int i = 0; i < data.n_internal_frequencies; i++) {
+                        casa::Vector<double> chan_freq_vector;
+                        chan_freq_vector=chan_freq_col(i);
+                        for(int j = 0; j < data.channels[i]; j++) {
+                                fields[f].nu[h] = chan_freq_vector[j];
+                                h++;
+                        }
                 }
-            }
         }
 
         for(int f=0; f<data.nfields; f++) {
-            h = 0;
-            fields[f].valid_frequencies = 0;
-            for(int i = 0; i < data.n_internal_frequencies; i++) {
-                for(int j = 0; j < data.channels[i]; j++) {
-                    if(fields[f].numVisibilitiesPerFreq[h] > 0) {
-                        fields[f].valid_frequencies++;
-                    }
-                    h++;
+                h = 0;
+                fields[f].valid_frequencies = 0;
+                for(int i = 0; i < data.n_internal_frequencies; i++) {
+                        for(int j = 0; j < data.channels[i]; j++) {
+                                if(fields[f].numVisibilitiesPerFreq[h] > 0) {
+                                        fields[f].valid_frequencies++;
+                                }
+                                h++;
+                        }
                 }
-            }
         }
 
 
@@ -384,36 +384,37 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
         if(num_gpus == 1) {
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
-                            for(int s=0; s<data.nstokes;s++) {
-                                gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm,
-                                                     sizeof(cufftComplex) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
-                                                     cudaMemcpyDeviceToHost));
-                                gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight,
-                                                     fields[f].device_visibilities[i][s].weight,
-                                                     sizeof(float) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
-                                                     cudaMemcpyDeviceToHost));
-                            }
+                                for(int s=0; s<data.nstokes; s++) {
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm,
+                                                             sizeof(cufftComplex) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
+                                                             cudaMemcpyDeviceToHost));
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight,
+                                                             fields[f].device_visibilities[i][s].weight,
+                                                             sizeof(float) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
+                                                             cudaMemcpyDeviceToHost));
+                                }
                         }
                 }
         }else{
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
                                 cudaSetDevice((i%num_gpus) + firstgpu);
-                                for(int s=0; s<data.nstokes;s++) {
-                                    gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
-                                    gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight, fields[f].device_visibilities[i][s].weight, sizeof(float)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
-                        }       }
+                                for(int s=0; s<data.nstokes; s++) {
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight, fields[f].device_visibilities[i][s].weight, sizeof(float)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
+                                }
+                        }
                 }
         }
 
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {
-                    for(int s=0; s<data.nstokes; s++) {
-                        for (int j = 0; j < fields[f].numVisibilitiesPerFreqPerStoke[i][s]; j++) {
-                            if (fields[f].visibilities[i][s].uvw[j].x < 0)
-                                fields[f].visibilities[i][s].Vm[j].y *= -1;
+                        for(int s=0; s<data.nstokes; s++) {
+                                for (int j = 0; j < fields[f].numVisibilitiesPerFreqPerStoke[i][s]; j++) {
+                                        if (fields[f].visibilities[i][s].uvw[j].x < 0)
+                                                fields[f].visibilities[i][s].Vm[j].y *= -1;
+                                }
                         }
-                    }
                 }
         }
 
@@ -438,8 +439,8 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
 
 
         for(int f=0; f < data.nfields; f++)
-            for(int i = 0; i < data.total_frequencies; i++)
-                memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
+                for(int i = 0; i < data.total_frequencies; i++)
+                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
 
 
 
@@ -455,59 +456,59 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
         PutSeed(-1);
 
         for(int f=0; f<data.nfields; f++) {
-            g=0;
-            for(int i=0; i < data.n_internal_frequencies; i++) {
-                query = "select WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
+                g=0;
+                for(int i=0; i < data.n_internal_frequencies; i++) {
+                        query = "select WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
 
-                if(W_projection)
-                    query += " ORDERBY ASC UVW[2]";
+                        if(W_projection)
+                                query += " ORDERBY ASC UVW[2]";
 
-                casa::Table query_tab = casa::tableCommand(query.c_str());
+                        casa::Table query_tab = casa::tableCommand(query.c_str());
 
-                casa::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                casa::ArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                casa::ArrayColumn<bool> flag_col(query_tab,"FLAG");
+                        casa::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
+                        casa::ArrayColumn<casa::Complex> data_col(query_tab,"DATA");
+                        casa::ArrayColumn<bool> flag_col(query_tab,"FLAG");
 
-                for (int k=0; k < query_tab.nrow(); k++) {
-                    weights = weight_col(k);
-                    dataCol = data_col(k);
-                    flagCol = flag_col(k);
-                    for(int j=0; j < data.channels[i]; j++) {
-                        for (int sto=0; sto < data.nstokes; sto++) {
-                            if(flagCol(sto,j) == false && weights[sto] > 0.0) {
-                                c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
+                        for (int k=0; k < query_tab.nrow(); k++) {
+                                weights = weight_col(k);
+                                dataCol = data_col(k);
+                                flagCol = flag_col(k);
+                                for(int j=0; j < data.channels[i]; j++) {
+                                        for (int sto=0; sto < data.nstokes; sto++) {
+                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
+                                                        c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
 
-                                if(sim && noise){
-                                    vis = addNoiseToVis(fields[f].visibilities[g+j][sto].Vm[c], weights[sto]);
-                                }else if(sim){
-                                    vis = fields[f].visibilities[g+j][sto].Vm[c];
-                                }else{
-                                    vis.x = fields[f].visibilities[g+j][sto].Vo[c].x - fields[f].visibilities[g+j][sto].Vm[c].x;
-                                    vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
+                                                        if(sim && noise) {
+                                                                vis = addNoiseToVis(fields[f].visibilities[g+j][sto].Vm[c], weights[sto]);
+                                                        }else if(sim) {
+                                                                vis = fields[f].visibilities[g+j][sto].Vm[c];
+                                                        }else{
+                                                                vis.x = fields[f].visibilities[g+j][sto].Vo[c].x - fields[f].visibilities[g+j][sto].Vm[c].x;
+                                                                vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
+                                                        }
+
+                                                        dataCol(sto,j) = casa::Complex(vis.x, vis.y);
+                                                        weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
+                                                        fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
+                                                }
+                                        }
                                 }
-
-                                dataCol(sto,j) = casa::Complex(vis.x, vis.y);
-                                weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
-                                fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
-                            }
+                                data_col.put(k,dataCol);
+                                weight_col.put(k, weights);
                         }
-                    }
-                    data_col.put(k,dataCol);
-                    weight_col.put(k, weights);
+
+                        query_tab.flush();
+
+                        string sub_query = "select from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
+                        if(W_projection)
+                                sub_query += " ORDERBY ASC UVW[2]";
+
+                        query = "update ["+sub_query+"], $1 tq set DATA[!FLAG]=tq.DATA[!tq.FLAG], WEIGHT=tq.WEIGHT";
+
+                        casa::TaQLResult result1 = casa::tableCommand(query.c_str(), query_tab);
+
+                        g+=data.channels[i];
                 }
-
-                query_tab.flush();
-
-                string sub_query = "select from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
-                if(W_projection)
-                    sub_query += " ORDERBY ASC UVW[2]";
-
-                query = "update ["+sub_query+"], $1 tq set DATA[!FLAG]=tq.DATA[!tq.FLAG], WEIGHT=tq.WEIGHT";
-
-                casa::TaQLResult result1 = casa::tableCommand(query.c_str(), query_tab);
-
-                g+=data.channels[i];
-            }
         }
 
         main_tab.flush();
@@ -517,80 +518,80 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
 
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)
 {
-    fitsfile *fpointer;
-    int status = 0;
-    long fpixel = 1;
-    long elements = M*N;
-    size_t needed;
-    char *name;
-    long naxes[2]={M,N};
-    long naxis = 2;
-    char *unit = "JY/PIXEL";
+        fitsfile *fpointer;
+        int status = 0;
+        long fpixel = 1;
+        long elements = M*N;
+        size_t needed;
+        char *name;
+        long naxes[2]={M,N};
+        long naxis = 2;
+        char *unit = "JY/PIXEL";
 
-    switch(option){
+        switch(option) {
         case 0:
-            needed = snprintf(NULL, 0, "!%s", out_image) + 1;
-            name = (char*)malloc(needed*sizeof(char));
-            snprintf(name, needed*sizeof(char), "!%s", out_image);
-            break;
+                needed = snprintf(NULL, 0, "!%s", out_image) + 1;
+                name = (char*)malloc(needed*sizeof(char));
+                snprintf(name, needed*sizeof(char), "!%s", out_image);
+                break;
         case 1:
-            needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
-            name = (char*)malloc(needed*sizeof(char));
-            snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
-            break;
+                needed = snprintf(NULL, 0, "!%sMEM_%d.fits", mempath, iteration) + 1;
+                name = (char*)malloc(needed*sizeof(char));
+                snprintf(name, needed*sizeof(char), "!%sMEM_%d.fits", mempath, iteration);
+                break;
         case -1:
-            break;
+                break;
         default:
-            printf("Invalid case to FITS\n");
-            exit(-1);
-    }
-
-    fits_create_file(&fpointer, name, &status);
-    if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(-1);
-    }
-    fits_copy_header(canvas, fpointer, &status);
-    if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(-1);
-    }
-
-    fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
-    fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
-
-
-    cufftComplex *host_IFITS;
-    host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-    float *image2D = (float*) malloc(M*N*sizeof(float));
-    gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
-
-
-    for(int i=0; i < M; i++){
-        for(int j=0; j < N; j++){
-            /*Absolute*/
-            image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
-            /*Real part*/
-            //image2D[N*i+j] = host_IFITS[N*i+j].y;
-            /*Imaginary part*/
-            //image2D[N*i+j] = host_IFITS[N*i+j].y;
+                printf("Invalid case to FITS\n");
+                exit(-1);
         }
-    }
 
-    fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
-    if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(-1);
-    }
-    fits_close_file(fpointer, &status);
-    if (status) {
-        fits_report_error(stderr, status); /* print error message */
-        exit(-1);
-    }
+        fits_create_file(&fpointer, name, &status);
+        if (status) {
+                fits_report_error(stderr, status); /* print error message */
+                exit(-1);
+        }
+        fits_copy_header(canvas, fpointer, &status);
+        if (status) {
+                fits_report_error(stderr, status); /* print error message */
+                exit(-1);
+        }
 
-    free(host_IFITS);
-    free(image2D);
-    free(name);
+        fits_update_key(fpointer, TSTRING, "BUNIT", unit, "Unit of measurement", &status);
+        fits_update_key(fpointer, TINT, "NITER", &iteration, "Number of iteration in gpuvmem software", &status);
+
+
+        cufftComplex *host_IFITS;
+        host_IFITS = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
+        float *image2D = (float*) malloc(M*N*sizeof(float));
+        gpuErrchk(cudaMemcpy2D(host_IFITS, sizeof(cufftComplex), I, sizeof(cufftComplex), sizeof(cufftComplex), M*N, cudaMemcpyDeviceToHost));
+
+
+        for(int i=0; i < M; i++) {
+                for(int j=0; j < N; j++) {
+                        /*Absolute*/
+                        image2D[N*i+j] = sqrt(host_IFITS[N*i+j].x * host_IFITS[N*i+j].x + host_IFITS[N*i+j].y * host_IFITS[N*i+j].y)* fg_scale;
+                        /*Real part*/
+                        //image2D[N*i+j] = host_IFITS[N*i+j].y;
+                        /*Imaginary part*/
+                        //image2D[N*i+j] = host_IFITS[N*i+j].y;
+                }
+        }
+
+        fits_write_img(fpointer, TFLOAT, fpixel, elements, image2D, &status);
+        if (status) {
+                fits_report_error(stderr, status); /* print error message */
+                exit(-1);
+        }
+        fits_close_file(fpointer, &status);
+        if (status) {
+                fits_report_error(stderr, status); /* print error message */
+                exit(-1);
+        }
+
+        free(host_IFITS);
+        free(image2D);
+        free(name);
 }
 
 __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)
@@ -629,10 +630,10 @@ __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, ch
         int offset = M*N*index;
         gpuErrchk(cudaMemcpy(host_IFITS, &I[offset], sizeof(float)*M*N, cudaMemcpyDeviceToHost));
 
-        for(int i=0; i<M; i++){
-            for(int j=0; j<N; j++){
-                host_IFITS[N*i+j] *= fg_scale;
-            }
+        for(int i=0; i<M; i++) {
+                for(int j=0; j<N; j++) {
+                        host_IFITS[N*i+j] *= fg_scale;
+                }
         }
 
         fits_write_img(fpointer, TFLOAT, fpixel, elements, host_IFITS, &status);
