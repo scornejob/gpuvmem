@@ -31,15 +31,18 @@ target_sources(gpuvmem PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/totalvariation.cu
 )
 
+
 if(PREFIX)
+  set(BINARY_DIR ${PREFIX})
   set_target_properties(gpuvmem
       PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY ${PREFIX}
+      RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR}
   )
 else()
+  set(BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
   set_target_properties(gpuvmem
       PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+      RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR}
   )
 endif()
 
@@ -71,3 +74,10 @@ set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} )
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cuda_check.cmake)
 target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measures cudart cuda stdc++ gomp cufft)
+enable_testing()
+set(TEST_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+add_test(antennae bash ${TEST_DIRECTORY}/antennae/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/antennae)
+add_test(co65 bash ${TEST_DIRECTORY}/co65/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/co65)
+add_test(freq78 bash ${TEST_DIRECTORY}/FREQ78/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/FREQ78)
+add_test(m87 bash ${TEST_DIRECTORY}/M87/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/M87)
+add_test(selfcalband9 bash ${TEST_DIRECTORY}/selfcalband9/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/selfcalband9)
