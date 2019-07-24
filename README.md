@@ -129,11 +129,11 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -c  --copyright        Shows copyright conditions
 -w  --warranty     Shows no warranty details
 --nopositivity     Run gpuvmem using chi2 with no posititivy restriction
---apply-noise      Apply random gaussian noise to visibilities\n");
---clipping         Clips the image to positive values\n");
---print-images     Prints images per iteration\n");
---print-errors     Prints final error images\n");
---verbose          Shows information through all the execution\n");
+--apply-noise      Apply random gaussian noise to visibilities
+--clipping         Clips the image to positive values
+--print-images     Prints images per iteration
+--print-errors     Prints final error images
+--verbose          Shows information through all the execution
 
 ```
 # Framework usage
