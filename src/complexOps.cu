@@ -37,79 +37,79 @@
 __host__ __device__ cufftComplex multRealComplex(cufftComplex c1, float c2)
 {
 
-    cufftComplex result;
+        cufftComplex result;
 
-    result.x = c1.x * c2;
-    result.y = c1.y * c2;
+        result.x = c1.x * c2;
+        result.y = c1.y * c2;
 
-    return result;
+        return result;
 
 }
 __host__ __device__ cufftComplex multComplexComplex(cufftComplex c1, cufftComplex c2)
 {
 
-    cufftComplex result;
+        cufftComplex result;
 
-    result.x = (c1.x * c2.x) - (c1.y * c2.y);
-    result.y = (c1.x * c2.y) + (c1.y * c2.x);
-    return result;
+        result.x = (c1.x * c2.x) - (c1.y * c2.y);
+        result.y = (c1.x * c2.y) + (c1.y * c2.x);
+        return result;
 
 }
 
 __host__ __device__ cufftComplex divComplexComplex(cufftComplex c1, cufftComplex c2)
 {
 
-    cufftComplex result;
-    float r, den;
+        cufftComplex result;
+        float r, den;
 
-    if(fabsf(c2.x) >= fabsf(c2.y))
-    {
-        r = c2.y/c2.x;
-        den = c2.x+r*c2.y;
-        result.x = (c1.x+r*c1.y)/den;
-        result.y = (c1.y-r*c1.x)/den;
+        if(fabsf(c2.x) >= fabsf(c2.y))
+        {
+                r = c2.y/c2.x;
+                den = c2.x+r*c2.y;
+                result.x = (c1.x+r*c1.y)/den;
+                result.y = (c1.y-r*c1.x)/den;
 
-    }else{
-        r = c2.x/c2.y;
-        den = c2.y+r*c2.x;
-        result.x = (c1.x*r+c1.y)/den;
-        result.y = (c1.y*r-c1.x)/den;
+        }else{
+                r = c2.x/c2.y;
+                den = c2.y+r*c2.x;
+                result.x = (c1.x*r+c1.y)/den;
+                result.y = (c1.y*r-c1.x)/den;
 
-    }
+        }
 
-    return result;
+        return result;
 
 }
 
 __host__ __device__ cufftComplex addComplexComplex(cufftComplex c1, cufftComplex c2)
 {
 
-    cufftComplex result;
+        cufftComplex result;
 
-    result.x = c1.x + c2.x;
-    result.y = c1.y + c2.y;
-    return result;
+        result.x = c1.x + c2.x;
+        result.y = c1.y + c2.y;
+        return result;
 
 }
 
 __host__ __device__ cufftComplex subComplexComplex(cufftComplex c1, cufftComplex c2)
 {
 
-    cufftComplex result;
+        cufftComplex result;
 
-    result.x = c1.x - c2.x;
-    result.y = c1.y - c2.y;
-    return result;
+        result.x = c1.x - c2.x;
+        result.y = c1.y - c2.y;
+        return result;
 
 }
 
 __host__ __device__ cufftComplex ConjComplex(cufftComplex c1)
 {
 
-    cufftComplex result;
+        cufftComplex result;
 
-    result.x = c1.x;
-    result.y = -c1.y;
-    return result;
+        result.x = c1.x;
+        result.y = -c1.y;
+        return result;
 
 }

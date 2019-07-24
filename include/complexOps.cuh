@@ -10,4 +10,3 @@ __host__ __device__ cufftComplex subComplexComplex(cufftComplex c1, cufftComplex
 __host__ __device__ cufftComplex ConjComplex(cufftComplex c1);
 
 #endif
-

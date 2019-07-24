@@ -1,7 +1,7 @@
 /* CAUTION: This is the ANSI C (only) version of the Numerical Recipes
    utility file nrutil.h.  Do not confuse this file with the same-named
    file nrutil.h that is supplied in the 'misc' subdirectory.
-   *That* file is the one from the book, and contains both ANSI and
+ * That* file is the one from the book, and contains both ANSI and
    traditional K&R versions, along with #ifdef macros to select the
    correct version.  *This* file contains only ANSI C.               */
 

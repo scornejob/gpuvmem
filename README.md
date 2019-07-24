@@ -32,6 +32,7 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 
 2. To compile GPUVMEM you will need:
 - cfitsio - Usually the package is called `libcfitsio-dev`.
+- cmake >= 3.8
 - casacore <= 5.4.0 (https://github.com/casacore/casacore, please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function). Additionally, if you are using version 5.4.0 of casacore, please compile using the flag NEWCASA=1.
 - CUDA >= 9
 - OpenMP
@@ -61,13 +62,19 @@ The gpuvmem binary should be in `/gpuvmem/bin`.
 # Compiling
 ```bash
 cd gpuvmem
-make
+mkdir build
+cd build
+cmake ..
+make -j
 ```
 
 If you are using the version 5.4.0 of casacore
  ```bash
-cd gpuvmem
-make NEWCASA=1
+ cd gpuvmem
+ mkdir build
+ cd build
+ cmake .. -DNEWCASA=1
+ make -j
 ```
 
 # Usage
@@ -118,16 +125,16 @@ Example: `./bin/gpuvmem options [ arguments ...]`
 -g  --gridding         Use count in cell gridding to decrease the number of visibilities. This is done in CPU (Need to select the CPU threads that will grid the input visibilities)
 -z  --initial_values   Initial values for image/s
 -Z  --penalizators     penalizators for prior terms
--R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n");
+-R  --robust-parameter Robust weighting parameter when gridding. -2.0 for uniform weighting, 2.0 for natural weighting and 0.0 for a tradeoff between these two. (Default R = 2.0).\n
 -T  --threshold        Threshold to calculate the spectral index image from above a certain number of sigmas in I_nu_0
 -c  --copyright        Shows copyright conditions
 -w  --warranty     Shows no warranty details
 --nopositivity     Run gpuvmem using chi2 with no posititivy restriction
---apply-noise      Apply random gaussian noise to visibilities\n");
---clipping         Clips the image to positive values\n");
---print-images     Prints images per iteration\n");
---print-errors     Prints final error images\n");
---verbose          Shows information through all the execution\n");
+--apply-noise      Apply random gaussian noise to visibilities
+--clipping         Clips the image to positive values
+--print-images     Prints images per iteration
+--print-errors     Prints final error images
+--verbose          Shows information through all the execution
 
 ```
 # Framework usage
