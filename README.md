@@ -61,13 +61,19 @@ The gpuvmem binary should be in `/gpuvmem/bin`.
 # Compiling
 ```bash
 cd gpuvmem
-make
+mkdir build
+cd build
+cmake ..
+make -j
 ```
 
 If you are using the version 5.4.0 of casacore
  ```bash
-cd gpuvmem
-make NEWCASA=1
+ cd gpuvmem
+ mkdir build
+ cd build
+ cmake .. -DNEWCASA=1
+ make -j
 ```
 
 # Usage
