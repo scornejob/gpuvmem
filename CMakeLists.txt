@@ -62,18 +62,22 @@ else()
   set(TEMP "${TEMP} ") # A space to cleanly separate from existing content
 endif()
 
-
 set(COMPFLAGS "-D_FORCE_INLINES -dc -w -O3 -Xptxas -O3 -Xcompiler -fopenmp")
+
 if(NEWCASA)
-  message("-- NEWCASA evaluates to True, adding compile flag -DNEWCASA")
+  message(STATUS "NEWCASA evaluates to True, adding compile flag -DNEWCASA")
   set(COMPFLAGS "${COMPFLAGS} -DNEWCASA" )
 endif()
 
 set(TEMP "${TEMP}${COMPFLAGS}" )
 set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} )
 
+# Search the compute capability of the first GPU
 include(${CMAKE_CURRENT_SOURCE_DIR}/cuda_check.cmake)
-target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measures cudart cuda stdc++ gomp cufft)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_NVCC_ARCH_FLAGS}")
+
+target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measures cudart cuda cufft stdc++ gomp)
+# Tests - Tests all the testing datasets
 enable_testing()
 set(TEST_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 add_test(antennae bash ${TEST_DIRECTORY}/antennae/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/antennae)

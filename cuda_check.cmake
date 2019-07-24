@@ -10,7 +10,7 @@ if (CUDA_FOUND)
                   RESULT_VARIABLE CUDA_RETURN_CODE
                   OUTPUT_VARIABLE ARCH)
   execute_process(COMMAND rm ${OUTPUTFILE})
-                  
+
   if(${CUDA_RETURN_CODE} EQUAL 0)
     set(CUDA_SUCCESS "TRUE")
   else()
@@ -21,12 +21,10 @@ if (CUDA_FOUND)
     message(STATUS "CUDA Architecture: ${ARCH}")
     message(STATUS "CUDA Version: ${CUDA_VERSION_STRING}")
     message(STATUS "CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
-    message(STATUS "CUDA Libararies: ${CUDA_LIBRARIES}")
+    message(STATUS "CUDA Libraries: ${CUDA_LIBRARIES}")
     message(STATUS "CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
 
-    set(CUDA_NVCC_FLAGS "${ARCH}")
-    add_definitions(-DGPU) #You may not require this
-
+    set(CUDA_NVCC_ARCH_FLAGS "${ARCH}")
   else()
     message(WARNING ${ARCH})
   endif()
