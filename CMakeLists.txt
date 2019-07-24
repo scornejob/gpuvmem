@@ -46,9 +46,6 @@ else()
   )
 endif()
 
-
-set_property(TARGET gpuvmem PROPERTY CUDA_STANDARD 11)
-
 set(CASACORE_DIR /usr/local/include/casacore)
 target_include_directories(gpuvmem PUBLIC
 ${CASACORE_DIR}
@@ -62,7 +59,7 @@ else()
   set(TEMP "${TEMP} ") # A space to cleanly separate from existing content
 endif()
 
-set(COMPFLAGS "-D_FORCE_INLINES -dc -w -O3 -Xptxas -O3 -Xcompiler -fopenmp")
+set(COMPFLAGS "-D_FORCE_INLINES -dc -w -O3")
 
 if(NEWCASA)
   message(STATUS "NEWCASA evaluates to True, adding compile flag -DNEWCASA")
@@ -70,11 +67,10 @@ if(NEWCASA)
 endif()
 
 set(TEMP "${TEMP}${COMPFLAGS}" )
-set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} )
-
-# Search the compute capability of the first GPU
+set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} CUDA_SEPARABLE_COMPILATION ON CUDA_STANDARD 11)
+# Search the compute capability of the first GPU and add CUDA specific FLAGS
 include(${CMAKE_CURRENT_SOURCE_DIR}/cuda_check.cmake)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_NVCC_ARCH_FLAGS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xptxas -O3 -Xcompiler -fopenmp ${CUDA_NVCC_ARCH_FLAGS}")
 
 target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measures cudart cuda cufft stdc++ gomp)
 # Tests - Tests all the testing datasets
