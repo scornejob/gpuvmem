@@ -33,7 +33,7 @@ keywords = "Maximum entropy, GPU, ALMA, Inverse problem, Radio interferometry, I
 2. To compile GPUVMEM you will need:
 - cfitsio - Usually the package is called `libcfitsio-dev`.
 - cmake >= 3.8
-- casacore = v3.1.2 (Use this command `git clone --branch v3.1.2 --depth 1 https://github.com/casacore/casacore.git`)
+- casacore = v3.1.2 (Use this command: `git clone --branch v3.1.2 --depth 1 https://github.com/casacore/casacore.git` to download the latest stable version)
 - CUDA >= 9
 - OpenMP
 
@@ -164,7 +164,7 @@ casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_mode
 
 # CONTRIBUTORS
 
-- Miguel Cárcamo - Universidad de Santiago de Chile - miguel.carcamo@usach.cl
+- Miguel Cárcamo - Universidad de Santiago de Chile - miguel.carcamo@protonmail.com
 - Nicolás Muñoz - Universidad de Santiago de Chile
 - Fernando Rannou - Universidad de Santiago de Chile
 - Pablo Román - Universidad de Santiago de Chile
