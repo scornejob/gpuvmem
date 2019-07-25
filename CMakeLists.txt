@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8...3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5...3.12 FATAL_ERROR)
 project(gpuvmem LANGUAGES CXX CUDA)
 
 add_executable(gpuvmem ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu)
