@@ -38,22 +38,22 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
         MSData freqsAndVisibilities;
         string dir = MS_name;
 
-        casa::Vector<double> pointing_ref;
-        casa::Vector<double> pointing_phs;
-        casa::Table main_tab(dir);
-        casa::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
-        casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-        casa::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
+        casacore::Vector<double> pointing_ref;
+        casacore::Vector<double> pointing_phs;
+        casacore::Table main_tab(dir);
+        casacore::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
+        casacore::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+        casacore::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
         freqsAndVisibilities.nfields = field_tab.nrow();
-        casa::ROTableRow field_row(field_tab, casa::stringToVector("REFERENCE_DIR,PHASE_DIR"));
+        casacore::ROTableRow field_row(field_tab, casacore::stringToVector("REFERENCE_DIR,PHASE_DIR"));
 
-        casa::ROScalarColumn<casa::Int> n_corr(polarization_tab,"NUM_CORR");
+        casacore::ROScalarColumn<casacore::Int> n_corr(polarization_tab,"NUM_CORR");
         freqsAndVisibilities.nstokes=n_corr(0);
 
         freqsAndVisibilities.corr_type = (int*)malloc(freqsAndVisibilities.nstokes*sizeof(int));
 
-        casa::ROArrayColumn<casa::Int> correlation_col(polarization_tab,"CORR_TYPE");
-        casa::Vector<int> polarizations;
+        casacore::ROArrayColumn<casacore::Int> correlation_col(polarization_tab,"CORR_TYPE");
+        casacore::Vector<int> polarizations;
         polarizations=correlation_col(0);
 
         for(int i=0; i<freqsAndVisibilities.nstokes; i++) {
@@ -62,7 +62,7 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
 
         fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
         for(int f=0; f<freqsAndVisibilities.nfields; f++) {
-                const casa::TableRecord &values = field_row.get(f);
+                const casacore::TableRecord &values = field_row.get(f);
                 pointing_ref = values.asArrayDouble("REFERENCE_DIR");
                 pointing_phs = values.asArrayDouble("PHASE_DIR");
 
@@ -80,11 +80,11 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                 exit(-1);
         }
 
-        casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ"); //NUMBER OF SPW
+        casacore::ROArrayColumn<casacore::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ"); //NUMBER OF SPW
         freqsAndVisibilities.n_internal_frequencies = spectral_window_tab.nrow();
 
         freqsAndVisibilities.channels = (int*)malloc(freqsAndVisibilities.n_internal_frequencies*sizeof(int));
-        casa::ROScalarColumn<casa::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
+        casacore::ROScalarColumn<casacore::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
         for(int i = 0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
                 freqsAndVisibilities.channels[i] = n_chan_freq(i);
         }
@@ -122,8 +122,8 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                 }
         }
 
-        casa::Vector<float> weights;
-        casa::Matrix<bool> flagCol;
+        casacore::Vector<float> weights;
+        casacore::Matrix<bool> flagCol;
 
         int counter;
         string query;
@@ -136,10 +136,10 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
                         // Query for data with forced IF and FIELD
                         query = "select WEIGHT,FLAG from "+ dir +" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
 
-                        casa::Table query_tab = casa::tableCommand(query.c_str());
+                        casacore::Table query_tab = casacore::tableCommand(query.c_str());
 
-                        casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
+                        casacore::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+                        casacore::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
 
                         for (int k=0; k < query_tab.nrow(); k++) {
                                 weights=weight_col(k);
@@ -255,16 +255,16 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
         int g = 0, h = 0;
         long c;
         string dir = MS_name;
-        casa::Table main_tab(dir);
+        casacore::Table main_tab(dir);
 
-        casa::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+        casacore::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
 
-        casa::ROArrayColumn<casa::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
+        casacore::ROArrayColumn<casacore::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
 
-        casa::Vector<float> weights;
-        casa::Vector<double> uvw;
-        casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<bool> flagCol;
+        casacore::Vector<float> weights;
+        casacore::Vector<double> uvw;
+        casacore::Matrix<casacore::Complex> dataCol;
+        casacore::Matrix<bool> flagCol;
 
         for(int f=0; f < data.nfields; f++)
                 for(int i = 0; i < data.total_frequencies; i++)
@@ -288,12 +288,12 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
                                 query += " RAND()<%f";
                         }
 
-                        casa::Table query_tab = casa::tableCommand(query.c_str());
+                        casacore::Table query_tab = casacore::tableCommand(query.c_str());
 
-                        casa::ROArrayColumn<double> uvw_col(query_tab,"UVW");
-                        casa::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ROArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ROArrayColumn<bool> flag_col(query_tab,"FLAG");
+                        casacore::ROArrayColumn<double> uvw_col(query_tab,"UVW");
+                        casacore::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
+                        casacore::ROArrayColumn<casacore::Complex> data_col(query_tab,"DATA");
+                        casacore::ROArrayColumn<bool> flag_col(query_tab,"FLAG");
 
                         for (int k=0; k < query_tab.nrow(); k++) {
                                 uvw = uvw_col(k);
@@ -338,7 +338,7 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
         for(int f=0; f<data.nfields; f++) {
                 h = 0;
                 for(int i = 0; i < data.n_internal_frequencies; i++) {
-                        casa::Vector<double> chan_freq_vector;
+                        casacore::Vector<double> chan_freq_vector;
                         chan_freq_vector=chan_freq_col(i);
                         for(int j = 0; j < data.channels[i]; j++) {
                                 fields[f].nu[h] = chan_freq_vector[j];
@@ -368,8 +368,8 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_fl
         string dir_origin = in_dir;
         string dir_dest = in_dir_dest;
 
-        casa::Table tab_src(dir_origin);
-        tab_src.deepCopy(dir_dest,casa::Table::New);
+        casacore::Table tab_src(dir_origin);
+        tab_src.deepCopy(dir_dest,casacore::Table::New);
         if (verbose_flag) {
                 printf("Copied\n");
         }
@@ -425,7 +425,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
         MScopy(infile, outfile, verbose_flag);
         char* out_col = "DATA";
         string dir=outfile;
-        casa::Table main_tab(dir,casa::Table::Update);
+        casacore::Table main_tab(dir,casacore::Table::Update);
         string column_name=out_col;
 
         if (main_tab.tableDesc().isColumn(column_name))
@@ -433,7 +433,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                 printf("Column %s already exists... skipping creation...\n", out_col);
         }else{
                 printf("Adding %s to the main table...\n", out_col);
-                main_tab.addColumn(casa::ArrayColumnDesc <casa::Complex>(column_name,"created by gpuvmem"));
+                main_tab.addColumn(casacore::ArrayColumnDesc <casacore::Complex>(column_name,"created by gpuvmem"));
                 main_tab.flush();
         }
 
@@ -447,9 +447,9 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
         int g = 0;
         long c;
         cufftComplex vis;
-        casa::Vector<float> weights;
-        casa::Matrix<casa::Complex> dataCol;
-        casa::Matrix<bool> flagCol;
+        casacore::Vector<float> weights;
+        casacore::Matrix<casacore::Complex> dataCol;
+        casacore::Matrix<bool> flagCol;
         string query;
         float real_n, imag_n;
         SelectStream(0);
@@ -463,11 +463,11 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                         if(W_projection)
                                 query += " ORDERBY ASC UVW[2]";
 
-                        casa::Table query_tab = casa::tableCommand(query.c_str());
+                        casacore::Table query_tab = casacore::tableCommand(query.c_str());
 
-                        casa::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casa::ArrayColumn<casa::Complex> data_col(query_tab,"DATA");
-                        casa::ArrayColumn<bool> flag_col(query_tab,"FLAG");
+                        casacore::ArrayColumn<float> weight_col(query_tab,"WEIGHT");
+                        casacore::ArrayColumn<casacore::Complex> data_col(query_tab,"DATA");
+                        casacore::ArrayColumn<bool> flag_col(query_tab,"FLAG");
 
                         for (int k=0; k < query_tab.nrow(); k++) {
                                 weights = weight_col(k);
@@ -487,7 +487,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
                                                                 vis.y = fields[f].visibilities[g+j][sto].Vo[c].y - fields[f].visibilities[g+j][sto].Vm[c].y;
                                                         }
 
-                                                        dataCol(sto,j) = casa::Complex(vis.x, vis.y);
+                                                        dataCol(sto,j) = casacore::Complex(vis.x, vis.y);
                                                         weights[sto] = fields[f].visibilities[g+j][sto].weight[c];
                                                         fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
                                                 }
@@ -505,7 +505,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
 
                         query = "update ["+sub_query+"], $1 tq set DATA[!FLAG]=tq.DATA[!tq.FLAG], WEIGHT=tq.WEIGHT";
 
-                        casa::TaQLResult result1 = casa::tableCommand(query.c_str(), query_tab);
+                        casacore::TaQLResult result1 = casacore::tableCommand(query.c_str(), query_tab);
 
                         g+=data.channels[i];
                 }

@@ -12,7 +12,7 @@
 #include <casa/Arrays/Matrix.h>
 #include <casa/Arrays/Slicer.h>
 #include <casa/Arrays/ArrayMath.h>
-#include <tables/Tables/TableParse.h>
+#include <tables/TaQL/TableParse.h>
 #include <ms/MeasurementSets.h>
 #include <tables/Tables/ColumnDesc.h>
 #include <tables/Tables/ScaColDesc.h>
@@ -48,11 +48,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
                 if (abort) exit(code);
         }
 }
-
-//Included variable from Makefile using "make NEWCASA=1"
-#ifdef NEWCASA
-namespace casa = casacore;
-#endif
 
 typedef struct MSData {
         int n_internal_frequencies;

@@ -61,11 +61,6 @@ endif()
 
 set(COMPFLAGS "-D_FORCE_INLINES -w -O3")
 
-if(NEWCASA)
-  message(STATUS "NEWCASA evaluates to True, adding compile flag -DNEWCASA")
-  set(COMPFLAGS "${COMPFLAGS} -DNEWCASA" )
-endif()
-
 set(TEMP "${TEMP}${COMPFLAGS}" )
 set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} CUDA_SEPARABLE_COMPILATION ON CUDA_STANDARD 11)
 # Search the compute capability of the first GPU and add CUDA specific FLAGS

@@ -268,7 +268,7 @@ float calcFunction(float *p)
 {
         float value = 0.0;
 
-        for(vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
+        for(std::vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
         {
                 value += (*it)->calcFi(p);
         }
@@ -287,7 +287,7 @@ void calcGradient(float *p, float *xi)
                 }
         }
         restartDPhi();
-        for(vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
+        for(std::vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
         {
                 (*it)->calcGi(p, xi);
                 (*it)->addToDphi(dphi);
@@ -298,7 +298,7 @@ void calcGradient(float *p, float *xi)
 
 void restartDPhi()
 {
-        for(vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
+        for(std::vector<Fi*>::iterator it = fis.begin(); it != fis.end(); it++)
         {
                 (*it)->restartDGi();
         }
@@ -336,7 +336,7 @@ void configure(long N, long M, int I)
         gpuErrchk(cudaMemset(dphi, 0, sizeof(float)*M*N*I));
 }
 private:
-vector<Fi*> fis;
+std::vector<Fi*> fis;
 Io *io = NULL;
 float *dphi;
 int phiStatus = 1;
@@ -443,7 +443,7 @@ class SynthesizerFactory
 public:
 typedef Synthesizer* (*CreateSynthesizerCallback)();
 private:
-typedef map<int, CreateSynthesizerCallback> CallbackMap;
+typedef std::map<int, CreateSynthesizerCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterSynthesizer(int SynthesizerId, CreateSynthesizerCallback CreateFn)
@@ -477,7 +477,7 @@ class FiFactory
 public:
 typedef Fi* (*CreateFiCallback)();
 private:
-typedef map<int, CreateFiCallback> CallbackMap;
+typedef std::map<int, CreateFiCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterFi(int FiId, CreateFiCallback CreateFn)
@@ -511,7 +511,7 @@ class OptimizatorFactory
 public:
 typedef Optimizator* (*CreateOptimizatorCallback)();
 private:
-typedef map<int, CreateOptimizatorCallback> CallbackMap;
+typedef std::map<int, CreateOptimizatorCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterOptimizator(int OptimizatorId, CreateOptimizatorCallback CreateFn)
@@ -545,7 +545,7 @@ class FilterFactory
 public:
 typedef Filter* (*CreateFilterCallback)();
 private:
-typedef map<int, CreateFilterCallback> CallbackMap;
+typedef std::map<int, CreateFilterCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterFilter(int FilterId, CreateFilterCallback CreateFn)
@@ -579,7 +579,7 @@ class ObjectiveFunctionFactory
 public:
 typedef ObjectiveFunction* (*CreateObjectiveFunctionCallback)();
 private:
-typedef map<int, CreateObjectiveFunctionCallback> CallbackMap;
+typedef std::map<int, CreateObjectiveFunctionCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterObjectiveFunction(int ObjectiveFunctionId, CreateObjectiveFunctionCallback CreateFn)
@@ -613,7 +613,7 @@ class IoFactory
 public:
 typedef Io* (*CreateIoCallback)();
 private:
-typedef map<int, CreateIoCallback> CallbackMap;
+typedef std::map<int, CreateIoCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterIo(int IoId, CreateIoCallback CreateFn)
@@ -647,7 +647,7 @@ class ErrorFactory
 public:
 typedef Error* (*CreateErrorCallback)();
 private:
-typedef map<int, CreateErrorCallback> CallbackMap;
+typedef std::map<int, CreateErrorCallback> CallbackMap;
 public:
 // Returns true if registration was succesfull
 bool RegisterError(int ErrorId, CreateErrorCallback CreateFn)
