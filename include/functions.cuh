@@ -27,7 +27,7 @@ __host__ void goToError();
 __host__ long NearestPowerOf2(long x);
 
 __host__ void readInputDat(char *file);
-__host__ void init_beam(int telescope);
+__host__ void init_beam(int telescope, float *antenna_diameter, float *pb_factor, float *pb_cutoff);
 __host__ void print_help();
 __host__ char *strip(const char *string, const char *chars);
 __host__ Vars getOptions(int argc, char **argv);
@@ -50,7 +50,7 @@ __host__ void defaultNewP(float*p, float*xi, float xmin, int image);
 __host__ void particularNewP(float*p, float*xi, float xmin, int image);
 __host__ void defaultEvaluateXt(float*xt, float*pcom, float*xicom, float x, int image);
 __host__ void particularEvaluateXt(float*xt, float*pcom, float*xicom, float x, int image);
-__host__ void linkApplyBeam2I(cufftComplex *image, float xobs, float yobs, float freq);
+__host__ void linkApplyBeam2I(cufftComplex *image, float antenna_diameter, float pb_factor, float pb_cutoff, float xobs, float yobs, float freq);
 __host__ void linkClipWNoise2I(float *I);
 __host__ void linkCalculateInu2I(cufftComplex *image, float *I, float freq);
 __host__ void linkChain2I(float *chain, float freq, float *I);

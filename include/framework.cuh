@@ -28,10 +28,6 @@ typedef struct varsPerGPU {
         cufftComplex *device_V;
 }varsPerGPU;
 
-typedef struct variablesPerField {
-        float *atten_image;
-}VariablesPerField;
-
 typedef struct variables {
         char *input;
         char *output;
@@ -69,7 +65,7 @@ class VirtualImageProcessor
 public:
 virtual void clip(float *I) = 0;
 virtual void clipWNoise(float *I) = 0;
-virtual void apply_beam(cufftComplex *image, float xobs, float yobs, float freq) = 0;
+virtual void apply_beam(cufftComplex *image, float antenna_diameter, float pb_factor, float pb_cutoff, float xobs, float yobs, float freq) = 0;
 virtual void calculateInu(cufftComplex *image, float *I, float freq) = 0;
 virtual void chainRule(float *I, float freq) = 0;
 virtual void configure(int I) = 0;
@@ -175,29 +171,42 @@ imageMap *functionMapping;
 class Visibilities
 {
 public:
-void setData(MSData* d){
-        this->data = d;
+
+void setMSDataset(MSDataset *d){
+        this->datasets = d;
 };
-void setFields(Field *f){
-        this->fields = f;
-};
-void setTotalVisibilities(int *t){
+void setTotalVisibilities(int t){
         this->total_visibilities = t;
 };
-MSData *getData(){
-        return data;
+
+void setNDatasets(int t){
+        this->ndatasets = t;
 };
-Field *getFields(){
-        return fields;
+
+void setMaxNumberVis(int t){
+        this->max_number_vis = t;
 };
-int *getTotalVisibilities(){
+
+MSDataset *getMSDataset(){
+        return datasets;
+};
+int getTotalVisibilities(){
         return total_visibilities;
 };
+
+int getMaxNumberVis(){
+        return max_number_vis;
+};
+
+int getNDatasets(){
+        return ndatasets;
+};
+
 private:
-MSData *data;
-VariablesPerField *vars_per_field;
-Field *fields;
-int *total_visibilities;
+MSDataset *datasets;
+int ndatasets;
+int total_visibilities;
+int max_number_vis;
 };
 
 class Telescope
@@ -237,13 +246,13 @@ virtual void calculateErrorImage(Image *I, Visibilities *v) = 0;
 class Io
 {
 public:
-virtual MSData IocountVisibilities(char * MS_name, Field *&fields, int gridding) = 0;
+virtual MSData IocountVisibilities(char const *MS_name, Field *&fields, int gridding) = 0;
 virtual canvasVariables IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag) = 0;
-virtual void IoreadMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob) = 0;
-virtual void IowriteMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag) = 0;
+virtual void IoreadMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob) = 0;
+virtual void IowriteMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag) = 0;
 virtual void IocloseCanvas(fitsfile *canvas) = 0;
 virtual void IoPrintImage(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N)= 0;
-virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
+virtual void IoPrintImageIteration(float *I, fitsfile *canvas, char *path, char const *name_image, char *units, int iteration, int index, float fg_scale, long M, long N) = 0;
 virtual void IoPrintMEMImageIteration(float *I, char *name_image, char *units, int index) = 0;
 virtual void IoPrintcuFFTComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option)=0;
 void setPrintImagesPath(char * pip){
@@ -390,6 +399,7 @@ __host__ virtual void run() = 0;
 __host__ virtual void setOutPut(char * FileName) = 0;
 __host__ virtual void setDevice() = 0;
 __host__ virtual void unSetDevice() = 0;
+__host__ virtual std::vector<std::string> countAndSeparateStrings(char *input) = 0;
 __host__ virtual void configure(int argc, char **argv) = 0;
 __host__ virtual void applyFilter(Filter *filter) = 0;
 __host__ void setOptimizator(Optimizator *min){

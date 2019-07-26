@@ -59,6 +59,7 @@ typedef struct MSData {
         int *corr_type;
 
         int max_number_visibilities_in_channel_and_stokes;
+        int max_number_vis;
 }MSData;
 
 typedef struct visibilities {
@@ -80,6 +81,7 @@ typedef struct field {
         float ref_xobs, ref_yobs;
         float phs_xobs, phs_yobs;
         float *nu;
+        float *atten_image;
         long **numVisibilitiesPerFreqPerStoke;
         long *numVisibilitiesPerFreq;
         long **backup_numVisibilitiesPerFreqPerStoke;
@@ -90,6 +92,16 @@ typedef struct field {
         Vis **backup_visibilities;
 }Field;
 
+typedef struct MSDataset {
+        char *name;
+        char *oname;
+        Field *fields;
+        MSData data;
+        float antenna_diameter;
+        float pb_factor;
+        float pb_cutoff;
+}MSDataset;
+
 typedef struct canvas_variables {
         double DELTAX, DELTAY;
         double ra, dec;
@@ -99,16 +111,16 @@ typedef struct canvas_variables {
         float beam_noise;
 }canvasVariables;
 
-__host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding);
+__host__ MSData countVisibilities(char const *MS_name, Field *&fields, int gridding);
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
-__host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob);
+__host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob);
 
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_flag);
 
 __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu);
 
-__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag);
+__host__ void writeMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag);
 
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);
