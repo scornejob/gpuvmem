@@ -227,8 +227,8 @@ __host__ void print_help() {
         printf( "   -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)\n");
         printf( "   -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)\n");
         printf( "   -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)\n");
-        printf( "   -i  --input            The name of the input file of visibilities(MS)\n");
-        printf( "   -o  --output           The name of the output file of residual visibilities(MS)\n");
+        printf( "   -i  --input            The name of the input file/s (separated by a comma) of visibilities(MS)\n");
+        printf( "   -o  --output           The name of the output file/s (separated by a comma) of residual visibilities(MS)\n");
         printf( "   -O  --output-image     The name of the output image FITS file\n");
         printf("    -I  --inputdat         The name of the input file of parameters\n");
         printf("    -m  --model_input      FITS file including a complete header for astrometry\n");
