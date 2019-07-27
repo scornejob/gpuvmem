@@ -116,7 +116,7 @@ __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float 
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
 __host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob);
 
-__host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_flag);
+__host__ void MScopy(char const *in_dir, char const *in_dir_dest);
 
 __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu);
 
