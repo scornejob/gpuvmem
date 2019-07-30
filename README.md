@@ -40,14 +40,14 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
   f. `make -j`
 
   g. `sudo make install`
-  
+
 2.  Install cfitsio
 
   a. `sudo apt-get -y install libcfitsio-dev`
 
-1.  Download or clone gpuvmem.
+3.  Download or clone gpuvmem.
 
-2.  To compile GPUVMEM you will need:
+4.  To compile GPUVMEM you will need:
 
 -   cfitsio - Usually the package is called `libcfitsio-dev`.
 -   cmake >= 3.8
