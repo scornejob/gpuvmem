@@ -25,7 +25,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 
 # Installation
 
-1.  Install casacore's last stable version v3.1.2
+1.  Install casacore latest stable version v3.1.2
 
   a. `git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git`
   
