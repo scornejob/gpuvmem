@@ -40,6 +40,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
   f. `make -j`
 
   g. `sudo make install`
+  
 2.  Install cfitsio
 
   a. `sudo apt-get -y install libcfitsio-dev`
