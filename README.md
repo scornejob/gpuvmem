@@ -28,7 +28,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 1.  Install casacore latest stable version v3.1.2
 
   a. `git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git`
-  
+
   b. `sudo apt-get install -y build-essential cmake gfortran g++ libncurses5-dev libreadline-dev flex bison libblas-dev liblapacke-dev libcfitsio-dev wcslib-dev libhdf5-serial-dev libfftw3-dev python-numpy libboost-python-dev libpython2.7-dev`
 
   b. `cd casacore`
@@ -91,17 +91,6 @@ cmake ..
 make -j
 ```
 
-# Usage
-
-Create your canvas or mod_in_0.fits with the image data in the header, typically we use a FITS CASA CLEAN dirty image of the desired object.
-
-Create your input.dat file with the following data and change the parameters as you need:
-
-    noise_cut	100.5
-    ftol		1.0e-12
-    random_probability 0.0
-    t_telescope        2
-
 # t_telescope references the following telescopes:
 
 1.  CBI2
@@ -112,6 +101,24 @@ Create your input.dat file with the following data and change the parameters as 
 6.  CBI
 7.  EHT
 
+# Usage
+
+Create your canvas or mod_in_0.fits with the image data in the header, typically we use a FITS CASA CLEAN dirty image of the desired object.
+
+Create your input.dat file with the following data and change the parameters as you need. For example if you want to reconstruct a single ALMA dataset file:
+
+    noise_cut	100.5
+    ftol		1.0e-12
+    random_probability 0.0
+    t_telescope        2
+
+However, if you want to reconstruct a multi-antenna dataset. For example, CBI and CBI2.
+
+    noise_cut	100.5
+    ftol		1.0e-12
+    random_probability 0.0
+    t_telescope        6,1
+
 # Use GPUVMEM:
 
 Example: `./bin/gpuvmem options [ arguments ...]`
@@ -120,8 +127,8 @@ Example: `./bin/gpuvmem options [ arguments ...]`
     -X  --blockSizeX       Block X Size for Image (Needs to be pow of 2)
     -Y  --blockSizeY       Block Y Size for Image (Needs to be pow of 2)
     -V  --blockSizeV       Block Size for Visibilities (Needs to be pow of 2)
-    -i  --input            The name of the input file of visibilities(MS)
-    -o  --output           The name of the output file of residual visibilities(MS)
+    -i  --input            The name of the input file/s of visibilities(MS) separated by a comma.
+    -o  --output           The name of the output file/s of residuals visibilities(MS) separated by a comma.
     -O  --output-image     The name of the output image FITS file
     -I  --inputdat         The name of the input file of parameters
     -m  --model_input      FITS file including a complete header for astrometry
