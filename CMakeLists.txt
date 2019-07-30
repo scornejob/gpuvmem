@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.8...3.12 FATAL_ERROR)
 project(gpuvmem LANGUAGES CXX CUDA)
 
 add_executable(gpuvmem ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu)
@@ -46,6 +46,9 @@ else()
   )
 endif()
 
+message(WARNING "We are currently using the latest casacore stable version v3.1.2")
+message(WARNING "If this version is not installed in your computer, please make sure to install it")
+message(WARNING "For more information please read the README.md file")
 set(CASACORE_DIR /usr/local/include/casacore)
 target_include_directories(gpuvmem PUBLIC
 ${CASACORE_DIR}
@@ -60,11 +63,6 @@ else()
 endif()
 
 set(COMPFLAGS "-D_FORCE_INLINES -w -O3")
-
-if(NEWCASA)
-  message(STATUS "NEWCASA evaluates to True, adding compile flag -DNEWCASA")
-  set(COMPFLAGS "${COMPFLAGS} -DNEWCASA" )
-endif()
 
 set(TEMP "${TEMP}${COMPFLAGS}" )
 set_target_properties(gpuvmem PROPERTIES COMPILE_FLAGS ${TEMP} CUDA_SEPARABLE_COMPILATION ON CUDA_STANDARD 11)
