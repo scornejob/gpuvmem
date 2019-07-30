@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.8...3.12 FATAL_ERROR)
 project(gpuvmem LANGUAGES CXX CUDA)
 
 add_executable(gpuvmem ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu)
@@ -46,6 +46,9 @@ else()
   )
 endif()
 
+message(WARNING "We are currently using the latest casacore stable version v3.1.2")
+message(WARNING "If this version is not installed in your computer, please make sure to install it")
+message(WARNING "For more information please read the README.md file")
 set(CASACORE_DIR /usr/local/include/casacore)
 target_include_directories(gpuvmem PUBLIC
 ${CASACORE_DIR}
@@ -71,7 +74,6 @@ target_link_libraries(gpuvmem cfitsio m casa_casa casa_tables casa_ms casa_measu
 # Tests - Tests all the testing datasets
 enable_testing()
 set(TEST_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-message(STATUS "Testing datasets in ${TEST_DIRECTORY}")
 add_test(antennae bash ${TEST_DIRECTORY}/antennae/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/antennae)
 add_test(co65 bash ${TEST_DIRECTORY}/co65/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/co65)
 add_test(freq78 bash ${TEST_DIRECTORY}/FREQ78/test.sh ${BINARY_DIR}/gpuvmem ${TEST_DIRECTORY}/FREQ78)
