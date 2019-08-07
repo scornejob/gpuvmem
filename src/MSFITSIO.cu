@@ -33,10 +33,10 @@
 
 #include "MSFITSIO.cuh"
 
-__host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
+__host__ MSData countVisibilities(char const* MS_name, Field *&fields, int gridding)
 {
         MSData freqsAndVisibilities;
-        string dir = MS_name;
+        std::string dir(MS_name);
 
         casacore::Vector<double> pointing_ref;
         casacore::Vector<double> pointing_phs;
@@ -126,7 +126,7 @@ __host__ MSData countVisibilities(char * MS_name, Field *&fields, int gridding)
         casacore::Matrix<bool> flagCol;
 
         int counter;
-        string query;
+        std::string query;
 
         // Iteration through all fields
 
@@ -248,13 +248,14 @@ __host__ cufftComplex addNoiseToVis(cufftComplex vis, float weights){
         return noise_vis;
 }
 
-__host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
+__host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
 {
 
         char *error = 0;
         int g = 0, h = 0;
         long c;
-        string dir = MS_name;
+
+        std::string dir(MS_name);
         casacore::Table main_tab(dir);
 
         casacore::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
@@ -273,7 +274,8 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
         float u;
         SelectStream(0);
         PutSeed(-1);
-        string query;
+        std::string query;
+
         for(int f=0; f<data.nfields; f++) {
                 g=0;
                 for(int i=0; i < data.n_internal_frequencies; i++) {
@@ -363,17 +365,13 @@ __host__ void readMS(char *MS_name, Field *fields, MSData data, bool noise, bool
 
 }
 
-__host__ void MScopy(char const *in_dir, char const *in_dir_dest, int verbose_flag)
+__host__ void MScopy(char const *in_dir, char const *in_dir_dest)
 {
         string dir_origin = in_dir;
         string dir_dest = in_dir_dest;
 
         casacore::Table tab_src(dir_origin);
         tab_src.deepCopy(dir_dest,casacore::Table::New);
-        if (verbose_flag) {
-                printf("Copied\n");
-        }
-
 }
 
 
@@ -420,13 +418,13 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
 
 }
 
-__host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
+__host__ void writeMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
 {
-        MScopy(infile, outfile, verbose_flag);
+        MScopy(infile, outfile);
         char* out_col = "DATA";
-        string dir=outfile;
+        std::string dir = outfile;
         casacore::Table main_tab(dir,casacore::Table::Update);
-        string column_name=out_col;
+        std::string column_name(out_col);
 
         if (main_tab.tableDesc().isColumn(column_name))
         {
@@ -450,7 +448,7 @@ __host__ void writeMS(char *infile, char *outfile, Field *fields, MSData data, f
         casacore::Vector<float> weights;
         casacore::Matrix<casacore::Complex> dataCol;
         casacore::Matrix<bool> flagCol;
-        string query;
+        std::string query;
         float real_n, imag_n;
         SelectStream(0);
         PutSeed(-1);

@@ -23,10 +23,10 @@ void ImageProcessor::calculateInu(cufftComplex *image, float *I, float freq)
         }
 };
 
-void ImageProcessor::apply_beam(cufftComplex *image, float xobs, float yobs, float freq)
+void ImageProcessor::apply_beam(cufftComplex *image, float antenna_diameter, float pb_factor, float pb_cutoff, float xobs, float yobs, float freq)
 {
         if(image_count == 2)
-                linkApplyBeam2I(image, xobs, yobs, freq);
+                linkApplyBeam2I(image, antenna_diameter, pb_factor, pb_cutoff, xobs, yobs, freq);
 };
 
 void ImageProcessor::chainRule(float *I, float freq)

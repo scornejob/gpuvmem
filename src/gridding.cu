@@ -12,24 +12,26 @@ Gridding::Gridding()
 
 void Gridding::applyCriteria(Visibilities *v)
 {
-        for(int f=0; f< v->getData()->nfields; f++) {
-                for(int i=0; i < v->getData()->total_frequencies; i++) {
-                        for(int s=0; i < v->getData()->nstokes; s++) {
-                                v->getFields()[f].gridded_visibilities[i][s].uvw = (double3 *) malloc(M * N * sizeof(double3));
-                                v->getFields()[f].gridded_visibilities[i][s].weight = (float *) malloc(M * N * sizeof(float));
-                                v->getFields()[f].gridded_visibilities[i][s].Vo = (cufftComplex *) malloc(
-                                        M * N * sizeof(cufftComplex));
+        for(int d=0; d< v->getNDatasets(); d++) {
+                for(int f=0; f< v->getMSDataset()[d].data.nfields; f++) {
+                        for(int i=0; i < v->getMSDataset()[d].data.total_frequencies; i++) {
+                                for(int s=0; i < v->getMSDataset()[d].data.nstokes; s++) {
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].uvw = (double3 *) malloc(M * N * sizeof(double3));
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].weight = (float *) malloc(M * N * sizeof(float));
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].Vo = (cufftComplex *) malloc(
+                                                M * N * sizeof(cufftComplex));
 
-                                memset(v->getFields()[f].gridded_visibilities[i][s].uvw, 0, M * N * sizeof(double3));
-                                memset(v->getFields()[f].gridded_visibilities[i][s].weight, 0, M * N * sizeof(float));
-                                memset(v->getFields()[f].gridded_visibilities[i][s].S, 0, M * N * sizeof(int));
-                                memset(v->getFields()[f].gridded_visibilities[i][s].Vo, 0, M * N * sizeof(cufftComplex));
+                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].uvw, 0, M * N * sizeof(double3));
+                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].weight, 0, M * N * sizeof(float));
+                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].S, 0, M * N * sizeof(int));
+                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].Vo, 0, M * N * sizeof(cufftComplex));
+                                }
                         }
                 }
+                omp_set_num_threads(threads);
+                do_gridding(v->getMSDataset()[d].fields,&v->getMSDataset()[d].data, deltau, deltav, M, N, robust_param);
+                omp_set_num_threads(num_gpus);
         }
-        omp_set_num_threads(threads);
-        do_gridding(v->getFields(), v->getData(), deltau, deltav, M, N, robust_param);
-        omp_set_num_threads(num_gpus);
 };
 
 Gridding::Gridding(int threads)

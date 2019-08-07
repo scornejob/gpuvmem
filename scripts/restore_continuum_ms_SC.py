@@ -1,13 +1,13 @@
 #casapy --log2term --nogui -c restore_continum_ms_SC.py
 print sys.argv
-residual_ms = str(sys.argv[3]); #input
+residual_ms = str(sys.argv[3]).split(','); #input
 model_fits = str(sys.argv[4]);  # input
 restored = str(sys.argv[5]);  #output
 weight=str(sys.argv[6]); # "briggs or natural"
 polarization="I"
 
 ######################################################################
-residual_image=residual_ms+".img"
+residual_image="residual.img"
 
 os.system("rm -rf *.log *.last "+residual_image+".* mod_out convolved_mod_out convolved_mod_out.fits "+restored+" "+restored+".fits")
 
