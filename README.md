@@ -54,7 +54,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 -   cfitsio - Usually the package is called `libcfitsio-dev`.
 -   cmake >= 3.8
 -   casacore >= v3.1.2 (<https://github.com/casacore/casacore> - branch v3.1.2. please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function).
--   CUDA 9, 9.1, 9.2, 10.0 or 10.1.
+-   CUDA 9, 9.1, 9.2, 10.0 or 10.1 **Update 2**. Remember to add binaries and libraries to the **PATH** and **LD_LIBRARY_PATH** environment variables, respectively.
 -   OpenMP
 
 # Installation using a Singularity container
