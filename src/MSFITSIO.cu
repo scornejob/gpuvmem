@@ -33,148 +33,6 @@
 
 #include "MSFITSIO.cuh"
 
-__host__ MSData countVisibilities(char const* MS_name, Field *&fields, int gridding)
-{
-        MSData freqsAndVisibilities;
-        std::string dir(MS_name);
-
-        casacore::Vector<double> pointing_ref;
-        casacore::Vector<double> pointing_phs;
-        casacore::Table main_tab(dir);
-        casacore::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
-        casacore::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
-        casacore::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
-        freqsAndVisibilities.nfields = field_tab.nrow();
-        casacore::ROTableRow field_row(field_tab, casacore::stringToVector("REFERENCE_DIR,PHASE_DIR"));
-
-        casacore::ROScalarColumn<casacore::Int> n_corr(polarization_tab,"NUM_CORR");
-        freqsAndVisibilities.nstokes=n_corr(0);
-
-        freqsAndVisibilities.corr_type = (int*)malloc(freqsAndVisibilities.nstokes*sizeof(int));
-
-        casacore::ROArrayColumn<casacore::Int> correlation_col(polarization_tab,"CORR_TYPE");
-        casacore::Vector<int> polarizations;
-        polarizations=correlation_col(0);
-
-        for(int i=0; i<freqsAndVisibilities.nstokes; i++) {
-                freqsAndVisibilities.corr_type[i] = polarizations[i];
-        }
-
-        fields = (Field*)malloc(freqsAndVisibilities.nfields*sizeof(Field));
-        for(int f=0; f<freqsAndVisibilities.nfields; f++) {
-                const casacore::TableRecord &values = field_row.get(f);
-                pointing_ref = values.asArrayDouble("REFERENCE_DIR");
-                pointing_phs = values.asArrayDouble("PHASE_DIR");
-
-                fields[f].ref_ra = pointing_ref[0];
-                fields[f].ref_dec = pointing_ref[1];
-
-                fields[f].phs_ra = pointing_phs[0];
-                fields[f].phs_dec = pointing_phs[1];
-        }
-
-
-        freqsAndVisibilities.nsamples = main_tab.nrow();
-        if (freqsAndVisibilities.nsamples == 0) {
-                printf("ERROR : nsamples is zero... exiting....\n");
-                exit(-1);
-        }
-
-        casacore::ROArrayColumn<casacore::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ"); //NUMBER OF SPW
-        freqsAndVisibilities.n_internal_frequencies = spectral_window_tab.nrow();
-
-        freqsAndVisibilities.channels = (int*)malloc(freqsAndVisibilities.n_internal_frequencies*sizeof(int));
-        casacore::ROScalarColumn<casacore::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
-        for(int i = 0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
-                freqsAndVisibilities.channels[i] = n_chan_freq(i);
-        }
-
-        // We consider all chans .. The data will be processed this way later.
-
-        int total_frequencies = 0;
-        for(int i=0; i <freqsAndVisibilities.n_internal_frequencies; i++) {
-                for(int j=0; j < freqsAndVisibilities.channels[i]; j++) {
-                        total_frequencies++;
-                }
-        }
-
-        freqsAndVisibilities.total_frequencies = total_frequencies;
-
-        for(int f=0; f < freqsAndVisibilities.nfields; f++) {
-                fields[f].numVisibilitiesPerFreqPerStoke = (long**)malloc(freqsAndVisibilities.total_frequencies*sizeof(long*));
-                fields[f].numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
-                memset(fields[f].numVisibilitiesPerFreq, 0, freqsAndVisibilities.total_frequencies*sizeof(long));
-                if(gridding) {
-                        fields[f].backup_numVisibilitiesPerFreqPerStoke = (long **) malloc(freqsAndVisibilities.total_frequencies * sizeof(long *));
-                        fields[f].backup_numVisibilitiesPerFreq = (long*)malloc(freqsAndVisibilities.total_frequencies*sizeof(long));
-                        memset(fields[f].backup_numVisibilitiesPerFreq, 0, freqsAndVisibilities.total_frequencies*sizeof(long));
-                }
-
-                for(int i = 0; i < freqsAndVisibilities.total_frequencies; i++) {
-                        fields[f].numVisibilitiesPerFreqPerStoke[i] = (long*)malloc(freqsAndVisibilities.nstokes*sizeof(long));
-                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, freqsAndVisibilities.nstokes*sizeof(long));
-                        if(gridding) {
-                                fields[f].backup_numVisibilitiesPerFreqPerStoke[i] = (long *) malloc(
-                                        freqsAndVisibilities.nstokes * sizeof(long));
-                                memset(fields[f].backup_numVisibilitiesPerFreqPerStoke[i], 0,
-                                       freqsAndVisibilities.nstokes * sizeof(long));
-                        }
-                }
-        }
-
-        casacore::Vector<float> weights;
-        casacore::Matrix<bool> flagCol;
-
-        int counter;
-        std::string query;
-
-        // Iteration through all fields
-
-        for(int f=0; f<freqsAndVisibilities.nfields; f++) {
-                counter = 0;
-                for(int i=0; i < freqsAndVisibilities.n_internal_frequencies; i++) {
-                        // Query for data with forced IF and FIELD
-                        query = "select WEIGHT,FLAG from "+ dir +" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
-
-                        casacore::Table query_tab = casacore::tableCommand(query.c_str());
-
-                        casacore::ROArrayColumn<float> weight_col(query_tab,"WEIGHT");
-                        casacore::ROArrayColumn<bool> flag_data_col(query_tab,"FLAG");
-
-                        for (int k=0; k < query_tab.nrow(); k++) {
-                                weights=weight_col(k);
-                                flagCol = flag_data_col(k);
-                                for(int j=0; j < freqsAndVisibilities.channels[i]; j++) {
-                                        for (int sto=0; sto<freqsAndVisibilities.nstokes; sto++) {
-                                                if(flagCol(sto,j) == false && weights[sto] > 0.0) {
-                                                        fields[f].numVisibilitiesPerFreqPerStoke[counter+j][sto]++;
-                                                        fields[f].numVisibilitiesPerFreq[counter+j]++;
-                                                }
-                                        }
-                                }
-                        }
-                        counter+=freqsAndVisibilities.channels[i];
-                }
-        }
-
-
-        int local_max = 0;
-        int max = 0;
-        for(int f=0; f < freqsAndVisibilities.nfields; f++) {
-                for(int i=0; i<freqsAndVisibilities.total_frequencies; i++) {
-                        local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i],fields[f].numVisibilitiesPerFreqPerStoke[i]+freqsAndVisibilities.nstokes);
-                        if(local_max > max) {
-                                max = local_max;
-                        }
-                }
-        }
-
-        freqsAndVisibilities.max_number_visibilities_in_channel_and_stokes = max;
-
-        return freqsAndVisibilities;
-}
-
-
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag)
 {
         status_canvas = 0;
@@ -248,37 +106,99 @@ __host__ cufftComplex addNoiseToVis(cufftComplex vis, float weights){
         return noise_vis;
 }
 
-__host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
+__host__ void readMS(char const *MS_name, std::vector<Field>& fields, MSData *data, bool noise, bool W_projection, float random_prob, int gridding)
 {
 
         char *error = 0;
         int g = 0, h = 0;
-        long c;
 
         std::string dir(MS_name);
         casacore::Table main_tab(dir);
+        casacore::Vector<double> pointing_ref;
+        casacore::Vector<double> pointing_phs;
 
+        casacore::Table field_tab(main_tab.keywordSet().asTable("FIELD"));
         casacore::Table spectral_window_tab(main_tab.keywordSet().asTable("SPECTRAL_WINDOW"));
+        casacore::Table polarization_tab(main_tab.keywordSet().asTable("POLARIZATION"));
+
+        data->nfields = field_tab.nrow();
+        casacore::ROTableRow field_row(field_tab, casacore::stringToVector("REFERENCE_DIR,PHASE_DIR"));
+
+        for(int f=0; f<data->nfields; f++) {
+
+                const casacore::TableRecord &values = field_row.get(f);
+                pointing_ref = values.asArrayDouble("REFERENCE_DIR");
+                pointing_phs = values.asArrayDouble("PHASE_DIR");
+
+                fields.push_back(Field());
+
+                fields[f].ref_ra = pointing_ref[0];
+                fields[f].ref_dec = pointing_ref[1];
+
+                fields[f].phs_ra = pointing_phs[0];
+                fields[f].phs_dec = pointing_phs[1];
+        }
+
+        casacore::ROScalarColumn<casacore::Int> n_corr(polarization_tab,"NUM_CORR");
+        data->nstokes=n_corr(0);
+
+        casacore::ROArrayColumn<casacore::Int> correlation_col(polarization_tab,"CORR_TYPE");
+        casacore::Vector<int> polarizations;
+        polarizations=correlation_col(0);
+
+        for(int i=0; i<data->nstokes; i++) {
+                data->corr_type.push_back(polarizations[i]);
+        }
 
         casacore::ROArrayColumn<casacore::Double> chan_freq_col(spectral_window_tab,"CHAN_FREQ");
+
+        data->nsamples = main_tab.nrow();
+        if (data->nsamples == 0) {
+                printf("ERROR : nsamples is zero... exiting....\n");
+                exit(-1);
+        }
+
+        data->n_internal_frequencies = spectral_window_tab.nrow();
+
+        casacore::ROScalarColumn<casacore::Int> n_chan_freq(spectral_window_tab,"NUM_CHAN");
+        for(int i = 0; i < data->n_internal_frequencies; i++) {
+                data->channels.push_back(n_chan_freq(i));
+        }
+
+        int total_frequencies = 0;
+        for(int i=0; i <data->n_internal_frequencies; i++) {
+                for(int j=0; j < data->channels[i]; j++) {
+                        total_frequencies++;
+                }
+        }
+
+        data->total_frequencies = total_frequencies;
+
+        for(int f=0; f < data->nfields; f++) {
+            fields[f].visibilities.resize(data->total_frequencies, std::vector<HVis>(data->nstokes, HVis()));
+            fields[f].device_visibilities.resize(data->total_frequencies, std::vector<DVis>(data->nstokes, DVis()));
+            fields[f].numVisibilitiesPerFreqPerStoke.resize(data->total_frequencies, std::vector<long>(data->nstokes,0));
+            fields[f].numVisibilitiesPerFreq.resize(data->total_frequencies,0);
+            if(gridding){
+              fields[f].gridded_visibilities.resize(data->total_frequencies, std::vector<HVis>(data->nstokes, HVis()));
+              fields[f].backup_visibilities.resize(data->total_frequencies, std::vector<HVis>(data->nstokes, HVis()));
+              fields[f].backup_numVisibilitiesPerFreqPerStoke.resize(data->total_frequencies, std::vector<long>(data->nstokes,0));
+              fields[f].backup_numVisibilitiesPerFreq.resize(data->total_frequencies,0);
+            }
+        }
 
         casacore::Vector<float> weights;
         casacore::Vector<double> uvw;
         casacore::Matrix<casacore::Complex> dataCol;
         casacore::Matrix<bool> flagCol;
 
-        for(int f=0; f < data.nfields; f++)
-                for(int i = 0; i < data.total_frequencies; i++)
-                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
-
-        float u;
-        SelectStream(0);
-        PutSeed(-1);
         std::string query;
 
-        for(int f=0; f<data.nfields; f++) {
+        double3 MS_uvw;
+        cufftComplex MS_vis;
+        for(int f=0; f<data->nfields; f++) {
                 g=0;
-                for(int i=0; i < data.n_internal_frequencies; i++) {
+                for(int i=0; i < data->n_internal_frequencies; i++) {
 
                         query = "select UVW,WEIGHT,DATA,FLAG from "+dir+" where DATA_DESC_ID="+std::to_string(i)+" and FIELD_ID="+std::to_string(f)+" and !FLAG_ROW";
                         if(W_projection && random_prob < 1.0)
@@ -302,58 +222,66 @@ __host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise
                                 dataCol = data_col(k);
                                 weights = weight_col(k);
                                 flagCol = flag_col(k);
-                                for(int j=0; j < data.channels[i]; j++) {
-                                        for (int sto=0; sto < data.nstokes; sto++) {
+                                for(int j=0; j < data->channels[i]; j++) {
+                                        for (int sto=0; sto < data->nstokes; sto++) {
                                                 if(flagCol(sto,j) == false) {
-                                                        c = fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].x = uvw[0];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].y = uvw[1];
-                                                        fields[f].visibilities[g+j][sto].uvw[c].z = uvw[2];
+                                                        MS_uvw.x = uvw[0];
+                                                        MS_uvw.y = uvw[1];
+                                                        MS_uvw.z = uvw[2];
 
-                                                        fields[f].visibilities[g+j][sto].Vo[c].x = dataCol(sto,j).real();
-                                                        fields[f].visibilities[g+j][sto].Vo[c].y = dataCol(sto,j).imag();
+                                                        fields[f].visibilities[g+j][sto].uvw.push_back(MS_uvw);
+
+                                                        MS_vis.x = dataCol(sto,j).real();
+                                                        MS_vis.y = dataCol(sto,j).imag();
 
                                                         if(noise)
-                                                                fields[f].visibilities[g+j][sto].Vo[c] = addNoiseToVis(fields[f].visibilities[g+j][sto].Vo[c], weights[sto]);
+                                                          fields[f].visibilities[g+j][sto].Vo.push_back(addNoiseToVis(MS_vis, weights[sto]));
+                                                        else
+                                                          fields[f].visibilities[g+j][sto].Vo.push_back(MS_vis);
 
-
-                                                        fields[f].visibilities[g+j][sto].weight[c] = weights[sto];
+                                                        fields[f].visibilities[g+j][sto].weight.push_back(weights[sto]);
                                                         fields[f].numVisibilitiesPerFreqPerStoke[g+j][sto]++;
+                                                        fields[f].numVisibilitiesPerFreq[g+j]++;
                                                 }
                                         }
                                 }
                         }
-                        g+=data.channels[i];
+                        g += data->channels[i];
                 }
         }
 
-
-        for(int f=0; f<data.nfields; f++) {
-                for(int i=0; i<data.total_frequencies; i++) {
-                        for (int sto=0; sto<data.nstokes; sto++) {
+        cufftComplex cufft_zeroval;
+        cufft_zeroval.x = 0.0f;
+        cufft_zeroval.y = 0.0f;
+        for(int f=0; f<data->nfields; f++) {
+                for(int i=0; i<data->total_frequencies; i++) {
+                        for (int sto=0; sto<data->nstokes; sto++) {
                                 fields[f].numVisibilitiesPerFreq[i] += fields[f].numVisibilitiesPerFreqPerStoke[i][sto];
+                                /*
+                                 *
+                                 * We will allocate memory for model visibilities using the size of the observed visibilities vector.
+                                 */
+                                fields[f].visibilities[i][sto].Vm.assign(fields[f].visibilities[i][sto].Vo.size(), cufft_zeroval);
                         }
                 }
         }
 
 
-        for(int f=0; f<data.nfields; f++) {
-                h = 0;
-                for(int i = 0; i < data.n_internal_frequencies; i++) {
+        for(int f=0; f<data->nfields; f++) {
+                for(int i = 0; i < data->n_internal_frequencies; i++) {
                         casacore::Vector<double> chan_freq_vector;
                         chan_freq_vector=chan_freq_col(i);
-                        for(int j = 0; j < data.channels[i]; j++) {
-                                fields[f].nu[h] = chan_freq_vector[j];
-                                h++;
+                        for(int j = 0; j < data->channels[i]; j++) {
+                                fields[f].nu.push_back(chan_freq_vector[j]);
                         }
                 }
         }
 
-        for(int f=0; f<data.nfields; f++) {
+        for(int f=0; f<data->nfields; f++) {
                 h = 0;
                 fields[f].valid_frequencies = 0;
-                for(int i = 0; i < data.n_internal_frequencies; i++) {
-                        for(int j = 0; j < data.channels[i]; j++) {
+                for(int i = 0; i < data->n_internal_frequencies; i++) {
+                        for(int j = 0; j < data->channels[i]; j++) {
                                 if(fields[f].numVisibilitiesPerFreq[h] > 0) {
                                         fields[f].valid_frequencies++;
                                 }
@@ -362,6 +290,18 @@ __host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise
                 }
         }
 
+        int local_max = 0;
+        int max = 0;
+        for(int f=0; f < data->nfields; f++) {
+                for(int i=0; i< data->total_frequencies; i++) {
+                        local_max = *std::max_element(fields[f].numVisibilitiesPerFreqPerStoke[i].data(),fields[f].numVisibilitiesPerFreqPerStoke[i].data() + data->nstokes);
+                        if(local_max > max) {
+                                max = local_max;
+                        }
+                }
+        }
+
+        data->max_number_visibilities_in_channel_and_stokes = max;
 
 }
 
@@ -376,17 +316,17 @@ __host__ void MScopy(char const *in_dir, char const *in_dir_dest)
 
 
 
-__host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu)
+__host__ void residualsToHost(std::vector<Field>& fields, MSData data, int num_gpus, int firstgpu)
 {
 
         if(num_gpus == 1) {
                 for(int f=0; f<data.nfields; f++) {
                         for(int i=0; i<data.total_frequencies; i++) {
                                 for(int s=0; s<data.nstokes; s++) {
-                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm,
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm.data(), fields[f].device_visibilities[i][s].Vm,
                                                              sizeof(cufftComplex) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
                                                              cudaMemcpyDeviceToHost));
-                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight,
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight.data(),
                                                              fields[f].device_visibilities[i][s].weight,
                                                              sizeof(float) * fields[f].numVisibilitiesPerFreqPerStoke[i][s],
                                                              cudaMemcpyDeviceToHost));
@@ -398,8 +338,8 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
                         for(int i=0; i<data.total_frequencies; i++) {
                                 cudaSetDevice((i%num_gpus) + firstgpu);
                                 for(int s=0; s<data.nstokes; s++) {
-                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm, fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
-                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight, fields[f].device_visibilities[i][s].weight, sizeof(float)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].Vm.data(), fields[f].device_visibilities[i][s].Vm, sizeof(cufftComplex)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
+                                        gpuErrchk(cudaMemcpy(fields[f].visibilities[i][s].weight.data(), fields[f].device_visibilities[i][s].weight, sizeof(float)*fields[f].numVisibilitiesPerFreqPerStoke[i][s], cudaMemcpyDeviceToHost));
                                 }
                         }
                 }
@@ -408,7 +348,7 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
         for(int f=0; f<data.nfields; f++) {
                 for(int i=0; i<data.total_frequencies; i++) {
                         for(int s=0; s<data.nstokes; s++) {
-                                for (int j = 0; j < fields[f].numVisibilitiesPerFreqPerStoke[i][s]; j++) {
+                                for (int j = 0; j < fields[f].visibilities[i][s].Vm.size(); j++) {
                                         if (fields[f].visibilities[i][s].uvw[j].x < 0)
                                                 fields[f].visibilities[i][s].Vm[j].y *= -1;
                                 }
@@ -418,7 +358,7 @@ __host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firs
 
 }
 
-__host__ void writeMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
+__host__ void writeMS(char const *infile, char const *outfile, std::vector<Field> fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
 {
         MScopy(infile, outfile);
         char* out_col = "DATA";
@@ -437,9 +377,7 @@ __host__ void writeMS(char const *infile, char const *outfile, Field *fields, MS
 
 
         for(int f=0; f < data.nfields; f++)
-                for(int i = 0; i < data.total_frequencies; i++)
-                        memset(fields[f].numVisibilitiesPerFreqPerStoke[i], 0, data.nstokes*sizeof(long));
-
+          std:fill(fields[f].numVisibilitiesPerFreqPerStoke.begin(), fields[f].numVisibilitiesPerFreqPerStoke.end(), std::vector<long>(data.nstokes,0));
 
 
         int g = 0;

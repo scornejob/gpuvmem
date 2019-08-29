@@ -6,20 +6,16 @@ extern char* mempath;
 extern fitsfile *mod_in;
 extern int iter;
 
-MSData IoMS::IocountVisibilities(char const *MS_name, Field *&fields, int gridding)
-{
-        return countVisibilities(MS_name, fields, gridding);
-};
 canvasVariables IoMS::IoreadCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag)
 {
         return readCanvas(canvas_name, canvas, b_noise_aux, status_canvas, verbose_flag);
 };
 
-void IoMS::IoreadMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob)
+void IoMS::IoreadMS(char const *MS_name, std::vector<Field>& fields, MSData *data, bool noise, bool W_projection, float random_prob, int gridding)
 {
-        readMS(MS_name, fields, data, noise, W_projection, random_prob);
+        readMS(MS_name, fields, data, noise, W_projection, random_prob, gridding);
 };
-void IoMS::IowriteMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
+void IoMS::IowriteMS(char const *infile, char const *outfile, std::vector<Field>& fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag)
 {
         writeMS(infile, outfile, fields, data, random_probability, sim, noise, W_projection, verbose_flag);
 };

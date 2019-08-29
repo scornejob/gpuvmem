@@ -25,7 +25,7 @@ double ra, dec, crpix1, crpix2, DELTAX, DELTAY, deltau, deltav;
 
 fitsfile *mod_in;
 
-MSDataset *datasets;
+std::vector<MSDataset> datasets;
 
 varsPerGPU *vars_gpu;
 
@@ -115,17 +115,16 @@ void MFS::configure(int argc, char **argv)
                 exit(-1);
         }
 
-        datasets = (MSDataset*)malloc(nMeasurementSets*sizeof(MSDataset));
-
         if(verbose_flag)
                 printf("Number of input datasets %d\n", nMeasurementSets);
 
         for(int i=0; i< nMeasurementSets; i++) {
-
+                datasets.push_back(MSDataset());
                 datasets[i].name = (char*)malloc((string_values[i].length()+1)*sizeof(char));
                 datasets[i].oname = (char*)malloc((s_output_values[i].length()+1)*sizeof(char));
                 strcpy(datasets[i].name, string_values[i].c_str());
                 strcpy(datasets[i].oname, s_output_values[i].c_str());
+
         }
 
         string_values.clear();
@@ -257,8 +256,13 @@ void MFS::configure(int argc, char **argv)
         if(verbose_flag)
                 printf("Counting data for memory allocation\n");
 
-        for(int i=0; i<nMeasurementSets; i++) {
-                datasets[i].data = iohandler->IocountVisibilities(datasets[i].name, datasets[i].fields, gridding);
+
+        for(int d=0; d<nMeasurementSets; d++) {
+                if(apply_noise) {
+                        iohandler->IoreadMS(datasets[d].name, datasets[d].fields, &datasets[d].data, true, false, random_probability, gridding);
+                }else{
+                        iohandler->IoreadMS(datasets[d].name, datasets[d].fields, &datasets[d].data, false, false, random_probability, gridding);
+                }
         }
 
         if(verbose_flag) {
@@ -373,80 +377,36 @@ void MFS::configure(int argc, char **argv)
         }
 
         vars_gpu = (varsPerGPU*)malloc(num_gpus*sizeof(varsPerGPU));
-        for(int d=0; d<nMeasurementSets; d++) {
-                for(int f=0; f<datasets[d].data.nfields; f++) {
-                        datasets[d].fields[f].visibilities = (Vis**)malloc(datasets[d].data.total_frequencies*sizeof(Vis*));
-                        datasets[d].fields[f].device_visibilities = (Vis**)malloc(datasets[d].data.total_frequencies*sizeof(Vis*));
-                        datasets[d].fields[f].nu = (float*)malloc(datasets[d].data.total_frequencies*sizeof(float));
-                        if(gridding) {
-                                datasets[d].fields[f].gridded_visibilities = (Vis **) malloc(datasets[d].data.total_frequencies * sizeof(Vis * ));
-                                datasets[d].fields[f].backup_visibilities = (Vis **) malloc(datasets[d].data.total_frequencies * sizeof(Vis * ));
-                        }
 
-                        for(int i=0; i<datasets[d].data.total_frequencies; i++) {
-                                datasets[d].fields[f].visibilities[i] = (Vis*)malloc(datasets[d].data.nstokes*sizeof(Vis));
-                                datasets[d].fields[f].device_visibilities[i] = (Vis*)malloc(datasets[d].data.nstokes*sizeof(Vis));
 
-                                if(gridding) {
-                                        datasets[d].fields[f].gridded_visibilities[i] = (Vis*)malloc(datasets[d].data.nstokes*sizeof(Vis));
-                                        datasets[d].fields[f].backup_visibilities[i] = (Vis*)malloc(datasets[d].data.nstokes*sizeof(Vis));
-                                }
-                        }
+        // REMEMBER TO INITIALIZE GRIDDED VISIBILITIES VECTORS AS M*N ZEROS!
+        cufftComplex cufft_zeroval;
+        cufft_zeroval.x = 0.0f;
+        cufft_zeroval.x = 0.0f;
+        double3 zeros;
+        zeros.x = 0.0;
+        zeros.y = 0.0;
+        zeros.z = 0.0;
+        if(gridding){
+          for(int d=0; d<nMeasurementSets; d++) {
+            for(int f=0; f<datasets[d].data.nfields; f++) {
+              for(int i=0; i<datasets[d].data.total_frequencies; i++) {
+                for(int s=0; s<datasets[d].data.nstokes; s++) {
+                  datasets[d].fields[f].gridded_visibilities[i][s].uvw.resize(M*N, zeros);
+                  datasets[d].fields[f].gridded_visibilities[i][s].weight.resize(M*N, 0.0f);
+                  datasets[d].fields[f].gridded_visibilities[i][s].S.resize(M*N, 0);
+                  datasets[d].fields[f].gridded_visibilities[i][s].Vo.resize(M*N, cufft_zeroval);
+                  datasets[d].fields[f].gridded_visibilities[i][s].Vm.resize(M*N, cufft_zeroval);
                 }
+              }
+            }
+          }
         }
 
 
-        //ALLOCATE MEMORY AND GET TOTAL NUMBER OF VISIBILITIES
-        for(int d=0; d<nMeasurementSets; d++) {
-                for(int f=0; f<datasets[d].data.nfields; f++) {
-                        for(int i=0; i < datasets[d].data.total_frequencies; i++) {
-                                for(int s=0; s<datasets[d].data.nstokes; s++) {
-                                        datasets[d].fields[f].visibilities[i][s].uvw = (double3*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(double3));
-                                        datasets[d].fields[f].visibilities[i][s].weight = (float*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(float));
-                                        datasets[d].fields[f].visibilities[i][s].Vo = (cufftComplex*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-                                        datasets[d].fields[f].visibilities[i][s].Vm = (cufftComplex*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-
-                                        if(gridding)
-                                        {
-                                                datasets[d].fields[f].gridded_visibilities[i][s].uvw = (double3*)malloc(M*N*sizeof(double3));
-                                                datasets[d].fields[f].gridded_visibilities[i][s].weight = (float*)malloc(M*N*sizeof(float));
-                                                datasets[d].fields[f].gridded_visibilities[i][s].S = (int*)malloc(M*N*sizeof(int));
-                                                datasets[d].fields[f].gridded_visibilities[i][s].Vo = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-                                                datasets[d].fields[f].gridded_visibilities[i][s].Vm = (cufftComplex*)malloc(M*N*sizeof(cufftComplex));
-
-                                                memset(datasets[d].fields[f].gridded_visibilities[i][s].uvw, 0, M*N*sizeof(double3));
-                                                memset(datasets[d].fields[f].gridded_visibilities[i][s].weight, 0, M*N*sizeof(float));
-                                                memset(datasets[d].fields[f].gridded_visibilities[i][s].S, 0, M*N*sizeof(int));
-                                                memset(datasets[d].fields[f].gridded_visibilities[i][s].Vo, 0, M*N*sizeof(cufftComplex));
-                                                memset(datasets[d].fields[f].gridded_visibilities[i][s].Vm, 0, M*N*sizeof(cufftComplex));
-
-                                                //Allocate memory to backup original visibilities after gridding
-                                                datasets[d].fields[f].backup_visibilities[i][s].uvw = (double3*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(double3));
-                                                datasets[d].fields[f].backup_visibilities[i][s].weight = (float*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(float));
-                                                datasets[d].fields[f].backup_visibilities[i][s].Vo = (cufftComplex*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-                                                datasets[d].fields[f].backup_visibilities[i][s].Vm = (cufftComplex*)malloc(datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-
-                                                memset(datasets[d].fields[f].backup_visibilities[i][s].uvw, 0, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(double3));
-                                                memset(datasets[d].fields[f].backup_visibilities[i][s].weight, 0, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(float));
-                                                memset(datasets[d].fields[f].backup_visibilities[i][s].Vo, 0, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-                                                memset(datasets[d].fields[f].backup_visibilities[i][s].Vm, 0, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]*sizeof(cufftComplex));
-
-                                        }
-                                }
-                        }
-                }
-        }
 
         if(verbose_flag) {
                 printf("Reading visibilities and FITS input files...\n");
-        }
-
-        for(int d=0; d<nMeasurementSets; d++) {
-                if(apply_noise) {
-                        iohandler->IoreadMS(datasets[d].name, datasets[d].fields, datasets[d].data, true, false, random_probability);
-                }else{
-                        iohandler->IoreadMS(datasets[d].name, datasets[d].fields, datasets[d].data, false, false, random_probability);
-                }
         }
 
         this->visibilities = new Visibilities();
@@ -504,16 +464,16 @@ void MFS::setDevice()
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
                                                 gpuErrchk(cudaMalloc(&datasets[d].fields[f].device_visibilities[i][s].Vr,
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
-                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].visibilities[i][s].uvw,
+                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].visibilities[i][s].uvw.data(),
                                                                      sizeof(double3) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],
                                                                      cudaMemcpyHostToDevice));
 
                                                 gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].weight,
-                                                                     datasets[d].fields[f].visibilities[i][s].weight,
+                                                                     datasets[d].fields[f].visibilities[i][s].weight.data(),
                                                                      sizeof(float) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],
                                                                      cudaMemcpyHostToDevice));
 
-                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].Vo, datasets[d].fields[f].visibilities[i][s].Vo,
+                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].Vo, datasets[d].fields[f].visibilities[i][s].Vo.data(),
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],
                                                                      cudaMemcpyHostToDevice));
 
@@ -544,11 +504,11 @@ void MFS::setDevice()
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
                                                 gpuErrchk(cudaMalloc(&datasets[d].fields[f].device_visibilities[i][s].Vr,
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
-                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].uvw,datasets[d].fields[f].visibilities[i][s].uvw,
+                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].uvw,datasets[d].fields[f].visibilities[i][s].uvw.data(),
                                                                      sizeof(double3) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],cudaMemcpyHostToDevice));
-                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].weight,datasets[d].fields[f].visibilities[i][s].weight,
+                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].weight,datasets[d].fields[f].visibilities[i][s].weight.data(),
                                                                      sizeof(float) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],cudaMemcpyHostToDevice));
-                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].Vo,datasets[d].fields[f].visibilities[i][s].Vo,
+                                                gpuErrchk(cudaMemcpy(datasets[d].fields[f].device_visibilities[i][s].Vo,datasets[d].fields[f].visibilities[i][s].Vo.data(),
                                                                      sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s],cudaMemcpyHostToDevice));
                                                 gpuErrchk(cudaMemset(datasets[d].fields[f].device_visibilities[i][s].Vr, 0, sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
                                                 gpuErrchk(cudaMemset(datasets[d].fields[f].device_visibilities[i][s].Vm, 0,sizeof(cufftComplex) * datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]));
@@ -727,8 +687,8 @@ void MFS::setDevice()
                                 cudaSetDevice(selected);
                                 for(int i=0; i<datasets[d].data.total_frequencies; i++) {
                                         for(int s=0; s<datasets[d].data.nstokes; s++) {
-                                                hermitianSymmetry << < datasets[d].fields[f].visibilities[i][s].numBlocksUV,
-                                                        datasets[d].fields[f].visibilities[i][s].threadsPerBlockUV >> >
+                                                hermitianSymmetry << < datasets[d].fields[f].device_visibilities[i][s].numBlocksUV,
+                                                        datasets[d].fields[f].device_visibilities[i][s].threadsPerBlockUV >> >
                                                 (datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].device_visibilities[i][s].Vo, datasets[d].fields[f].nu[i], datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
                                                 gpuErrchk(cudaDeviceSynchronize());
                                         }
@@ -745,8 +705,8 @@ void MFS::setDevice()
                                         cudaSetDevice((i%num_gpus) + firstgpu); // "% num_gpus" allows more CPU threads than GPU devices
                                         cudaGetDevice(&gpu_id);
                                         for(int s=0; s<datasets[d].data.nstokes; s++) {
-                                                hermitianSymmetry << < datasets[d].fields[f].visibilities[i][s].numBlocksUV,
-                                                        datasets[d].fields[f].visibilities[i][s].threadsPerBlockUV >> >
+                                                hermitianSymmetry << < datasets[d].fields[f].device_visibilities[i][s].numBlocksUV,
+                                                        datasets[d].fields[f].device_visibilities[i][s].threadsPerBlockUV >> >
                                                 (datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].device_visibilities[i][s].Vo, datasets[d].fields[f].nu[i], datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
                                                 gpuErrchk(cudaDeviceSynchronize());
                                         }
@@ -1021,10 +981,10 @@ void MFS::unSetDevice()
                         for(int i=0; i<datasets[d].data.total_frequencies; i++) {
                                 for(int s=0; s<datasets[d].data.nstokes; s++) {
                                         if (datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
-                                                free(datasets[d].fields[f].visibilities[i][s].uvw);
-                                                free(datasets[d].fields[f].visibilities[i][s].weight);
-                                                free(datasets[d].fields[f].visibilities[i][s].Vo);
-                                                free(datasets[d].fields[f].visibilities[i][s].Vm);
+                                                datasets[d].fields[f].visibilities[i][s].uvw.clear();
+                                                datasets[d].fields[f].visibilities[i][s].weight.clear();
+                                                datasets[d].fields[f].visibilities[i][s].Vo.clear();
+                                                datasets[d].fields[f].visibilities[i][s].Vm.clear();
                                         }
                                 }
                         }

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <cuda.h>
 #include "math_constants.h"
@@ -52,17 +53,26 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 typedef struct MSData {
         int n_internal_frequencies;
         int total_frequencies;
-        int *channels;
+        std::vector<int> channels;
         int nfields;
         int nsamples;
         int nstokes;
-        int *corr_type;
+        std::vector<int> corr_type;
 
         int max_number_visibilities_in_channel_and_stokes;
         int max_number_vis;
 }MSData;
 
-typedef struct visibilities {
+typedef struct host_visibilities {
+        std::vector<double3> uvw;
+        std::vector<float> weight;
+        std::vector<cufftComplex> Vo;
+        std::vector<cufftComplex> Vm;
+        std::vector<cufftComplex> Vr;
+        std::vector<int> S;
+}HVis;
+
+typedef struct device_visibilities {
         double3 *uvw;
         float *weight;
         cufftComplex *Vo;
@@ -72,7 +82,7 @@ typedef struct visibilities {
 
         int threadsPerBlockUV;
         int numBlocksUV;
-}Vis;
+}DVis;
 
 typedef struct field {
         int valid_frequencies;
@@ -80,22 +90,22 @@ typedef struct field {
         double phs_ra, phs_dec;
         float ref_xobs, ref_yobs;
         float phs_xobs, phs_yobs;
-        float *nu;
         float *atten_image;
-        long **numVisibilitiesPerFreqPerStoke;
-        long *numVisibilitiesPerFreq;
-        long **backup_numVisibilitiesPerFreqPerStoke;
-        long *backup_numVisibilitiesPerFreq;
-        Vis **visibilities;
-        Vis **device_visibilities;
-        Vis **gridded_visibilities;
-        Vis **backup_visibilities;
+        std::vector<float> nu;
+        std::vector<std::vector<long>> numVisibilitiesPerFreqPerStoke;
+        std::vector<long> numVisibilitiesPerFreq;
+        std::vector<std::vector<long>> backup_numVisibilitiesPerFreqPerStoke;
+        std::vector<long> backup_numVisibilitiesPerFreq;
+        std::vector<std::vector<HVis>> visibilities;
+        std::vector<std::vector<DVis>> device_visibilities;
+        std::vector<std::vector<HVis>> gridded_visibilities;
+        std::vector<std::vector<HVis>> backup_visibilities;
 }Field;
 
 typedef struct MSDataset {
         char *name;
         char *oname;
-        Field *fields;
+        std::vector<Field> fields;
         MSData data;
         float antenna_diameter;
         float pb_factor;
@@ -111,16 +121,15 @@ typedef struct canvas_variables {
         float beam_noise;
 }canvasVariables;
 
-__host__ MSData countVisibilities(char const *MS_name, Field *&fields, int gridding);
 __host__ canvasVariables readCanvas(char *canvas_name, fitsfile *&canvas, float b_noise_aux, int status_canvas, int verbose_flag);
 __host__ void readFITSImageValues(char *imageName, fitsfile *file, float *&values, int status, long M, long N);
-__host__ void readMS(char const *MS_name, Field *fields, MSData data, bool noise, bool W_projection, float random_prob);
+__host__ void readMS(char const *MS_name, std::vector<Field>& fields, MSData *data, bool noise, bool W_projection, float random_prob, int gridding);
 
 __host__ void MScopy(char const *in_dir, char const *in_dir_dest);
 
-__host__ void residualsToHost(Field *fields, MSData data, int num_gpus, int firstgpu);
+__host__ void residualsToHost(std::vector<Field>& fields, MSData data, int num_gpus, int firstgpu);
 
-__host__ void writeMS(char const *infile, char const *outfile, Field *fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag);
+__host__ void writeMS(char const *infile, char const *outfile, std::vector<Field> fields, MSData data, float random_probability, bool sim, bool noise, bool W_projection, int verbose_flag);
 
 __host__ void fitsOutputCufftComplex(cufftComplex *I, fitsfile *canvas, char *out_image, char *mempath, int iteration, float fg_scale, long M, long N, int option);
 __host__ void OFITS(float *I, fitsfile *canvas, char *path, char *name_image, char *units, int iteration, int index, float fg_scale, long M, long N);

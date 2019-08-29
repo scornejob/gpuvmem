@@ -12,19 +12,23 @@ Gridding::Gridding()
 
 void Gridding::applyCriteria(Visibilities *v)
 {
+        double3 valzero;
+        cufftComplex complexValZero;
+        valzero.x = 0.0;
+        valzero.y = 0.0;
+        valzero.z = 0.0;
+
+        complexValZero.x = 0.0f;
+        complexValZero.y = 0.0f;
         for(int d=0; d< v->getNDatasets(); d++) {
                 for(int f=0; f< v->getMSDataset()[d].data.nfields; f++) {
                         for(int i=0; i < v->getMSDataset()[d].data.total_frequencies; i++) {
                                 for(int s=0; i < v->getMSDataset()[d].data.nstokes; s++) {
-                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].uvw = (double3 *) malloc(M * N * sizeof(double3));
-                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].weight = (float *) malloc(M * N * sizeof(float));
-                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].Vo = (cufftComplex *) malloc(
-                                                M * N * sizeof(cufftComplex));
+                                        double3 val;
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].uvw.assign(M * N, valzero);
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].weight.assign(M * N, 0.0f);
+                                        v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].Vo.assign(M * N, complexValZero);
 
-                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].uvw, 0, M * N * sizeof(double3));
-                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].weight, 0, M * N * sizeof(float));
-                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].S, 0, M * N * sizeof(int));
-                                        memset(v->getMSDataset()[d].fields[f].gridded_visibilities[i][s].Vo, 0, M * N * sizeof(cufftComplex));
                                 }
                         }
                 }
