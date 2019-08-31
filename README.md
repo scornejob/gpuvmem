@@ -25,7 +25,9 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 
 # Installation
 
-1.  Install casacore latest stable version v3.1.2
+1.  Install git-lfs
+  a. `sudo apt-get install git-lfs`
+2.  Install casacore latest stable version v3.1.2
 
   a. `git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git`
 
@@ -43,7 +45,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 
   g. `sudo make install`
 
-2.  Install cfitsio
+3.  Install cfitsio
 
   a. `sudo apt-get -y install libcfitsio-dev`
 
@@ -53,6 +55,7 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 
 -   cfitsio - Usually the package is called `libcfitsio-dev`.
 -   cmake >= 3.8
+-   git-lfs - `git-lfs`
 -   casacore >= v3.1.2 (<https://github.com/casacore/casacore> - branch v3.1.2. please make sure you have installed the github version, Ubuntu package doesn't work well since doesn't have the `put()` function).
 -   CUDA 9, 9.1, 9.2, 10.0 or 10.1 **Update 2**. Remember to add binaries and libraries to the **PATH** and **LD_LIBRARY_PATH** environment variables, respectively.
 -   OpenMP
