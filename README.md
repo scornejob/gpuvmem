@@ -26,7 +26,9 @@ If you use GPUVMEM for your research please do not forget to cite Cárcamo et al
 # Installation
 
 1.  Install git-lfs
+
   a. `sudo apt-get install git-lfs`
+  
 2.  Install casacore latest stable version v3.1.2
 
   a. `git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git`
