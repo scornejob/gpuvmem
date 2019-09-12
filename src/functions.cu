@@ -2337,7 +2337,8 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
         float un_rand = 0.0f;
         float s_d = (2.4*2.4)/valid_pixels;
         accepted_afterburndown = accepted;
-
+        printf("Accepted inside %d\n", accepted_afterburndown);
+        exit(-1);
 
         /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
 
@@ -2393,7 +2394,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
         float n_I_nu_0;
         float n_alpha;
 
-        for(real_iterations = 1; real_iterations<= iterations; real_iterations++) {
+        for(real_iterations = 1; real_iterations <= iterations; real_iterations++) {
 
                 if(adaptive && real_iterations >= burndown_steps + 100) {
                         //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
