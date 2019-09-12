@@ -873,6 +873,7 @@ __host__ int main(int argc, char **argv) {
         printf("Iterations: %d\n", it_maximum);
         printf("Burn in steps: %d\n", variables.burndown_steps);
         printf("Accepted: %d\n", variables.current_k);
+        
         MetropolisHasting(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
 
         t = clock() - t;
