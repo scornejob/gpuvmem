@@ -1,4 +1,4 @@
-noise_cut	149517684.8874598
-t_telescope	7
+noise_cut	0.999999999767
+t_telescope	4
 ftol		1.0e-12
 random_probability	1.0
