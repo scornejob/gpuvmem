@@ -870,6 +870,7 @@ __host__ int main(int argc, char **argv) {
         gpuErrchk(cudaMemset(theta_device, 0, sizeof(float2)*M*N));
         gpuErrchk(cudaMemcpy2D(theta_device, sizeof(float2), theta_host, sizeof(float2), sizeof(float2), M*N, cudaMemcpyHostToDevice));
 
+        printf("Burn in steps: %d\n", variables.burndown_steps);
         MetropolisHasting(device_2I, theta_device, it_maximum, variables.burndown_steps, variables.current_k);
 
         t = clock() - t;
