@@ -92,7 +92,7 @@ __host__ void do_gridding(Field *fields, freqData *data, double deltau, double d
 __host__ float calculateNoise(Field *fields, freqData data, int *total_visibilities, int blockSizeV, int gridding);
 __host__ void clipping(cufftComplex *I, int iterations);
 __host__ float deviceReduce(float *in, long N);
-__host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int burndown_steps, int accepted);
+__host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int *burndown_steps, int *accepted);
 __host__ void Metropolis(float2 *I, float2 *theta, int iterations, int burndown_steps, int accepted);
 
 __device__ float EllipticGaussianKernel(float amplitude, int x_c, int y_c, float bmaj, float bmin, float bpa, double DELTAX, double DELTAY);

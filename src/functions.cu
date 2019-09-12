@@ -2318,7 +2318,7 @@ __host__ float chiCuadrado(float2 *I)
 }
 
 
-__host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int burndown_steps, int accepted)
+__host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int *burndown_steps, int *accepted)
 {
         if(num_gpus == 1) {
                 cudaSetDevice(selected);
@@ -2336,9 +2336,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
         float p = 0.0f;
         float un_rand = 0.0f;
         float s_d = (2.4*2.4)/valid_pixels;
-        accepted_afterburndown = accepted;
-        printf("Accepted inside %d\n", accepted_afterburndown);
-        exit(-1);
+        accepted_afterburndown = *accepted;
 
         /**************** GPU MEMORY FOR TOTAL OUT I_nu_0 and alpha ***************/
 
@@ -2396,13 +2394,13 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
 
         for(real_iterations = 1; real_iterations <= iterations; real_iterations++) {
 
-                if(adaptive && real_iterations >= burndown_steps + 100) {
+                if(adaptive && real_iterations >= *burndown_steps + 100) {
                         //__global__ void updateTheta(float2 *theta, double2 *total, double2 *total2, float s_d, int samples, long N)
                         updateTheta<<<numBlocksNN, threadsPerBlockNN>>>(theta, Q_k_out, s_d, accepted_afterburndown, N);
                         gpuErrchk(cudaDeviceSynchronize());
                 }
 
-                if(real_iterations == burndown_steps) {
+                if(real_iterations == *burndown_steps) {
                   if(checkpoint){
                     gpuErrchk(cudaMemcpy2D(M_k_out, sizeof(double2), host_M_k, sizeof(double2), sizeof(double2), M*N, cudaMemcpyHostToDevice));
                   }
@@ -2449,7 +2447,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
                           gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
                           /*if(print_images && i%3 == 0)
                              float2toImage(I, mod_in, out_image, mempath, i, M, N, 1);*/
-                          if(real_iterations >= burndown_steps) {
+                          if(real_iterations >= *burndown_steps) {
                             accepted_afterburndown++;
                             sumI<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, Q_k_out, I, accepted_afterburndown, N);
                             gpuErrchk(cudaDeviceSynchronize());
@@ -2461,7 +2459,7 @@ __host__ void MetropolisHasting(float2 *I, float2 *theta, int iterations, int bu
                           un_rand = Random();
                           if(-log(un_rand) > delta_chi2) {
                                   gpuErrchk(cudaMemcpy2D(I, sizeof(float2), temp, sizeof(float2), sizeof(float2), M*N, cudaMemcpyDeviceToDevice));
-                                  if(real_iterations >= burndown_steps) {
+                                  if(real_iterations >= *burndown_steps) {
                                     accepted_afterburndown++;
                                     sumI<<<numBlocksNN, threadsPerBlockNN>>>(M_k_out, Q_k_out, I, accepted_afterburndown, N);
                                     gpuErrchk(cudaDeviceSynchronize());
