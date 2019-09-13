@@ -1,1 +1,6 @@
 *.fits filter=lfs diff=lfs merge=lfs -text
+tests/FREQ78 filter=lfs diff=lfs merge=lfs -text
+tests/M87 filter=lfs diff=lfs merge=lfs -text
+tests/selfcalband9 filter=lfs diff=lfs merge=lfs -text
+tests/antennae filter=lfs diff=lfs merge=lfs -text
+tests/co65 filter=lfs diff=lfs merge=lfs -text
