@@ -20,13 +20,13 @@
 #include "copyrightwarranty.cuh"
 #include <cooperative_groups.h>
 
-typedef struct varsPerGPU {
+typedef struct varsPolarization {
         float *device_chi2;
         float *device_dchi2;
         cufftHandle plan;
-        cufftComplex *device_I_nu;
+        cufftComplex *device_IQUV_nu;
         cufftComplex *device_V;
-}varsPerGPU;
+}varsPol;
 
 typedef struct variables {
         char *input;
