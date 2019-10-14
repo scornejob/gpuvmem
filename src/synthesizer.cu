@@ -699,16 +699,6 @@ void MFS::run()
                 {
                         optimizator->setImage(image);
                         optimizator->minimizate();
-                }else if(image_count == 2) {
-                        optimizator->setImage(image);
-                        optimizator->setFlag(0);
-                        optimizator->minimizate();
-                        optimizator->setFlag(1);
-                        optimizator->minimizate();
-                        optimizator->setFlag(2);
-                        optimizator->minimizate();
-                        optimizator->setFlag(3);
-                        optimizator->minimizate();
                 }
         }else{
                 (this->Order)(optimizator, image);
