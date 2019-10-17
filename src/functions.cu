@@ -2587,7 +2587,6 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                         ip->calculateInu(vars_gpu[0].device_I_nu, I, datasets[d].fields[f].nu[i]);
 
                                         ip->apply_beam(vars_gpu[0].device_I_nu, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].fields[f].nu[i]);
-                                        gpuErrchk(cudaDeviceSynchronize());
 
                                         //FFT 2D
                                         FFT2D(vars_gpu[0].device_V, vars_gpu[0].device_I_nu, vars_gpu[0].plan, M, N, false);
@@ -2645,11 +2644,8 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
                                         cudaGetDevice(&gpu_id);
                                         ip->calculateInu(vars_gpu[i % num_gpus].device_I_nu, I, datasets[d].fields[f].nu[i]);
 
-                                        //apply_beam<<<numBlocksNN, threadsPerBlockNN>>>(beam_fwhm, beam_freq, beam_cutoff, vars_gpu[i%num_gpus].device_I_nu, device_fg_image, N, fields[f].ref_xobs, fields[f].ref_yobs, fg_scale, fields[f].visibilities[i].freq, DELTAX, DELTAY);
                                         ip->apply_beam(vars_gpu[i % num_gpus].device_I_nu, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs,
                                                        datasets[d].fields[f].ref_yobs, datasets[d].fields[f].nu[i]);
-                                        gpuErrchk(cudaDeviceSynchronize());
-
 
                                         //FFT 2D
                                         FFT2D(vars_gpu[i % num_gpus].device_V, vars_gpu[i % num_gpus].device_I_nu, vars_gpu[i % num_gpus].plan, M, N, false);
