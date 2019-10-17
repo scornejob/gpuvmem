@@ -750,6 +750,7 @@ void MFS::run()
                 fclose(outfile);
         }
         //Pass residuals to host
+        //TODO: Change the way images are saved!
         printf("Saving final image to disk\n");
         if(IoOrderEnd == NULL) {
                 iohandler->IoPrintImage(image->getImage(), mod_in, "", out_image, "JY/PIXEL", iter, 0, fg_scale, M, N);
