@@ -1585,27 +1585,6 @@ __global__ void residual(cufftComplex *Vr, cufftComplex *Vm, cufftComplex *Vo, l
 }
 
 
-
-__global__ void clipWNoise(cufftComplex *fg_image, float *noise, float *I, long N, float noise_cut, float MINPIX, float eta)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-
-        if(noise[N*i+j] > noise_cut) {
-                if(eta > 0.0) {
-                        I[N*i+j] = 0.0;
-                }
-                else{
-                        I[N*i+j] = -1.0 * eta * MINPIX;
-                }
-
-        }
-
-        fg_image[N*i+j].x = I[N*i+j];
-        fg_image[N*i+j].y = 0;
-}
-
 __global__ void clip2IWNoise(float *noise, float *I, long N, long M, float noise_cut, float MINPIX, float alpha_start, float eta, float threshold, int schedule)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1627,15 +1606,6 @@ __global__ void clip2IWNoise(float *noise, float *I, long N, long M, float noise
 }
 
 
-__global__ void getGandDGG(float *gg, float *dgg, float *xi, float *g, long N)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-        gg[N*i+j] = g[N*i+j] * g[N*i+j];
-        dgg[N*i+j] = (xi[N*i+j] + g[N*i+j]) * xi[N*i+j];
-}
-
 __global__ void getGGandDGG(float *gg, float *dgg, float* xi, float* g, long N, long M, int image)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1652,17 +1622,6 @@ __global__ void getGGandDGG(float *gg, float *dgg, float* xi, float* g, long N, 
         dgg[N*i+j] += dgg_temp;
 }
 
-__global__ void clip(cufftComplex *I, long N, float MINPIX)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-        if(I[N*i+j].x < MINPIX && MINPIX >= 0.0) {
-                I[N*i+j].x = MINPIX;
-        }
-        I[N*i+j].y = 0;
-}
-
 __global__ void clip(float *I, long N, float MINPIX)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1673,30 +1632,6 @@ __global__ void clip(float *I, long N, float MINPIX)
         }
 }
 
-__global__ void clip2I(float *I, long N, float MINPIX)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-        if(I[N*i+j] < MINPIX && MINPIX >= 0.0) {
-                I[N*i+j] = MINPIX;
-        }
-}
-
-__global__ void newP(float *p, float *xi, float xmin, float MINPIX, float eta, long N)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-        xi[N*i+j] *= xmin;
-        if(p[N*i+j] + xi[N*i+j] > -1.0*eta*MINPIX) {
-                p[N*i+j] += xi[N*i+j];
-        }else{
-                p[N*i+j] = -1.0*eta*MINPIX;
-                xi[N*i+j] = 0.0;
-        }
-        //p[N*i+j].y = 0.0;
-}
 
 __global__ void newP(float*p, float*xi, float xmin, long N, long M, float MINPIX, float eta, int image)
 {
@@ -1722,18 +1657,6 @@ __global__ void newPNoPositivity(float *p, float *xi, float xmin, long N, long M
         p[N*M*image+N*i+j] += xi[N*M*image+N*i+j];
 }
 
-__global__ void evaluateXt(float *xt, float *pcom, float *xicom, float x, float MINPIX, float eta, long N)
-{
-        int j = threadIdx.x + blockDim.x * blockIdx.x;
-        int i = threadIdx.y + blockDim.y * blockIdx.y;
-
-        if(pcom[N*i+j] + x * xicom[N*i+j] > -1.0*eta*MINPIX) {
-                xt[N*i+j] = pcom[N*i+j] + x * xicom[N*i+j];
-        }else{
-                xt[N*i+j] = -1.0*eta*MINPIX;
-        }
-        //xt[N*i+j].y = 0.0;
-}
 
 __global__ void evaluateXt(float*xt, float*pcom, float*xicom, float x, long N, long M, float MINPIX, float eta, int image)
 {
