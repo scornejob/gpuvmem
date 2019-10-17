@@ -2565,35 +2565,41 @@ __host__ float chi2(float *I, VirtualImageProcessor *ip)
         float resultPhi = 0.0;
         float resultchi2  = 0.0;
 
-        if(clip_flag) {
+        /*if(clip_flag) {
                 ip->clip(I);
-        }
-
-        ip->clipWNoise(I);
+           }*/
+        for(int index = 0; index < image_count; index++)
+                ip->clipWNoise(I, index);
 
         for(int d=0; d<nMeasurementSets; d++) {
                 for(int f=0; f<datasets[d].data.nfields; f++) {
                         if(num_gpus == 1) {
                                 cudaSetDevice(selected);
                                 for(int i=0; i<datasets[d].data.total_frequencies; i++) {
+                                        for(int index = 0; index < image_count; index++) {
+                                                ip->calculateInu(vars_gpu[0].device_I_nu, I, datasets[d].fields[f].nu[i], index);
 
-                                        ip->calculateInu(vars_gpu[0].device_I_nu, I, datasets[d].fields[f].nu[i]);
+                                                ip->apply_beam(vars_gpu[0].device_I_nu, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].fields[f].nu[i], index);
 
-                                        ip->apply_beam(vars_gpu[0].device_I_nu, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].fields[f].nu[i]);
-                                        gpuErrchk(cudaDeviceSynchronize());
+                                                //FFT 2D
+                                                FFT2D(vars_gpu[0].device_V, vars_gpu[0].device_I_nu, vars_gpu[0].plan, M, N, false, index);
 
-                                        //FFT 2D
-                                        FFT2D(vars_gpu[0].device_V, vars_gpu[0].device_I_nu, vars_gpu[0].plan, M, N, false);
-
-                                        // PHASE_ROTATE
-                                        phase_rotate <<< numBlocksNN, threadsPerBlockNN >>>
-                                        (vars_gpu[0].device_V, M, N, datasets[d].fields[f].phs_xobs, datasets[d].fields[f].phs_yobs);
-                                        gpuErrchk(cudaDeviceSynchronize());
+                                                // PHASE_ROTATE
+                                                phase_rotate <<< numBlocksNN, threadsPerBlockNN >>>
+                                                (vars_gpu[0].device_V, M, N, datasets[d].fields[f].phs_xobs, datasets[d].fields[f].phs_yobs, index);
+                                                gpuErrchk(cudaDeviceSynchronize());
+                                        }
 
                                         for(int s=0; s<datasets[d].data.nstokes; s++) {
                                                 if (datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
 
                                                         gpuErrchk(cudaMemset(vars_gpu[0].device_chi2, 0, sizeof(float) * max_number_vis));
+
+                                                        /*
+                                                         * Create XX, YY, XY, YX, LL, RR, RL, LR images
+                                                         *
+                                                         */
+
 
                                                         // BILINEAR INTERPOLATION
                                                         vis_mod <<< datasets[d].fields[f].visibilities[i][s].numBlocksUV,
@@ -2672,42 +2678,6 @@ __host__ void dchi2(float *I, float *dxi2, float *result_dchi2, VirtualImageProc
                                                                 (device_noise_image, result_dchi2, vars_gpu[0].device_dchi2, I, datasets[d].fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
                                                         gpuErrchk(cudaDeviceSynchronize());
 
-                                                }
-                                        }
-                                }
-                        }
-                }else{
-                        for(int f=0; f<datasets[d].data.nfields; f++) {
-                          #pragma omp parallel for schedule(static,1)
-                                for (int i = 0; i < datasets[d].data.total_frequencies; i++)
-                                {
-                                        unsigned int j = omp_get_thread_num();
-                                        //unsigned int num_cpu_threads = omp_get_num_threads();
-                                        // set and check the CUDA device for this CPU thread
-                                        int gpu_id = -1;
-                                        cudaSetDevice((i%num_gpus) + firstgpu); // "% num_gpus" allows more CPU threads than GPU devices
-                                        cudaGetDevice(&gpu_id);
-                                        for(int s=0; s<datasets[d].data.nstokes; s++) {
-                                                if (datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s] > 0) {
-                                                        gpuErrchk(cudaMemset(vars_gpu[i % num_gpus].device_dchi2, 0, sizeof(float) *
-                                                                             M*N));
-                                                        //size_t shared_memory;
-                                                        //shared_memory = 3*fields[f].numVisibilitiesPerFreq[i]*sizeof(float) + fields[f].numVisibilitiesPerFreq[i]*sizeof(cufftComplex);
-                                                        DChi2 <<< numBlocksNN, threadsPerBlockNN >>> (device_noise_image, vars_gpu[i % num_gpus].device_dchi2, datasets[d].fields[f].device_visibilities[i][s].Vr, datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].device_visibilities[i][s].weight, N, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].fields[f].phs_xobs, datasets[d].fields[f].phs_yobs, DELTAX, DELTAY, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].nu[i]);
-                                                        //DChi2<<<numBlocksNN, threadsPerBlockNN, shared_memory>>>(device_noise_image, vars_gpu[i%num_gpus].device_dchi2, fields[f].device_visibilities[i][s].Vr, fields[f].device_visibilities[i][s].uvw, fields[f].device_visibilities[i][s].weight, N, fields[f].numVisibilitiesPerFreqPerStoke[i][s], fg_scale, noise_cut, fields[f].ref_xobs, fields[f].ref_yobs, fields[f].phs_xobs, fields[f].phs_yobs, DELTAX, DELTAY, antenna_diameter, pb_factor, pb_cutoff, fields[f].nu[i]);
-                                                        gpuErrchk(cudaDeviceSynchronize());
-
-
-                                          #pragma omp critical
-                                                        {
-                                                                if (flag_opt % 2 == 0)
-                                                                        DChi2_total_I_nu_0 <<< numBlocksNN, threadsPerBlockNN >>>
-                                                                        (device_noise_image, result_dchi2, vars_gpu[i % num_gpus].device_dchi2, I, datasets[d].fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
-                                                                else
-                                                                        DChi2_total_alpha <<< numBlocksNN, threadsPerBlockNN >>>
-                                                                        (device_noise_image, result_dchi2, vars_gpu[i % num_gpus].device_dchi2, I, datasets[d].fields[f].nu[i], nu_0, noise_cut, fg_scale, threshold, N, M);
-                                                                gpuErrchk(cudaDeviceSynchronize());
-                                                        }
                                                 }
                                         }
                                 }
