@@ -2559,7 +2559,28 @@ __global__ void noise_reduction(float *noise_I, long N, long M){
 
 __host__ float chi2(float *I, VirtualImageProcessor *ip)
 {
-
+        /*
+         *
+         *  The global variable image_POL is the image created using the Stokes formulas
+         *
+         *
+         * For linear polarized emission:
+         *
+         *
+         * XX = I + Q = F(I) + F(Q)
+         * YY = I - Q = F(I) - F(Q)
+         * XY = U + iV = F(U) + iF(V)
+         * YX = U - iV = F(U) - iF(V)
+         *
+         *
+         * For circular polarized emission:
+         *
+         * RR = I + V = F(I) + F(V)
+         * LL = I - V = F(I) - F(V)
+         * RL = Q + iU = F(Q) + iF(U)
+         * LR = Q - iU = F(Q) - iF(U)
+         *
+         */
         cudaSetDevice(firstgpu);
 
         float resultPhi = 0.0;
