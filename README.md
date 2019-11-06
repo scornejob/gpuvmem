@@ -198,10 +198,10 @@ casapy --log2term --nogui -c restore_continuum_ms.py residual_folder.ms mem_mode
 # CONTRIBUTORS
 
 -   Miguel Cárcamo - The University of Manchester - miguel.carcamo@postgrad.manchester.ac.uk
+-   Simon Casassus - Universidad de Chile - simoncasassus@gmail.com
 -   Nicolás Muñoz - Universidad de Santiago de Chile
 -   Fernando Rannou - Universidad de Santiago de Chile
 -   Pablo Román - Universidad de Santiago de Chile
--   Simón Casassus - Universidad de Chile
 -   Axel Osses - Universidad de Chile
 -   Victor Moral - Universidad de Chile
 
