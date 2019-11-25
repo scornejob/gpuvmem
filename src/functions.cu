@@ -2478,7 +2478,7 @@ __global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float 
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float alpha, nudiv, nudiv_pow_alpha, sum_noise, atten;
+        float alpha, nudiv, nudiv_pow_alpha, sum_weights, atten;
 
         atten = attenuation(antenna_diameter, pb_factor, pb_cutoff, nu, xobs, yobs, DELTAX, DELTAY);
 
@@ -2486,12 +2486,12 @@ __global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float 
         alpha = images[N*M+N*i+j];
         nudiv_pow_alpha = powf(nudiv, alpha);
 
-        sum_noise = 0.0f;
+        sum_weights = 0.0f;
         if(noise[N*i+j] <= noise_cut) {
                 for(int k=0; k<numVisibilities; k++) {
-                        sum_noise +=  w[k];
+                        sum_weights+=  w[k];
                 }
-                noise_I[N*i+j] += atten * atten * sum_noise;
+                noise_I[N*i+j] += atten * atten * sum_weights;
         }else{
                 noise_I[N*i+j] = 0.0f;
         }
@@ -2506,7 +2506,7 @@ __global__ void alpha_Noise(float *noise_I, float *images, float nu, float nu_0,
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2, sum_noise, atten;
+        float I_nu, I_nu_0, alpha, nudiv, nudiv_pow_alpha, log_nu, Ukv, Vkv, cosk, sink, x, y, dchi2, sum_weights, atten;
         int x0, y0;
 
         x0 = xobs;
@@ -2524,7 +2524,7 @@ __global__ void alpha_Noise(float *noise_I, float *images, float nu, float nu_0,
         I_nu = I_nu_0 * nudiv_pow_alpha;
         log_nu = logf(nudiv);
 
-        sum_noise = 0.0f;
+        sum_weights = 0.0f;
         if(noise[N*i+j] <= noise_cut) {
                 for(int v=0; v<numVisibilities; v++) {
                         Ukv = x * UVW[v].x;
@@ -2536,12 +2536,12 @@ __global__ void alpha_Noise(float *noise_I, float *images, float nu, float nu_0,
                         sink = sinpif(2.0*(Ukv+Vkv));
       #endif
                         dchi2 = ((Vr[v].x * cosk) - (Vr[v].y * sink));
-                        sum_noise += w[v] * (atten * I_nu * fg_scale + dchi2);
+                        sum_weights += w[v] * (atten * I_nu * fg_scale + dchi2);
                 }
-                if(sum_noise <= 0.0f)
+                if(sum_weights <= 0.0f)
                         noise_I[N*M+N*i+j]+= 0.0f;
                 else
-                        noise_I[N*M+N*i+j] += log_nu * log_nu * atten * I_nu * fg_scale * sum_noise;
+                        noise_I[N*M+N*i+j] += log_nu * log_nu * atten * I_nu * fg_scale * sum_weights;
         }else{
                 noise_I[N*M+N*i+j] = 0.0f;
         }
