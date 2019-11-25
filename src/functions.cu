@@ -2484,14 +2484,14 @@ __global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float 
 
         nudiv = nu/nu_0;
         alpha = images[N*M+N*i+j];
-        nudiv_pow_alpha = powf(nudiv, alpha);
+        nudiv_pow_alpha = powf(nudiv, 2.0f*alpha);
 
         sum_weights = 0.0f;
         if(noise[N*i+j] <= noise_cut) {
                 for(int k=0; k<numVisibilities; k++) {
                         sum_weights+=  w[k];
                 }
-                noise_I[N*i+j] += atten * atten * sum_weights;
+                noise_I[N*i+j] += atten * atten * sum_weights * nudiv_pow_alpha;
         }else{
                 noise_I[N*i+j] = 0.0f;
         }
