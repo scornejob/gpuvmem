@@ -1,3 +1,4 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7c32eb7e308be0c391c85359da593ee053e2798fa37eafdc7f25fa7decc4099e
-size 70
+noise_cut	10.2
+ftol		1.0e-12
+t_telescope     2
+random_probability 1.0
