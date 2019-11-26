@@ -6,6 +6,8 @@
 *.fatbin
 *.bin
 bin
+bin/*
 build
+build/*
 *.o
 *.idea/*
