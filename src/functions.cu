@@ -1981,12 +1981,9 @@ __device__ float calculateDNormL1(float *I, float lambda, float noise, float noi
         float dL1 = 0.0f;
 
         float c = I[N*M*index+N*i+j];
-        float normI = normf(1, &c);
+        float sign = copysignf(1.0f, c);
         if(noise <= noise_cut) {
-                if(normI > 0.0f)
-                        dL1 = c / normI;
-                else
-                        dL1 = 0.0f;
+                dL1 = sign;
         }
 
         dL1 *= lambda;
@@ -2473,12 +2470,12 @@ __global__ void DChi2_2I(float *noise, float *chain, float *I, float *dchi2, flo
 }
 
 
-__global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float noise_cut, float nu, float nu_0, float *w, float antenna_diameter, float pb_factor, float pb_cutoff, float xobs, float yobs, double DELTAX, double DELTAY, long numVisibilities, long N, long M)
+__global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float noise_cut, float nu, float nu_0, float *w, float antenna_diameter, float pb_factor, float pb_cutoff, float xobs, float yobs, float sum_weights, double DELTAX, double DELTAY, long N, long M)
 {
         int j = threadIdx.x + blockDim.x * blockIdx.x;
         int i = threadIdx.y + blockDim.y * blockIdx.y;
 
-        float alpha, nudiv, nudiv_pow_alpha, sum_weights, atten;
+        float alpha, nudiv, nudiv_pow_alpha, atten;
 
         atten = attenuation(antenna_diameter, pb_factor, pb_cutoff, nu, xobs, yobs, DELTAX, DELTAY);
 
@@ -2486,11 +2483,7 @@ __global__ void I_nu_0_Noise(float *noise_I, float *images, float *noise, float 
         alpha = images[N*M+N*i+j];
         nudiv_pow_alpha = powf(nudiv, 2.0f*alpha);
 
-        sum_weights = 0.0f;
         if(noise[N*i+j] <= noise_cut) {
-                for(int k=0; k<numVisibilities; k++) {
-                        sum_weights+=  w[k];
-                }
                 noise_I[N*i+j] += atten * atten * sum_weights * nudiv_pow_alpha;
         }else{
                 noise_I[N*i+j] = 0.0f;
@@ -3014,7 +3007,7 @@ __host__ void calculateErrors(Image *image){
         gpuErrchk(cudaMalloc((void**)&errors, sizeof(float)*M*N*image->getImageCount()));
         gpuErrchk(cudaMemset(errors, 0, sizeof(float)*M*N*image->getImageCount()));
 
-
+        float sum_weights;
         for(int d=0; d<nMeasurementSets; d++) {
                 if(num_gpus == 1) {
                         cudaSetDevice(selected);
@@ -3022,8 +3015,9 @@ __host__ void calculateErrors(Image *image){
                                 for(int i=0; i<datasets[d].data.total_frequencies; i++) {
                                         for(int s=0; s<datasets[d].data.nstokes; s++) {
                                                 if (datasets[d].fields[f].numVisibilitiesPerFreq[i] > 0) {
+                                                        sum_weights = deviceReduce<float>(datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
                                                         I_nu_0_Noise <<< numBlocksNN, threadsPerBlockNN >>>
-                                                        (errors, image->getImage(), device_noise_image, noise_cut, datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, DELTAX, DELTAY, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s], N, M);
+                                                        (errors, image->getImage(), device_noise_image, noise_cut, datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, sum_weights, DELTAX, DELTAY, N, M);
                                                         gpuErrchk(cudaDeviceSynchronize());
                                                         alpha_Noise <<< numBlocksNN, threadsPerBlockNN >>>
                                                         (errors, image->getImage(), datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].device_visibilities[i][s].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, fg_scale, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s], N, M);
@@ -3034,7 +3028,7 @@ __host__ void calculateErrors(Image *image){
                         }
                 }else{
                         for(int f=0; f<datasets[d].data.nfields; f++) {
-                          #pragma omp parallel for schedule(static,1)
+                          #pragma omp parallel for private(sum_weights) schedule(static,1)
                                 for (int i = 0; i < datasets[d].data.total_frequencies; i++)
                                 {
                                         unsigned int j = omp_get_thread_num();
@@ -3045,11 +3039,11 @@ __host__ void calculateErrors(Image *image){
                                         cudaGetDevice(&gpu_id);
                                         for(int s=0; s<datasets[d].data.nstokes; s++) {
                                                 if (datasets[d].fields[f].numVisibilitiesPerFreq[i] > 0) {
-
-                                          #pragma omp critical
+                                                        sum_weights = deviceReduce<float>(datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s]);
+                                                        #pragma omp critical
                                                         {
                                                                 I_nu_0_Noise << < numBlocksNN, threadsPerBlockNN >> >
-                                                                (errors, image->getImage(), device_noise_image, noise_cut, datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, DELTAX, DELTAY, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s], N, M);
+                                                                (errors, image->getImage(), device_noise_image, noise_cut, datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, sum_weights, DELTAX, DELTAY, N, M);
                                                                 gpuErrchk(cudaDeviceSynchronize());
                                                                 alpha_Noise << < numBlocksNN, threadsPerBlockNN >> >
                                                                 (errors, image->getImage(), datasets[d].fields[f].nu[i], nu_0, datasets[d].fields[f].device_visibilities[i][s].weight, datasets[d].fields[f].device_visibilities[i][s].uvw, datasets[d].fields[f].device_visibilities[i][s].Vr, device_noise_image, noise_cut, DELTAX, DELTAY, datasets[d].fields[f].ref_xobs, datasets[d].fields[f].ref_yobs, datasets[d].antenna_diameter, datasets[d].pb_factor, datasets[d].pb_cutoff, fg_scale, datasets[d].fields[f].numVisibilitiesPerFreqPerStoke[i][s], N, M);
