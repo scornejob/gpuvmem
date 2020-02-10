@@ -4,7 +4,7 @@ on: [push]
 
 jobs: 
     build:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-18.04 #CUDA is very version coupled
         steps:
             - name: Install git-lfs
               run: sudo apt-get -y install git-lfs
@@ -16,5 +16,7 @@ jobs:
               run: cd casacore && mkdir build && cd build && cmake -DUSE_FFTW3=ON -DUSE_OPENMP=ON -DUSE_HDF5=ON -DUSE_THREADS=ON .. && make -j 8 && sudo make install
             - name: Install cfitsio
               run: sudo apt-get -y install libcfitsio-dev
+            - name: Install CUDA
+              run: sudo wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.0.130-1_amd64.deb && sudo dpkg -i cuda-repo-ubuntu1804_10.0.130-1_amd64.deb && sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub && sudo apt-get update && sudo apt-get install cuda
             - name: Retrieve gpuvmem
               run: git clone --single-branch --branch master https://github.com/scornejob/gpuvmem.git
