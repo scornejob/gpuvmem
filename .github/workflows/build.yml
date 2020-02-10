@@ -21,4 +21,4 @@ jobs:
             - name: Retrieve gpuvmem
               run: git clone --single-branch --branch master https://github.com/scornejob/gpuvmem.git
             - name: Build gpuvmem
-              run: cd gpuvmem && mkdir build && export PATH=${PATH}:/usr/local/cuda/bin && export LD_LIBRARY_PATH=/usr/local/cuda/lib64 && cmake .. && make -j 8 
+              run: cd gpuvmem && mkdir build && cd buid && export PATH=${PATH}:/usr/local/cuda/bin && export LD_LIBRARY_PATH=/usr/local/cuda/lib64 && cmake .. && make -j 8 
