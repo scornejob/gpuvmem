@@ -1,15 +1,20 @@
 name: build On Centos
-# This workflow is triggered on pushes to the repository. Modify and push thsi file, and should build.
+# This workflow is triggered on pushes to the repository. Modify and push this file, and should build.
 on: [push]
 
 jobs: 
     build:
         runs-on: ubuntu-latest
-        -steps:
-            -name: Install git-lfs
-                run: sudo apt-get install git-lfs
-            -name: Install casacore latest stable version v3.1.2
-               run: git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git
-            -name: Install dependencies
-                run: sudo apt-get install -y build-essential cmake gfortran g++ libncurses5-dev libreadline-dev flex bison libblas-dev liblapacke-dev libcfitsio-dev wcslib-dev libhdf5-serial-dev libfftw3-dev python-numpy libboost-python-dev libpython2.7-dev
-
+        steps:
+            - name: Install git-lfs
+              run: sudo apt-get -y install git-lfs
+            - name: Retrieve casacore latest stable version v3.1.2
+              run: git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git
+            - name: Install dependencies
+              run: sudo apt-get install -y build-essential cmake gfortran g++ libncurses5-dev libreadline-dev flex bison libblas-dev liblapacke-dev libcfitsio-dev wcslib-dev libhdf5-serial-dev libfftw3-dev python-numpy libboost-python-dev libpython2.7-dev
+            - name: Build casacore
+              run: cd casacore && mkdir build && cd build && cmake -DUSE_FFTW3=ON -DUSE_OPENMP=ON -DUSE_HDF5=ON -DUSE_THREADS=ON .. && make -j && sudo make install
+            - name: Install cfitsio
+              run: sudo apt-get -y install libcfitsio-dev
+            - name: Retrieve gpuvmem
+              run: git clone --single-branch --branch master https://github.com/scornejob/gpuvmem.git
