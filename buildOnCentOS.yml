@@ -1,0 +1,15 @@
+name: build On Centos
+# This workflow is triggered on pushes to the repository. Modify and push thsi file, and should build.
+on: [push]
+
+jobs: 
+    build:
+        runs-on: ubuntu-latest
+        -steps:
+            -name: Install git-lfs
+                run: sudo apt-get install git-lfs
+            -name: Install casacore latest stable version v3.1.2
+               run: git clone --single-branch --branch v3.1.2 https://github.com/casacore/casacore.git
+            -name: Install dependencies
+                run: sudo apt-get install -y build-essential cmake gfortran g++ libncurses5-dev libreadline-dev flex bison libblas-dev liblapacke-dev libcfitsio-dev wcslib-dev libhdf5-serial-dev libfftw3-dev python-numpy libboost-python-dev libpython2.7-dev
+
