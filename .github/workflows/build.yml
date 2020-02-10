@@ -13,7 +13,7 @@ jobs:
             - name: Install dependencies
               run: sudo apt-get install -y build-essential cmake gfortran g++ libncurses5-dev libreadline-dev flex bison libblas-dev liblapacke-dev libcfitsio-dev wcslib-dev libhdf5-serial-dev libfftw3-dev python-numpy libboost-python-dev libpython2.7-dev
             - name: Build casacore
-              run: cd casacore && mkdir build && cd build && cmake -DUSE_FFTW3=ON -DUSE_OPENMP=ON -DUSE_HDF5=ON -DUSE_THREADS=ON .. && make -j && sudo make install
+              run: cd casacore && mkdir build && cd build && cmake -DUSE_FFTW3=ON -DUSE_OPENMP=ON -DUSE_HDF5=ON -DUSE_THREADS=ON .. && make -j 8 && sudo make install
             - name: Install cfitsio
               run: sudo apt-get -y install libcfitsio-dev
             - name: Retrieve gpuvmem
