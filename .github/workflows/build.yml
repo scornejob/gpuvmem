@@ -1,4 +1,4 @@
-name: build On Centos
+name: build On ubuntu 18.04
 # This workflow is triggered on pushes to the repository. Modify and push this file, and should build.
 on: [push]
 
